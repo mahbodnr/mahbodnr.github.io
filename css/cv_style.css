@@ -1,0 +1,99 @@
+body {
+    font-family: 'Times New Roman';
+}
+
+
+h1 {
+    line-height: 115%;
+    font-size: 20pt;
+    margin-top: 3pt;
+    margin-bottom: 0pt;
+    line-height: 115%;
+    padding-bottom: 1pt;
+    font-weight: normal;
+    text-transform: uppercase;
+}
+
+h1::first-letter {
+    font-size: 24pt;
+}
+
+h2 {
+    line-height: 115%;
+    font-size: 12pt;
+    margin-top: 5pt;
+    margin-left: 1pt;
+    line-height: 115%;
+    padding-bottom: 1pt;
+    font-weight: normal;
+    text-transform: uppercase;
+    border-bottom: 1.5pt solid #000000;
+}
+
+h2::first-letter {
+    font-size: 16pt;
+}
+
+h3 {
+    font-size: 12pt;
+    margin-top: 6pt;
+    margin-left: 7.2pt;
+    margin-bottom: 0pt;
+    line-height: 115%;
+}
+
+.content {
+    margin-top: 0pt;
+    margin-left: 7.2pt;
+    margin-bottom: 0pt;
+    line-height: 115%;
+    font-size: 10pt;
+}
+
+.item {
+    margin-left: 20pt;
+    line-height: 115%;
+    padding-left: 8.4pt;
+    font-size: 10pt;
+}
+
+.publication {
+    margin-top: 12pt;
+    margin-left: 7.2pt;
+    margin-bottom: 4pt;
+    text-align: justify;
+    line-height: 120%;
+    /* letter-spacing: -0.3pt; */
+}
+
+.link {
+    font-size: 10pt;
+}
+
+
+.date {
+    font-size: 10pt;
+    font-weight: normal;
+}
+
+.job-title {
+    margin-top: 0pt;
+    margin-left: 14.4pt;
+    margin-bottom: 0pt;
+    font-size: 10pt;
+}
+
+.rectangle {
+    display: flex;
+    flex-direction: row;
+    width: 200px;
+    height: 100px;
+    background: rgb(163, 163, 163) url('../img/AT.jpg') no-repeat right center;
+    background-size: auto 100%;
+    margin-bottom: 15pt;
+}
+
+.line {
+    border-right: 1.5px solid black;
+    margin-left: 202px;
+}
