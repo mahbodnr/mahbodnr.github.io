@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard | Latent Space</title>
+    <meta name="description" content="Latent Space puzzle challenge leaderboard">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="../img/favicon.ico">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="main-window windows-box-shadow">
+        <div class="window-header">
+            <div class="title">
+                <img src="../img/help_book_computer-4.png" alt="">
+                Leaderboard - Latent Space
+            </div>
+            <div class="header-buttons">
+                <button onclick="window.location.href='index.html'">_</button>
+                <button>□</button>
+                <button onclick="window.location.href='index.html'">X</button>
+            </div>
+        </div>
+        
+        <div class="menu-bar">
+            <span>File</span>
+            <span>View</span>
+            <span>Help</span>
+        </div>
+        
+        <div class="window-content">
+            <!-- Navigation Bar -->
+            <div class="nav-bar">
+                <a href="index.html"><button class="win-button windows-box-shadow">📋 Puzzles</button></a>
+                <a href="leaderboard.html"><button class="win-button windows-box-shadow inverse-windows-box-shadow">🏆 Leaderboard</button></a>
+                <div class="auth-buttons">
+                    <a href="login.html"><button class="win-button windows-box-shadow">🔑 Login</button></a>
+                </div>
+                <div class="user-info-display hidden">
+                    <img class="user-avatar" src="../img/computer_explorer-5.png" alt="Avatar">
+                    <span class="user-name">User</span>
+                    <button class="win-button windows-box-shadow" onclick="signOut()">Logout</button>
+                </div>
+            </div>
+            
+            <div id="message-container" class="hidden"></div>
+            
+            <div class="content-inner">
+                <h1>🏆 Leaderboard</h1>
+                
+                <p>The top puzzle solvers, ranked by total points earned. Solve puzzles quickly (before hints are released) to maximize your score!</p>
+                
+                <div style="text-align: right; margin-bottom: 12px;">
+                    <button class="win-button windows-box-shadow" onclick="loadLeaderboard()">🔄 Refresh</button>
+                </div>
+                
+                <div id="leaderboard-container" class="leaderboard-container">
+                    <div class="loading">Loading leaderboard...</div>
+                </div>
+                
+                <div style="margin-top: 24px; padding: 12px; background: #FFFFCC; border: 2px inset;">
+                    <h3>📊 Scoring Info</h3>
+                    <p style="margin: 4px 0;">
+                        Points are awarded based on how many hints were released when you solved the puzzle:
+                    </p>
+                    <ul style="margin: 8px 0; padding-left: 20px; font-size: 12px;">
+                        <li>0 hints: 100% of base points</li>
+                        <li>1 hint: 50% of base points</li>
+                        <li>2 hints: 25% of base points</li>
+                        <li>3 hints: 12.5% of base points</li>
+                        <li>And so on...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="window-footer">
+            <span class="footer-section">Top 100 players</span>
+            <span class="footer-section">Updated in real-time</span>
+        </div>
+    </div>
+    
+    <script src="scripts.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', initLeaderboardPage);
+    </script>
+</body>
+</html>

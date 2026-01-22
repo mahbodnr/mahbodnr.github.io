@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latent Space | Mahbod Nouri</title>
+    <meta name="description" content="Latent Space - A puzzle challenge by Mahbod Nouri">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="../img/favicon.ico">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="main-window windows-box-shadow">
+        <div class="window-header">
+            <div class="title">
+                <img src="../img/help_book_computer-4.png" alt="">
+                Latent Space - Puzzle Challenge
+            </div>
+            <div class="header-buttons">
+                <button onclick="window.location.href='../index.html'">_</button>
+                <button>□</button>
+                <button onclick="window.location.href='../index.html'">X</button>
+            </div>
+        </div>
+        
+        <div class="menu-bar">
+            <span>File</span>
+            <span>Edit</span>
+            <span>View</span>
+            <span>Help</span>
+        </div>
+        
+        <div class="window-content">
+            <!-- Navigation Bar -->
+            <div class="nav-bar">
+                <a href="index.html"><button class="win-button windows-box-shadow">📋 Puzzles</button></a>
+                <a href="leaderboard.html"><button class="win-button windows-box-shadow">🏆 Leaderboard</button></a>
+                <div class="auth-buttons">
+                    <a href="login.html"><button class="win-button windows-box-shadow">🔑 Login</button></a>
+                </div>
+                <div class="user-info-display hidden">
+                    <img class="user-avatar" src="../img/computer_explorer-5.png" alt="Avatar">
+                    <span class="user-name">User</span>
+                    <button class="win-button windows-box-shadow" onclick="signOut()">Logout</button>
+                </div>
+            </div>
+            
+            <div id="message-container" class="hidden"></div>
+            
+            <div class="content-inner">
+                <h1>🧩 Welcome to Latent Space</h1>
+                
+                <p>
+                    Welcome to <strong>Latent Space</strong> — a collection of puzzles that will challenge your 
+                    problem-solving skills, pattern recognition, and creative thinking. Each puzzle is a mystery 
+                    waiting to be unraveled, with hidden variables that need to be discovered.
+                </p>
+                
+                <div class="tabs">
+                    <div class="tab active" onclick="showTab('puzzles')">Available Puzzles</div>
+                    <div class="tab" onclick="showTab('howto')">How to Play</div>
+                </div>
+                
+                <div id="tab-puzzles" class="tab-content active">
+                    <div id="puzzle-list">
+                        <div class="loading">Loading puzzles...</div>
+                    </div>
+                </div>
+                
+                <div id="tab-howto" class="tab-content">
+                    <h2>📖 How to Play</h2>
+                    <ul class="how-to-list">
+                        <li><strong>Create an account</strong> - Log in with your Google account to track your progress and earn points.</li>
+                        <li><strong>Choose a puzzle</strong> - Select an active puzzle from the list to begin solving.</li>
+                        <li><strong>Read carefully</strong> - Each puzzle has a description and possibly artifacts (images, text, data) that contain clues.</li>
+                        <li><strong>Use hints wisely</strong> - Hints are released over time. Each hint halves your potential points!</li>
+                        <li><strong>Submit your answer</strong> - When you think you've found the solution, submit it. You can try as many times as you want.</li>
+                        <li><strong>Earn points</strong> - Correct answers earn you points. The earlier you solve (with fewer hints), the more points you get!</li>
+                        <li><strong>Climb the leaderboard</strong> - Compete with other solvers for the top spots.</li>
+                    </ul>
+                    
+                    <h3>💯 Scoring System</h3>
+                    <p>
+                        Each puzzle has a base point value. Your score is calculated as:
+                    </p>
+                    <p style="text-align: center; font-family: 'Courier New', monospace; font-size: 14px; background: #FFFFCC; padding: 8px;">
+                        <strong>Score = Base Points ÷ 2<sup>(number of hints released)</sup></strong>
+                    </p>
+                    <p>
+                        For example, if a puzzle is worth 1000 points and 2 hints have been released when you solve it, 
+                        you earn 1000 ÷ 4 = 250 points.
+                    </p>
+                    
+                    <h3>⏰ Hint Schedule</h3>
+                    <p>
+                        Hints are released at scheduled times. Check the puzzle page to see when the next hint will be available. 
+                        The page updates automatically when new hints are released.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="window-footer">
+            <span class="footer-section">Puzzles loaded</span>
+            <span class="footer-section">© Mahbod Nouri</span>
+        </div>
+    </div>
+    
+    <script src="scripts.js"></script>
+    <script>
+        function showTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+        }
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', initIndexPage);
+    </script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puzzle #001 | Latent Space</title>
+    <meta name="description" content="Puzzle #001 - Latent Space challenge">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="../img/favicon.ico">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="main-window windows-box-shadow">
+        <div class="window-header">
+            <div class="title">
+                <img src="../img/help_book_computer-4.png" alt="">
+                <span id="puzzle-title">Puzzle #001</span> - Latent Space
+            </div>
+            <div class="header-buttons">
+                <button onclick="window.location.href='index.html'">_</button>
+                <button>□</button>
+                <button onclick="window.location.href='index.html'">X</button>
+            </div>
+        </div>
+        
+        <div class="menu-bar">
+            <span>File</span>
+            <span>Edit</span>
+            <span>View</span>
+            <span>Help</span>
+        </div>
+        
+        <div class="window-content">
+            <!-- Navigation Bar -->
+            <div class="nav-bar">
+                <a href="index.html"><button class="win-button windows-box-shadow">← Back to Puzzles</button></a>
+                <a href="leaderboard.html"><button class="win-button windows-box-shadow">🏆 Leaderboard</button></a>
+                <div class="auth-buttons">
+                    <a href="login.html"><button class="win-button windows-box-shadow">🔑 Login to Submit</button></a>
+                </div>
+                <div class="user-info-display hidden">
+                    <img class="user-avatar" src="../img/computer_explorer-5.png" alt="Avatar">
+                    <span class="user-name">User</span>
+                    <button class="win-button windows-box-shadow" onclick="signOut()">Logout</button>
+                </div>
+            </div>
+            
+            <div id="message-container" class="hidden"></div>
+            
+            <div class="content-inner">
+                <h1>🧩 <span id="puzzle-title-display">Loading...</span></h1>
+                
+                <div class="score-display">
+                    Base Points: <span id="puzzle-points">---</span> | 
+                    <span id="current-multiplier">Loading scoring info...</span>
+                </div>
+                
+                <!-- Puzzle Description -->
+                <h2>📝 Description</h2>
+                <div class="puzzle-description" id="puzzle-description">
+                    <div class="loading">Loading puzzle...</div>
+                </div>
+                
+                <!-- Hints Section -->
+                <h2>💡 Hints</h2>
+                <div id="hints-container">
+                    <div class="loading">Loading hints...</div>
+                </div>
+                
+                <!-- Solved Message (shown when already solved) -->
+                <div id="solved-message" class="hidden"></div>
+                
+                <!-- Submission Form (requires login) -->
+                <div id="submission-form" class="submission-form requires-auth hidden">
+                    <h3>📤 Submit Your Answer</h3>
+                    <form onsubmit="submitAnswer(event, 1); return false;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="answer-input">Your Answer:</label>
+                                <input type="text" id="answer-input" class="win-input inverse-windows-box-shadow" 
+                                       placeholder="Enter your answer..." autocomplete="off" required>
+                            </div>
+                            <button type="submit" id="submit-btn" class="win-button windows-box-shadow primary">Submit</button>
+                        </div>
+                    </form>
+                    <p style="font-size: 11px; color: #666; margin-top: 8px;">
+                        Answers are case-insensitive. You can submit as many times as you want.
+                    </p>
+                </div>
+                
+                <!-- Login prompt for non-authenticated users -->
+                <div class="hide-when-auth" style="margin-top: 16px;">
+                    <div class="message-box message-info">
+                        <strong>🔒 Login Required</strong><br>
+                        You need to <a href="login.html">log in</a> to submit answers and earn points.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="window-footer">
+            <span class="footer-section">Puzzle #001</span>
+            <span class="footer-section">Good luck!</span>
+        </div>
+    </div>
+    
+    <script src="scripts.js"></script>
+    <script>
+        const PUZZLE_ID = 1;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            initPuzzlePage(PUZZLE_ID);
+            
+            // Update title display
+            const titleEl = document.getElementById('puzzle-title-display');
+            if (titleEl) {
+                titleEl.textContent = document.getElementById('puzzle-title')?.textContent || 'Puzzle #001';
+            }
+        });
+    </script>
+</body>
+</html>
