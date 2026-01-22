@@ -247,15 +247,21 @@ a:hover {
 /* Navigation Bar */
 .nav-bar {
     display: flex;
+    align-items: center;
     gap: 8px;
     margin-bottom: 16px;
-    padding: 8px;
-    background: #c0c0c0;
+    padding: 8px 12px;
+    background: linear-gradient(180deg, #e0e0e0 0%, #c0c0c0 50%, #a8a8a8 100%);
     border: 2px inset;
+    flex-wrap: wrap;
 }
 
 .nav-bar a {
     text-decoration: none;
+}
+
+.auth-buttons {
+    margin-left: auto;
 }
 
 /* Puzzle Card */
@@ -333,6 +339,35 @@ a:hover {
     background: #c0c0c0;
     border: 2px inset;
     margin-bottom: 16px;
+}
+
+.user-info-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+    padding: 4px 8px;
+    background: linear-gradient(180deg, #e8e8e8 0%, #c0c0c0 100%);
+    border: 1px solid #808080;
+}
+
+.user-info-display .user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid #808080;
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    object-fit: cover;
+}
+
+.user-info-display .user-name {
+    font-size: 12px;
+    font-weight: bold;
+    color: #000;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .user-avatar {
@@ -571,6 +606,54 @@ a:hover {
     position: absolute;
     left: 0;
     color: #000080;
+}
+
+/* Leaderboard Table */
+.leaderboard-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.leaderboard-table .player-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.leaderboard-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid #808080;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.leaderboard-table .rank-cell {
+    text-align: center;
+    font-size: 16px;
+}
+
+.leaderboard-table .points-cell {
+    text-align: right;
+    font-family: 'Courier New', monospace;
+    color: #008000;
+}
+
+.leaderboard-table .solved-cell {
+    text-align: center;
+}
+
+.leaderboard-table tr.rank-gold {
+    background: linear-gradient(90deg, #FFD700 0%, #FFF8DC 30%, white 100%);
+}
+
+.leaderboard-table tr.rank-silver {
+    background: linear-gradient(90deg, #C0C0C0 0%, #E8E8E8 30%, white 100%);
+}
+
+.leaderboard-table tr.rank-bronze {
+    background: linear-gradient(90deg, #CD7F32 0%, #FAEBD7 30%, white 100%);
 }
 
 /* Icon styles */

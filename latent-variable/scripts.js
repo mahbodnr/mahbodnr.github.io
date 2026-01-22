@@ -1,8 +1,6 @@
 // Latent Space - Puzzle System Scripts
 // Supabase Configuration
 
-console.log('[Latent Space] Script loaded! URL:', window.location.href);
-
 const SUPABASE_URL = 'https://begtzhbfsvntrqaxjmah.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlZ3R6aGJmc3ZudHJxYXhqbWFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwOTI1MTAsImV4cCI6MjA4NDY2ODUxMH0.5W2khGK3va9a6cjM5jrsNhfPrzlrAjqAmzcjegy_47U';
 
@@ -13,11 +11,9 @@ let currentSession = null;
 let authInitialized = false;
 let authInitPromise = null;
 
-console.log('[Latent Space] Initializing Supabase...');
-
 try {
     if (typeof window.supabase === 'undefined') {
-        console.error('[Latent Space] Supabase library not loaded! Check if the script tag is present.');
+        console.error('[Latent Space] Supabase library not loaded!');
     } else if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY_HERE') {
         console.error('[Latent Space] Supabase anon key not configured.');
     } else {
@@ -37,26 +33,20 @@ try {
             }
         });
         supabaseConfigured = true;
-        console.log('[Latent Space] Supabase initialized successfully!');
-        console.log('[Latent Space] Client object:', supabaseClient);
-        console.log('[Latent Space] Auth available:', !!supabaseClient.auth);
         
         // Set up auth state listener and wait for initial state
         authInitPromise = new Promise((resolve) => {
             const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
-                console.log('[Latent Space] Auth state changed:', event, session ? 'session exists' : 'no session');
                 currentSession = session;
                 
                 // Resolve the promise first (so getCurrentUser doesn't wait forever)
                 const wasInitialized = authInitialized;
                 if (!authInitialized) {
                     authInitialized = true;
-                    console.log('[Latent Space] Auth initialized!');
                     resolve(session);
                 }
                 
                 // Only run side effects AFTER initial page load (not during)
-                // The page will call updateAuthUI itself
                 if (wasInitialized) {
                     try {
                         if (event === 'SIGNED_IN' && session && typeof ensureUserExists === 'function') {
@@ -81,7 +71,6 @@ try {
 async function waitForAuth() {
     if (authInitialized) return currentSession;
     if (authInitPromise) {
-        console.log('[Latent Space] Waiting for auth to initialize...');
         return await authInitPromise;
     }
     return null;
@@ -90,20 +79,11 @@ async function waitForAuth() {
 // ============== Authentication ==============
 
 async function getCurrentUser() {
-    console.log('[Latent Space] getCurrentUser called, configured:', supabaseConfigured);
     if (!supabaseConfigured || !supabaseClient) return null;
     
     try {
-        // Wait for auth to be initialized first
         const session = await waitForAuth();
-        console.log('[Latent Space] Session from waitForAuth:', session ? 'found' : 'none');
-        
-        if (!session) {
-            console.log('[Latent Space] No active session (user not logged in)');
-            return null;
-        }
-        
-        console.log('[Latent Space] Current user:', session.user ? session.user.email : 'none');
+        if (!session) return null;
         return session.user;
     } catch (e) {
         console.error('[Latent Space] Error in getCurrentUser:', e);
@@ -112,22 +92,18 @@ async function getCurrentUser() {
 }
 
 async function signInWithGoogle() {
-    console.log('[Latent Space] signInWithGoogle called, configured:', supabaseConfigured);
     if (!supabaseConfigured || !supabaseClient) {
         showMessage('Authentication not configured. Please contact the site administrator.', 'error');
         return;
     }
     
     try {
-        console.log('[Latent Space] Initiating Google OAuth...');
         const { data, error } = await supabaseClient.auth.signInWithOAuth({
             provider: 'google',
             options: {
                 redirectTo: window.location.origin + '/latent-variable/'
             }
         });
-        
-        console.log('[Latent Space] OAuth response:', { data, error });
         
         if (error) {
             console.error('[Latent Space] Error signing in:', error);
@@ -143,10 +119,7 @@ async function signOut() {
     if (!supabaseConfigured || !supabaseClient) return;
     
     try {
-        const { error } = await supabaseClient.auth.signOut();
-        if (error) {
-            console.error('Error signing out:', error);
-        }
+        await supabaseClient.auth.signOut();
     } catch (e) {
         console.error('Error in signOut:', e);
     }
@@ -156,12 +129,10 @@ async function signOut() {
 // Auth state listener is now set up during initialization (above)
 
 async function ensureUserExists(user) {
-    console.log('[Latent Space] ensureUserExists called for:', user?.email);
     if (!user || !supabaseConfigured) return;
     
     try {
-        console.log('[Latent Space] Upserting user to database...');
-        const { data, error } = await supabaseClient
+        const { error } = await supabaseClient
             .from('users')
             .upsert({
                 id: user.id,
@@ -170,7 +141,6 @@ async function ensureUserExists(user) {
                 avatar_url: user.user_metadata?.avatar_url || null
             }, { onConflict: 'id' });
         
-        console.log('[Latent Space] Upsert result:', { data, error });
         if (error) {
             console.error('Error upserting user:', error);
         }
@@ -210,20 +180,11 @@ async function updateAuthUI() {
 // ============== Puzzles ==============
 
 async function fetchPuzzles() {
-    console.log('[Latent Space] fetchPuzzles called, configured:', supabaseConfigured);
-    if (!supabaseConfigured) {
-        console.error('[Latent Space] Supabase not configured');
-        return [];
-    }
+    if (!supabaseConfigured) return [];
     
     try {
-        console.log('[Latent Space] Fetching puzzles from database...');
-        console.log('[Latent Space] supabaseClient:', supabaseClient ? 'exists' : 'null');
-        console.log('[Latent Space] Making query...');
-        
-        // Add timeout to detect hanging
         const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Query timeout after 10s')), 10000)
+            setTimeout(() => reject(new Error('Query timeout')), 10000)
         );
         
         const queryPromise = supabaseClient
@@ -233,15 +194,13 @@ async function fetchPuzzles() {
         
         const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
         
-        console.log('[Latent Space] Query completed');
         if (error) {
-            console.error('[Latent Space] Error fetching puzzles:', error);
+            console.error('Error fetching puzzles:', error);
             return [];
         }
-        console.log('[Latent Space] Puzzles fetched:', data?.length || 0, 'puzzles');
         return data || [];
     } catch (e) {
-        console.error('[Latent Space] Error in fetchPuzzles:', e);
+        console.error('Error in fetchPuzzles:', e);
         return [];
     }
 }
@@ -466,23 +425,16 @@ function getStatusBadgeClass(status) {
 
 // Index Page
 async function initIndexPage() {
-    console.log('[Latent Space] initIndexPage called');
     await updateAuthUI();
     await loadPuzzleList();
 }
 
 async function loadPuzzleList() {
-    console.log('[Latent Space] loadPuzzleList called');
     const container = document.getElementById('puzzle-list');
-    if (!container) {
-        console.error('[Latent Space] puzzle-list container not found!');
-        return;
-    }
+    if (!container) return;
     
     container.innerHTML = '<div class="loading">Loading puzzles...</div>';
     
-    // Check if Supabase is configured
-    console.log('[Latent Space] supabaseConfigured:', supabaseConfigured);
     if (!supabaseConfigured) {
         container.innerHTML = `
             <div class="message-box message-error">
@@ -713,14 +665,16 @@ async function loadLeaderboard() {
             return;
         }
         
+        const defaultAvatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23808080'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E";
+        
         let html = `
-            <table class="win-table">
+            <table class="win-table leaderboard-table">
                 <thead>
                     <tr>
-                        <th>Rank</th>
+                        <th style="width: 60px;">Rank</th>
                         <th>Player</th>
-                        <th>Total Points</th>
-                        <th>Puzzles Solved</th>
+                        <th style="width: 100px;">Points</th>
+                        <th style="width: 80px;">Solved</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -735,12 +689,17 @@ async function loadLeaderboard() {
             else if (rank === 2) { rankClass = 'rank-silver'; rankIcon = '🥈'; }
             else if (rank === 3) { rankClass = 'rank-bronze'; rankIcon = '🥉'; }
             
+            const avatarUrl = entry.avatar_url || defaultAvatar;
+            
             html += `
-                <tr>
-                    <td class="${rankClass}">${rankIcon}</td>
-                    <td>${escapeHtml(entry.username || 'Anonymous')}</td>
-                    <td>${entry.total_points}</td>
-                    <td>${entry.puzzles_solved}</td>
+                <tr class="${rankClass}">
+                    <td class="rank-cell">${rankIcon}</td>
+                    <td class="player-cell">
+                        <img class="leaderboard-avatar" src="${escapeHtml(avatarUrl)}" alt="" onerror="this.src='${defaultAvatar}'">
+                        <span>${escapeHtml(entry.username || 'Anonymous')}</span>
+                    </td>
+                    <td class="points-cell"><strong>${entry.total_points.toLocaleString()}</strong></td>
+                    <td class="solved-cell">${entry.puzzles_solved}</td>
                 </tr>
             `;
         });
@@ -760,10 +719,8 @@ async function loadLeaderboard() {
 
 // Login Page
 async function initLoginPage() {
-    console.log('[Latent Space] initLoginPage called');
     const user = await getCurrentUser();
     if (user) {
-        console.log('[Latent Space] User already logged in, redirecting...');
         // Already logged in, redirect to main page
         window.location.href = '/latent-variable/';
     }
@@ -771,6 +728,5 @@ async function initLoginPage() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('[Latent Space] DOMContentLoaded - supabaseConfigured:', supabaseConfigured);
     updateAuthUI();
 });
