@@ -9,6 +9,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Initialize Supabase client
 let supabaseClient = null;
 let supabaseConfigured = false;
+let currentSession = null;
+let authInitialized = false;
+let authInitPromise = null;
 
 console.log('[Latent Space] Initializing Supabase...');
 
@@ -23,10 +26,42 @@ try {
         console.log('[Latent Space] Supabase initialized successfully!');
         console.log('[Latent Space] Client object:', supabaseClient);
         console.log('[Latent Space] Auth available:', !!supabaseClient.auth);
+        
+        // Set up auth state listener and wait for initial state
+        authInitPromise = new Promise((resolve) => {
+            const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
+                console.log('[Latent Space] Auth state changed:', event, session ? 'session exists' : 'no session');
+                currentSession = session;
+                
+                // Handle sign in
+                if (event === 'SIGNED_IN' && session) {
+                    await ensureUserExists(session.user);
+                }
+                
+                // Update UI on any auth change
+                updateAuthUI();
+                
+                if (!authInitialized) {
+                    authInitialized = true;
+                    console.log('[Latent Space] Auth initialized!');
+                    resolve(session);
+                }
+            });
+        });
     }
 } catch (e) {
     console.error('[Latent Space] Error initializing Supabase:', e);
     supabaseConfigured = false;
+}
+
+// Helper to wait for auth to be ready
+async function waitForAuth() {
+    if (authInitialized) return currentSession;
+    if (authInitPromise) {
+        console.log('[Latent Space] Waiting for auth to initialize...');
+        return await authInitPromise;
+    }
+    return null;
 }
 
 // ============== Authentication ==============
@@ -36,37 +71,17 @@ async function getCurrentUser() {
     if (!supabaseConfigured || !supabaseClient) return null;
     
     try {
-        // First try to get session (restores from localStorage)
-        console.log('[Latent Space] About to call getSession...');
-        let sessionResult;
-        try {
-            sessionResult = await supabaseClient.auth.getSession();
-            console.log('[Latent Space] getSession returned:', sessionResult);
-        } catch (sessionErr) {
-            console.error('[Latent Space] getSession threw error:', sessionErr);
-            return null;
-        }
-        
-        const { data: { session }, error: sessionError } = sessionResult;
-        console.log('[Latent Space] Session check:', session ? 'found' : 'none', sessionError || '');
+        // Wait for auth to be initialized first
+        const session = await waitForAuth();
+        console.log('[Latent Space] Session from waitForAuth:', session ? 'found' : 'none');
         
         if (!session) {
             console.log('[Latent Space] No active session (user not logged in)');
             return null;
         }
         
-        const { data: { user }, error } = await supabaseClient.auth.getUser();
-        if (error) {
-            // "Auth session missing" is normal when user is not logged in
-            if (error.name === 'AuthSessionMissingError') {
-                console.log('[Latent Space] No active session (user not logged in)');
-                return null;
-            }
-            console.error('[Latent Space] Error getting user:', error);
-            return null;
-        }
-        console.log('[Latent Space] Current user:', user ? user.email : 'none');
-        return user;
+        console.log('[Latent Space] Current user:', session.user ? session.user.email : 'none');
+        return session.user;
     } catch (e) {
         console.error('[Latent Space] Error in getCurrentUser:', e);
         return null;
@@ -115,16 +130,7 @@ async function signOut() {
     window.location.href = '/latent-variable/';
 }
 
-// Listen for auth changes
-if (supabaseConfigured && supabaseClient) {
-    supabaseClient.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-            // Ensure user exists in our users table
-            await ensureUserExists(session.user);
-        }
-        updateAuthUI();
-    });
-}
+// Auth state listener is now set up during initialization (above)
 
 async function ensureUserExists(user) {
     if (!user || !supabaseConfigured) return;
