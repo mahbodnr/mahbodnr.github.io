@@ -33,18 +33,23 @@ try {
                 console.log('[Latent Space] Auth state changed:', event, session ? 'session exists' : 'no session');
                 currentSession = session;
                 
-                // Handle sign in
-                if (event === 'SIGNED_IN' && session) {
-                    await ensureUserExists(session.user);
-                }
-                
-                // Update UI on any auth change
-                updateAuthUI();
-                
+                // Resolve the promise first (so getCurrentUser doesn't wait forever)
                 if (!authInitialized) {
                     authInitialized = true;
                     console.log('[Latent Space] Auth initialized!');
                     resolve(session);
+                }
+                
+                // Then handle side effects (these functions might not exist during initial load)
+                try {
+                    if (event === 'SIGNED_IN' && session && typeof ensureUserExists === 'function') {
+                        await ensureUserExists(session.user);
+                    }
+                    if (typeof updateAuthUI === 'function') {
+                        updateAuthUI();
+                    }
+                } catch (e) {
+                    console.error('[Latent Space] Error in auth state handler:', e);
                 }
             });
         });
