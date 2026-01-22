@@ -2,58 +2,89 @@
 // Supabase Configuration
 
 const SUPABASE_URL = 'https://begtzhbfsvntrqaxjmah.supabase.co';
-// TODO: Replace this with your actual Supabase anon key from:
-// Supabase Dashboard > Settings > API > Project API keys > anon/public
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlZ3R6aGJmc3ZudHJxYXhqbWFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwOTI1MTAsImV4cCI6MjA4NDY2ODUxMH0.5W2khGK3va9a6cjM5jrsNhfPrzlrAjqAmzcjegy_47U';
+const SUPABASE_ANON_KEY = 'sb_publishable_of_MSOBX81b3zsePo3luNg_kFTX-zxK';
 
+// Initialize Supabase client
+let supabaseClient = null;
+let supabaseConfigured = false;
+
+console.log('[Latent Space] Initializing Supabase...');
+
+try {
+    if (typeof window.supabase === 'undefined') {
+        console.error('[Latent Space] Supabase library not loaded! Check if the script tag is present.');
+    } else if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY_HERE') {
+        console.error('[Latent Space] Supabase anon key not configured.');
+    } else {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        supabaseConfigured = true;
+        console.log('[Latent Space] Supabase initialized successfully!');
+        console.log('[Latent Space] Client object:', supabaseClient);
+        console.log('[Latent Space] Auth available:', !!supabaseClient.auth);
+    }
+} catch (e) {
+    console.error('[Latent Space] Error initializing Supabase:', e);
+    supabaseConfigured = false;
+}
 
 // ============== Authentication ==============
 
 async function getCurrentUser() {
-    if (!supabaseConfigured) return null;
+    console.log('[Latent Space] getCurrentUser called, configured:', supabaseConfigured);
+    if (!supabaseConfigured || !supabaseClient) return null;
     
     try {
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const { data: { user }, error } = await supabaseClient.auth.getUser();
         if (error) {
-            console.error('Error getting user:', error);
+            // "Auth session missing" is normal when user is not logged in
+            if (error.name === 'AuthSessionMissingError') {
+                console.log('[Latent Space] No active session (user not logged in)');
+                return null;
+            }
+            console.error('[Latent Space] Error getting user:', error);
             return null;
         }
+        console.log('[Latent Space] Current user:', user ? user.email : 'none');
         return user;
     } catch (e) {
-        console.error('Error in getCurrentUser:', e);
+        console.error('[Latent Space] Error in getCurrentUser:', e);
         return null;
     }
 }
 
 async function signInWithGoogle() {
-    if (!supabaseConfigured) {
+    console.log('[Latent Space] signInWithGoogle called, configured:', supabaseConfigured);
+    if (!supabaseConfigured || !supabaseClient) {
         showMessage('Authentication not configured. Please contact the site administrator.', 'error');
         return;
     }
     
     try {
-        const { data, error } = await supabase.auth.signInWithOAuth({
+        console.log('[Latent Space] Initiating Google OAuth...');
+        const { data, error } = await supabaseClient.auth.signInWithOAuth({
             provider: 'google',
             options: {
                 redirectTo: window.location.origin + '/latent-variable/'
             }
         });
         
+        console.log('[Latent Space] OAuth response:', { data, error });
+        
         if (error) {
-            console.error('Error signing in:', error);
+            console.error('[Latent Space] Error signing in:', error);
             showMessage('Error signing in: ' + error.message, 'error');
         }
     } catch (e) {
-        console.error('Error in signInWithGoogle:', e);
+        console.error('[Latent Space] Error in signInWithGoogle:', e);
         showMessage('Error signing in. Please try again.', 'error');
     }
 }
 
 async function signOut() {
-    if (!supabaseConfigured) return;
+    if (!supabaseConfigured || !supabaseClient) return;
     
     try {
-        const { error } = await supabase.auth.signOut();
+        const { error } = await supabaseClient.auth.signOut();
         if (error) {
             console.error('Error signing out:', error);
         }
@@ -64,8 +95,8 @@ async function signOut() {
 }
 
 // Listen for auth changes
-if (supabaseConfigured) {
-    supabase.auth.onAuthStateChange(async (event, session) => {
+if (supabaseConfigured && supabaseClient) {
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
             // Ensure user exists in our users table
             await ensureUserExists(session.user);
@@ -126,30 +157,33 @@ async function updateAuthUI() {
 // ============== Puzzles ==============
 
 async function fetchPuzzles() {
+    console.log('[Latent Space] fetchPuzzles called, configured:', supabaseConfigured);
     if (!supabaseConfigured) {
-        console.error('Supabase not configured');
+        console.error('[Latent Space] Supabase not configured');
         return [];
     }
     
     try {
-        const { data, error } = await supabase
+        console.log('[Latent Space] Fetching puzzles from database...');
+        const { data, error } = await supabaseClient
             .from('puzzles')
             .select('*')
             .order('release_time', { ascending: true });
         
         if (error) {
-            console.error('Error fetching puzzles:', error);
+            console.error('[Latent Space] Error fetching puzzles:', error);
             return [];
         }
+        console.log('[Latent Space] Puzzles fetched:', data?.length || 0, 'puzzles');
         return data || [];
     } catch (e) {
-        console.error('Error in fetchPuzzles:', e);
+        console.error('[Latent Space] Error in fetchPuzzles:', e);
         return [];
     }
 }
 
 async function fetchPuzzle(puzzleId) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('puzzles')
         .select('*')
         .eq('id', puzzleId)
@@ -164,7 +198,7 @@ async function fetchPuzzle(puzzleId) {
 
 async function fetchHints(puzzleId) {
     const now = new Date().toISOString();
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('hints')
         .select('*')
         .eq('puzzle_id', puzzleId)
@@ -179,7 +213,7 @@ async function fetchHints(puzzleId) {
 }
 
 async function fetchAllHintsCount(puzzleId) {
-    const { count, error } = await supabase
+    const { count, error } = await supabaseClient
         .from('hints')
         .select('*', { count: 'exact', head: true })
         .eq('puzzle_id', puzzleId);
@@ -193,7 +227,7 @@ async function fetchAllHintsCount(puzzleId) {
 
 async function fetchUpcomingHint(puzzleId) {
     const now = new Date().toISOString();
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('hints')
         .select('release_time')
         .eq('puzzle_id', puzzleId)
@@ -258,7 +292,7 @@ async function getUserSubmission(puzzleId) {
 // ============== Leaderboard ==============
 
 async function fetchLeaderboard() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('leaderboard_view')
         .select('*')
         .order('total_points', { ascending: false })
@@ -273,7 +307,7 @@ async function fetchLeaderboard() {
 }
 
 async function calculateLeaderboard() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('submissions')
         .select(`
             user_id,
@@ -368,17 +402,23 @@ function getStatusBadgeClass(status) {
 
 // Index Page
 async function initIndexPage() {
+    console.log('[Latent Space] initIndexPage called');
     await updateAuthUI();
     await loadPuzzleList();
 }
 
 async function loadPuzzleList() {
+    console.log('[Latent Space] loadPuzzleList called');
     const container = document.getElementById('puzzle-list');
-    if (!container) return;
+    if (!container) {
+        console.error('[Latent Space] puzzle-list container not found!');
+        return;
+    }
     
     container.innerHTML = '<div class="loading">Loading puzzles...</div>';
     
     // Check if Supabase is configured
+    console.log('[Latent Space] supabaseConfigured:', supabaseConfigured);
     if (!supabaseConfigured) {
         container.innerHTML = `
             <div class="message-box message-error">
@@ -656,8 +696,10 @@ async function loadLeaderboard() {
 
 // Login Page
 async function initLoginPage() {
+    console.log('[Latent Space] initLoginPage called');
     const user = await getCurrentUser();
     if (user) {
+        console.log('[Latent Space] User already logged in, redirecting...');
         // Already logged in, redirect to main page
         window.location.href = '/latent-variable/';
     }
@@ -665,5 +707,6 @@ async function initLoginPage() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('[Latent Space] DOMContentLoaded - supabaseConfigured:', supabaseConfigured);
     updateAuthUI();
 });
