@@ -383,13 +383,15 @@ async function checkAnswer(puzzleId, answer) {
         return null;
     }
     
-    // Hash the answer for comparison
-    const answerHash = await hashString(answer.toLowerCase().trim());
+    // Normalize and hash the answer for comparison
+    const normalizedAnswer = answer.toLowerCase().trim();
+    const answerHash = await hashString(normalizedAnswer);
     
-    // Call the check_answer function
+    // Call the check_answer function with both the answer text and hash
     const { data, error } = await supabaseClient.rpc('check_answer', {
         p_puzzle_id: puzzleId,
         p_user_id: user.id,
+        p_answer_text: normalizedAnswer,
         p_answer_hash: answerHash
     });
     

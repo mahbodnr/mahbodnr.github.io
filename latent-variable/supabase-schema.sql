@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS submissions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     puzzle_id INTEGER NOT NULL REFERENCES puzzles(id) ON DELETE CASCADE,
+    answer_text TEXT NOT NULL,
     answer_hash TEXT NOT NULL,
     is_correct BOOLEAN NOT NULL DEFAULT FALSE,
     score INTEGER DEFAULT 0,
@@ -120,13 +121,13 @@ GROUP BY u.id, u.username, u.avatar_url
 HAVING COALESCE(SUM(s.score), 0) > 0
 ORDER BY total_points DESC;
 
--- ============================================
--- 6. CHECK ANSWER FUNCTION
+-- ============================================\n-- 6. CHECK ANSWER FUNCTION
 -- ============================================
 -- This function checks the answer and records the submission
 CREATE OR REPLACE FUNCTION check_answer(
     p_puzzle_id INTEGER,
     p_user_id UUID,
+    p_answer_text TEXT,
     p_answer_hash TEXT
 )
 RETURNS JSON
@@ -181,8 +182,8 @@ BEGIN
     END IF;
     
     -- Record the submission
-    INSERT INTO submissions (user_id, puzzle_id, answer_hash, is_correct, score)
-    VALUES (p_user_id, p_puzzle_id, p_answer_hash, v_is_correct, v_score);
+    INSERT INTO submissions (user_id, puzzle_id, answer_text, answer_hash, is_correct, score)
+    VALUES (p_user_id, p_puzzle_id, p_answer_text, p_answer_hash, v_is_correct, v_score);
     
     RETURN json_build_object(
         'correct', v_is_correct,
