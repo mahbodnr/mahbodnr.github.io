@@ -66,7 +66,8 @@ try {
                             updateAuthUI();
                         }
                     } catch (e) {
-                    console.error('[Latent Space] Error in auth state handler:', e);
+                        console.error('[Latent Space] Error in auth state handler:', e);
+                    }
                 }
             });
         });
