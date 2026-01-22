@@ -109,7 +109,7 @@ async function ensureUserExists(user) {
     if (!user || !supabaseConfigured) return;
     
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('users')
             .upsert({
                 id: user.id,
@@ -255,7 +255,7 @@ async function checkAnswer(puzzleId, answer) {
     const answerHash = await hashString(answer.toLowerCase().trim());
     
     // Call the check_answer function
-    const { data, error } = await supabase.rpc('check_answer', {
+    const { data, error } = await supabaseClient.rpc('check_answer', {
         p_puzzle_id: puzzleId,
         p_user_id: user.id,
         p_answer_hash: answerHash
@@ -274,7 +274,7 @@ async function getUserSubmission(puzzleId) {
     const user = await getCurrentUser();
     if (!user) return null;
     
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('submissions')
         .select('*')
         .eq('puzzle_id', puzzleId)
