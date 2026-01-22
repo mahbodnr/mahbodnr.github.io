@@ -29,7 +29,7 @@ try {
                 }
             },
             global: {
-                headers: { 'x-my-custom-header': 'latent-variable' }
+                headers: { 'x-my-custom-header': 'latent-space' }
             }
         });
         supabaseConfigured = true;
@@ -101,7 +101,7 @@ async function signInWithGoogle() {
         const { data, error } = await supabaseClient.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin + '/latent-variable/'
+                redirectTo: window.location.origin + '/latent-space/'
             }
         });
         
@@ -123,7 +123,7 @@ async function signOut() {
     } catch (e) {
         console.error('Error in signOut:', e);
     }
-    window.location.href = '/latent-variable/';
+    window.location.href = '/latent-space/';
 }
 
 // Auth state listener is now set up during initialization (above)
@@ -826,7 +826,7 @@ async function initLoginPage() {
     const user = await getCurrentUser();
     if (user) {
         // Already logged in, redirect to main page
-        window.location.href = '/latent-variable/';
+        window.location.href = '/latent-space/';
     }
 }
 

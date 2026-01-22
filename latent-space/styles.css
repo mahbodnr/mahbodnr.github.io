@@ -212,15 +212,6 @@ a:hover {
     background: #f0f0f0;
 }
 
-.win-table tr:hover {
-    background: #000080;
-    color: white;
-}
-
-.win-table tr:hover a {
-    color: white;
-}
-
 /* Status Badges */
 .status-badge {
     display: inline-block;
