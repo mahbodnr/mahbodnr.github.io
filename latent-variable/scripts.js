@@ -21,7 +21,21 @@ try {
     } else if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY_HERE') {
         console.error('[Latent Space] Supabase anon key not configured.');
     } else {
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: true
+            },
+            realtime: {
+                params: {
+                    eventsPerSecond: 2
+                }
+            },
+            global: {
+                headers: { 'x-my-custom-header': 'latent-variable' }
+            }
+        });
         supabaseConfigured = true;
         console.log('[Latent Space] Supabase initialized successfully!');
         console.log('[Latent Space] Client object:', supabaseClient);
@@ -34,21 +48,24 @@ try {
                 currentSession = session;
                 
                 // Resolve the promise first (so getCurrentUser doesn't wait forever)
+                const wasInitialized = authInitialized;
                 if (!authInitialized) {
                     authInitialized = true;
                     console.log('[Latent Space] Auth initialized!');
                     resolve(session);
                 }
                 
-                // Then handle side effects (these functions might not exist during initial load)
-                try {
-                    if (event === 'SIGNED_IN' && session && typeof ensureUserExists === 'function') {
-                        await ensureUserExists(session.user);
-                    }
-                    if (typeof updateAuthUI === 'function') {
-                        updateAuthUI();
-                    }
-                } catch (e) {
+                // Only run side effects AFTER initial page load (not during)
+                // The page will call updateAuthUI itself
+                if (wasInitialized) {
+                    try {
+                        if (event === 'SIGNED_IN' && session && typeof ensureUserExists === 'function') {
+                            await ensureUserExists(session.user);
+                        }
+                        if (typeof updateAuthUI === 'function') {
+                            updateAuthUI();
+                        }
+                    } catch (e) {
                     console.error('[Latent Space] Error in auth state handler:', e);
                 }
             });
