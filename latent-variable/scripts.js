@@ -34,6 +34,15 @@ async function getCurrentUser() {
     if (!supabaseConfigured || !supabaseClient) return null;
     
     try {
+        // First try to get session (restores from localStorage)
+        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        console.log('[Latent Space] Session check:', session ? 'found' : 'none', sessionError || '');
+        
+        if (!session) {
+            console.log('[Latent Space] No active session (user not logged in)');
+            return null;
+        }
+        
         const { data: { user }, error } = await supabaseClient.auth.getUser();
         if (error) {
             // "Auth session missing" is normal when user is not logged in
