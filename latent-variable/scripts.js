@@ -37,7 +37,17 @@ async function getCurrentUser() {
     
     try {
         // First try to get session (restores from localStorage)
-        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        console.log('[Latent Space] About to call getSession...');
+        let sessionResult;
+        try {
+            sessionResult = await supabaseClient.auth.getSession();
+            console.log('[Latent Space] getSession returned:', sessionResult);
+        } catch (sessionErr) {
+            console.error('[Latent Space] getSession threw error:', sessionErr);
+            return null;
+        }
+        
+        const { data: { session }, error: sessionError } = sessionResult;
         console.log('[Latent Space] Session check:', session ? 'found' : 'none', sessionError || '');
         
         if (!session) {
