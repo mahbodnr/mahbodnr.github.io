@@ -138,9 +138,11 @@ async function signOut() {
 // Auth state listener is now set up during initialization (above)
 
 async function ensureUserExists(user) {
+    console.log('[Latent Space] ensureUserExists called for:', user?.email);
     if (!user || !supabaseConfigured) return;
     
     try {
+        console.log('[Latent Space] Upserting user to database...');
         const { data, error } = await supabaseClient
             .from('users')
             .upsert({
@@ -150,6 +152,7 @@ async function ensureUserExists(user) {
                 avatar_url: user.user_metadata?.avatar_url || null
             }, { onConflict: 'id' });
         
+        console.log('[Latent Space] Upsert result:', { data, error });
         if (error) {
             console.error('Error upserting user:', error);
         }
@@ -197,11 +200,22 @@ async function fetchPuzzles() {
     
     try {
         console.log('[Latent Space] Fetching puzzles from database...');
-        const { data, error } = await supabaseClient
+        console.log('[Latent Space] supabaseClient:', supabaseClient ? 'exists' : 'null');
+        console.log('[Latent Space] Making query...');
+        
+        // Add timeout to detect hanging
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Query timeout after 10s')), 10000)
+        );
+        
+        const queryPromise = supabaseClient
             .from('puzzles')
             .select('*')
             .order('release_time', { ascending: true });
         
+        const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+        
+        console.log('[Latent Space] Query completed');
         if (error) {
             console.error('[Latent Space] Error fetching puzzles:', error);
             return [];
