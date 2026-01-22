@@ -422,17 +422,17 @@ a:hover {
 }
 
 .rank-gold {
-    color: #FFD700;
+    color: #000000;
     font-weight: bold;
 }
 
 .rank-silver {
-    color: #C0C0C0;
+    color: #000000;
     font-weight: bold;
 }
 
 .rank-bronze {
-    color: #CD7F32;
+    color: #000000;
     font-weight: bold;
 }
 
@@ -681,4 +681,80 @@ a:hover {
     color: #00FF00;
     padding: 4px 8px;
     display: inline-block;
+}
+
+/* Edit Name Dialog */
+.edit-name-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.edit-name-content {
+    background: #c0c0c0;
+    min-width: 300px;
+    max-width: 400px;
+}
+
+.edit-name-header {
+    background: linear-gradient(90deg, #000b7c, #377cc6);
+    color: white;
+    padding: 4px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.edit-name-header .close-btn {
+    background: #c0c0c0;
+    border: none;
+    width: 16px;
+    height: 14px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.edit-name-body {
+    padding: 16px;
+}
+
+.edit-name-body label {
+    display: block;
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+
+.edit-name-body input {
+    width: 100%;
+    margin-bottom: 16px;
+    padding: 6px 8px;
+}
+
+.edit-name-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* Clickable user name */
+.user-name-clickable {
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+}
+
+.user-name-clickable:hover {
+    color: #000080;
 }

@@ -149,6 +149,111 @@ async function ensureUserExists(user) {
     }
 }
 
+async function updateUsername(newUsername) {
+    const user = await getCurrentUser();
+    if (!user || !supabaseConfigured) {
+        showMessage('Please log in to change your name.', 'error');
+        return false;
+    }
+    
+    const trimmedName = newUsername.trim();
+    if (!trimmedName || trimmedName.length < 2) {
+        showMessage('Name must be at least 2 characters.', 'error');
+        return false;
+    }
+    if (trimmedName.length > 50) {
+        showMessage('Name must be less than 50 characters.', 'error');
+        return false;
+    }
+    
+    try {
+        const { error } = await supabaseClient
+            .from('users')
+            .update({ username: trimmedName })
+            .eq('id', user.id);
+        
+        if (error) {
+            console.error('Error updating username:', error);
+            showMessage('Error updating name. Please try again.', 'error');
+            return false;
+        }
+        
+        showMessage('Name updated successfully!', 'success');
+        return true;
+    } catch (e) {
+        console.error('Error in updateUsername:', e);
+        showMessage('Error updating name. Please try again.', 'error');
+        return false;
+    }
+}
+
+function showEditNameDialog() {
+    const currentName = document.querySelector('.user-name')?.textContent || '';
+    
+    const dialog = document.createElement('div');
+    dialog.className = 'edit-name-dialog';
+    dialog.innerHTML = `
+        <div class="edit-name-content windows-box-shadow">
+            <div class="edit-name-header">
+                <span>✏️ Edit Display Name</span>
+                <button class="close-btn" onclick="this.closest('.edit-name-dialog').remove()">×</button>
+            </div>
+            <div class="edit-name-body">
+                <label for="new-username">Display Name:</label>
+                <input type="text" id="new-username" class="win-input inverse-windows-box-shadow" value="${escapeHtml(currentName)}" maxlength="50">
+                <div class="edit-name-buttons">
+                    <button class="win-button windows-box-shadow" onclick="this.closest('.edit-name-dialog').remove()">Cancel</button>
+                    <button class="win-button windows-box-shadow primary" onclick="saveNewUsername()">Save</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(dialog);
+    
+    const input = dialog.querySelector('#new-username');
+    input.focus();
+    input.select();
+    
+    // Handle Enter key
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') saveNewUsername();
+        if (e.key === 'Escape') dialog.remove();
+    });
+}
+
+async function saveNewUsername() {
+    const input = document.querySelector('#new-username');
+    if (!input) return;
+    
+    const newName = input.value;
+    const success = await updateUsername(newName);
+    
+    if (success) {
+        // Update all displayed user names
+        document.querySelectorAll('.user-name').forEach(el => {
+            el.textContent = newName;
+        });
+        document.querySelector('.edit-name-dialog')?.remove();
+    }
+}
+
+async function fetchUserProfile(userId) {
+    if (!supabaseConfigured) return null;
+    
+    try {
+        const { data, error } = await supabaseClient
+            .from('users')
+            .select('username, avatar_url')
+            .eq('id', userId)
+            .single();
+        
+        if (error) return null;
+        return data;
+    } catch (e) {
+        return null;
+    }
+}
+
 async function updateAuthUI() {
     const user = await getCurrentUser();
     const authButtons = document.querySelectorAll('.auth-buttons');
@@ -157,12 +262,16 @@ async function updateAuthUI() {
     const hideWhenAuth = document.querySelectorAll('.hide-when-auth');
     
     if (user) {
+        // Fetch custom username from database
+        const profile = await fetchUserProfile(user.id);
+        const displayName = profile?.username || user.user_metadata?.full_name || user.email;
+        
         authButtons.forEach(el => el.classList.add('hidden'));
         userInfos.forEach(el => {
             el.classList.remove('hidden');
             const nameEl = el.querySelector('.user-name');
             const avatarEl = el.querySelector('.user-avatar');
-            if (nameEl) nameEl.textContent = user.user_metadata?.full_name || user.email;
+            if (nameEl) nameEl.textContent = displayName;
             if (avatarEl && user.user_metadata?.avatar_url) {
                 avatarEl.src = user.user_metadata.avatar_url;
             }
@@ -665,8 +774,6 @@ async function loadLeaderboard() {
             return;
         }
         
-        const defaultAvatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23808080'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E";
-        
         let html = `
             <table class="win-table leaderboard-table">
                 <thead>
@@ -689,15 +796,10 @@ async function loadLeaderboard() {
             else if (rank === 2) { rankClass = 'rank-silver'; rankIcon = '🥈'; }
             else if (rank === 3) { rankClass = 'rank-bronze'; rankIcon = '🥉'; }
             
-            const avatarUrl = entry.avatar_url || defaultAvatar;
-            
             html += `
                 <tr class="${rankClass}">
                     <td class="rank-cell">${rankIcon}</td>
-                    <td class="player-cell">
-                        <img class="leaderboard-avatar" src="${escapeHtml(avatarUrl)}" alt="" onerror="this.src='${defaultAvatar}'">
-                        <span>${escapeHtml(entry.username || 'Anonymous')}</span>
-                    </td>
+                    <td>${escapeHtml(entry.username || 'Anonymous')}</td>
                     <td class="points-cell"><strong>${entry.total_points.toLocaleString()}</strong></td>
                     <td class="solved-cell">${entry.puzzles_solved}</td>
                 </tr>
