@@ -289,7 +289,7 @@ a.desktop-item {
 
 
 .window {
-    background: #b9b9b9;
+    background: #c0c0c0;
     margin: 0.5rem;
     margin-top: -5rem;
     z-index: 10;
@@ -298,6 +298,7 @@ a.desktop-item {
     position: relative;
     width: 20rem;
     height: 21rem;
+    border: 1px solid #0a0a0a;
 }
 
 .window.ie {
@@ -358,11 +359,18 @@ a.desktop-item {
 }
 
 .window .header {
-    background: linear-gradient(90deg, #000b7c, #377cc6);
+    background: linear-gradient(90deg, #000b7c, #1084d0);
     color: white;
-    padding: 0.25rem;
+    padding: 0.25rem 0.5rem;
     cursor: move;
     user-select: none;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    height: 1.5rem;
+    box-sizing: border-box;
 }
 
 .window-content {
@@ -448,8 +456,10 @@ iframe {
 
 .options {
     display: flex;
-    padding: 0.5rem 0.5rem 0.5rem 1.25rem;
+    padding: 0.35rem 0.5rem 0.35rem 1.25rem;
     position: relative;
+    background: #c0c0c0;
+    font-size: 11px;
 }
 
 .options:before,
@@ -547,8 +557,13 @@ iframe {
     height: 3px;
 }
 
+.header-buttons>label:hover {
+    background: #d4d4d4;
+}
+
 .header-buttons>label:active {
     box-shadow: -2px -2px #818181, -2px 0 #818181, 0 -2px #818181, -4px -4px black, -4px 0 black, 0 -4px black, 2px 2px #e0dede, 0 2px #e0dede, 2px 0 #e0dede, 2px -2px #818181, -2px 2px #e0dede, -4px 2px black, -4px 4px white, 4px 4px white, 4px 0 white, 0 4px white, 2px -4px black, 4px -4px white;
+    background: #a0a0a0;
 }
 
 #start-button-items {
@@ -655,10 +670,49 @@ textarea:focus {
 
 .content.white-scroll {
     background: white;
-    padding: 1rem;
+    padding: 1.25rem;
     box-sizing: border-box;
     margin-top: 2px;
-    overflow: scroll;
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #c0c0c0 #ffffff;
+}
+
+.content.white-scroll::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+}
+
+.content.white-scroll::-webkit-scrollbar-track {
+    background: #dfdfdf;
+    border-left: 1px solid #808080;
+    border-top: 1px solid #808080;
+}
+
+.content.white-scroll::-webkit-scrollbar-thumb {
+    background: #c0c0c0;
+    box-shadow: inset -1px -1px 0 rgba(0,0,0,.05), inset 1px 1px 0 rgba(255,255,255,.8);
+    border: 1px solid #808080;
+}
+
+.content.white-scroll::-webkit-scrollbar-thumb:hover {
+    background: #d4d4d4;
+}
+
+.content.white-scroll::-webkit-scrollbar-button {
+    display: block;
+    background: #c0c0c0;
+    box-shadow: inset -1px -1px 0 rgba(0,0,0,.05), inset 1px 1px 0 rgba(255,255,255,.8);
+    width: 16px;
+    height: 16px;
+}
+
+.content.white-scroll::-webkit-scrollbar-button:vertical:decrement {
+    background: #c0c0c0 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 8 8"><path fill="%23000" d="M4 2L1 5h6z"/></svg>') no-repeat center;
+}
+
+.content.white-scroll::-webkit-scrollbar-button:vertical:increment {
+    background: #c0c0c0 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 8 8"><path fill="%23000" d="M1 3l3 3 3-3z"/></svg>') no-repeat center;
 }
 
 
@@ -807,11 +861,17 @@ textarea:focus {
 }
 
 .tab-box .box label {
-    padding: 0.25rem;
+    padding: 0.5rem 0.75rem;
     box-sizing: border-box;
     cursor: pointer;
     width: 100%;
     float: left;
+    font-size: 11px;
+    transition: background 0.1s ease;
+}
+
+.tab-box .box label:hover {
+    background: #e8e8e8;
 }
 
 .help .content {
@@ -858,15 +918,40 @@ textarea:focus {
 }
 
 .about-me {
-    font-family: "Open Sans", "Source Sans Pro";
+    font-family: "Open Sans", "Source Sans Pro", "MS Sans Serif", Arial, sans-serif;
+    line-height: 1.6;
 }
 
-.about-me strong {
-    font-weight: 500;
+.about-me h2 {
+    color: #000080;
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    font-size: 1.35rem;
 }
 
 .about-me h3 {
-    margin-bottom: -1rem;
+    margin-bottom: 0.5rem;
+    margin-top: 1.5rem;
+    color: #000080;
+    font-size: 1.1rem;
+}
+
+.about-me p {
+    margin-bottom: 0.85rem;
+}
+
+.about-me strong {
+    font-weight: 600;
+    color: #000;
+}
+
+.about-me a {
+    color: #0000ff;
+    text-decoration: underline;
+}
+
+.about-me a:hover {
+    color: #0000cc;
 }
 
 .stars {

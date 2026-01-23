@@ -663,35 +663,52 @@ async function loadHints(puzzleId) {
     const scoreEl = document.getElementById('current-multiplier');
     if (scoreEl && window.currentPuzzle) {
         const currentPoints = Math.floor(window.currentPuzzle.base_points * scoreMultiplier);
-        scoreEl.textContent = `Current points available: ${currentPoints} (${hints.length} hints released)`;
+        scoreEl.textContent = `${currentPoints} pts (${hints.length} hint${hints.length !== 1 ? 's' : ''} used)`;
     }
     
     if (hints.length === 0 && !upcomingHint) {
-        container.innerHTML = '<p class="hint-locked">No hints available for this puzzle.</p>';
+        container.innerHTML = '<p style="color: #666; font-style: italic;">No hints available for this puzzle yet.</p>';
         return;
     }
     
-    let html = '<div class="hints-container">';
-    html += `<h3>🔍 Hints (${hints.length}/${totalHints} released)</h3>`;
+    let html = '';
     
-    hints.forEach((hint, index) => {
-        html += `
-            <div class="hint-item">
-                <strong>Hint ${index + 1}:</strong> ${escapeHtml(hint.hint_text)}
-                <br><small>Released: ${formatDate(hint.release_time)}</small>
-            </div>
-        `;
-    });
+    if (hints.length === 0) {
+        html += '<p style="color: #666; font-style: italic;">No hints released yet. Check back later!</p>';
+    } else {
+        hints.forEach((hint, index) => {
+            html += `
+                <div class="hint-card">
+                    <div class="hint-header" onclick="toggleHint(${index})">
+                        <button class="hint-toggle" id="hint-toggle-${index}">▶</button>
+                        <strong>Hint ${index + 1}</strong>
+                        <span class="hint-time">Released: ${formatDate(hint.release_time)}</span>
+                    </div>
+                    <div class="hint-content hidden" id="hint-content-${index}">
+                        ${escapeHtml(hint.hint_text)}
+                    </div>
+                </div>
+            `;
+        });
+    }
     
     if (upcomingHint) {
         html += `
-            <div class="hint-item hint-locked">
-                <strong>Next hint:</strong> Available at ${formatDate(upcomingHint.release_time)}
+            <div class="hint-card hint-locked">
+                <div class="hint-header">
+                    <button class="hint-toggle">🔒</button>
+                    <strong>Next hint</strong>
+                    <span class="hint-time">Available: ${formatDate(upcomingHint.release_time)}</span>
+                </div>
             </div>
         `;
     }
     
-    html += '</div>';
+    if (totalHints > hints.length + (upcomingHint ? 1 : 0)) {
+        const remaining = totalHints - hints.length - (upcomingHint ? 1 : 0);
+        html += `<p style="color: #666; font-size: 11px; margin-top: 8px;">+ ${remaining} more hint${remaining !== 1 ? 's' : ''} scheduled</p>`;
+    }
+    
     container.innerHTML = html;
 }
 
