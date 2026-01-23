@@ -60,7 +60,7 @@ function createResearchElement(research) {
     }
 
     const researchElementText = document.createElement('div');
-    researchElement.classList.add('research-text');
+    researchElementText.classList.add('research-text');
     researchElement.appendChild(researchElementText);
 
     const titleElement = document.createElement('h2');

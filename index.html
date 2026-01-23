@@ -365,3 +365,19 @@
 <script src="./scripts/maximize.js"></script>
 <!-- Read projects -->
 <script src="./scripts/read_projects.js"></script>
+<script>
+(function () {
+    var timeDisplay = document.getElementById('time-options');
+    if (!timeDisplay) {
+        return;
+    }
+    function updateClock() {
+        var now = new Date();
+        var hours = String(now.getHours()).padStart(2, '0');
+        var minutes = String(now.getMinutes()).padStart(2, '0');
+        timeDisplay.setAttribute('data-time', hours + ':' + minutes);
+    }
+    updateClock();
+    setInterval(updateClock, 30000);
+})();
+</script>

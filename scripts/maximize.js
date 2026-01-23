@@ -1,56 +1,59 @@
-//Make the DIV element draggagle:
-var Windows = document.getElementsByClassName("window");
-for (var i = 0; i < Windows.length; i++) {
-    Windows[i].setAttribute('maximized', false)
+const Windows = document.getElementsByClassName("window");
+for (let i = 0; i < Windows.length; i++) {
+    Windows[i].setAttribute("maximized", "false");
     maximizeWindow(Windows[i]);
 }
 
 function maximizeWindow(elmnt) {
-    var defaultAttributes = getWindowAttributes();
-    elmnt.querySelector(".maximize").onmousedown = maximize_restore;
+    let defaultAttributes = null;
+    const toggleButton = elmnt.querySelector(".maximize");
+    if (!toggleButton) {
+        return;
+    }
+    toggleButton.onmousedown = maximizeRestore;
 
-    function maximize_restore(e) {
-        console.log("maximized", elmnt.getAttribute("maximized"))
-        if (elmnt.getAttribute("maximized") == "true") {
-            console.log("restoring")
-            restore(defaultAttributes);
+    function maximizeRestore(e) {
+        e.preventDefault();
+        if (elmnt.getAttribute("maximized") === "true") {
+            restore();
         } else {
-            console.log("maximizing")
+            defaultAttributes = getWindowAttributes();
             maximize();
         }
     }
 
     function maximize() {
-        // Adjust css of the window to fill the screen
-        elmnt.style.left = "-0.5rem";
-        elmnt.style.top = "0.1%";
+        const startBar = document.getElementById("start-bar");
+        const barHeight = startBar ? startBar.offsetHeight : 0;
+        elmnt.style.left = "0";
+        elmnt.style.top = "0";
         elmnt.style.width = "100%";
-        elmnt.style.height = "calc(100% - 3.75rem)";
+        elmnt.style.height = `calc(100% - ${barHeight}px)`;
         elmnt.style.position = "absolute";
         elmnt.style.zIndex = "100";
-        elmnt.setAttribute('maximized', true);
+        elmnt.setAttribute("maximized", "true");
     }
 
-    function restore(defaultAttributes) {
-        console.log("defaultAttributes", defaultAttributes)
-        // Restore css attributes
-        elmnt.style.left = defaultAttributes.left;
-        elmnt.style.top = defaultAttributes.top;
-        elmnt.style.width = defaultAttributes.width;
-        elmnt.style.height = defaultAttributes.height;
-        elmnt.style.position = defaultAttributes.position;
-        elmnt.style.zIndex = defaultAttributes.zIndex;
-        elmnt.setAttribute('maximized', false);
+    function restore() {
+        const currentDefaults = defaultAttributes || getWindowAttributes();
+        elmnt.style.left = currentDefaults.left;
+        elmnt.style.top = currentDefaults.top;
+        elmnt.style.width = currentDefaults.width;
+        elmnt.style.height = currentDefaults.height;
+        elmnt.style.position = currentDefaults.position;
+        elmnt.style.zIndex = currentDefaults.zIndex;
+        elmnt.setAttribute("maximized", "false");
     }
 
     function getWindowAttributes() {
+        const styles = window.getComputedStyle(elmnt);
         return {
-            left: window.getComputedStyle(elmnt).getPropertyValue("left"),
-            top: window.getComputedStyle(elmnt).getPropertyValue("top"),
-            width: window.getComputedStyle(elmnt).getPropertyValue("width"),
-            height: window.getComputedStyle(elmnt).getPropertyValue("height"),
-            position: window.getComputedStyle(elmnt).getPropertyValue("position"),
-            zIndex: window.getComputedStyle(elmnt).getPropertyValue("z-index"),
+            left: styles.getPropertyValue("left"),
+            top: styles.getPropertyValue("top"),
+            width: styles.getPropertyValue("width"),
+            height: styles.getPropertyValue("height"),
+            position: styles.getPropertyValue("position"),
+            zIndex: styles.getPropertyValue("z-index"),
         };
     }
 }

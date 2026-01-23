@@ -1,31 +1,49 @@
-//Make the DIV element draggagle:
-var draggableWindows = document.getElementsByClassName("window");
-for (var i = 0; i < draggableWindows.length; i++) {
+const draggableWindows = document.getElementsByClassName("window");
+for (let i = 0; i < draggableWindows.length; i++) {
     dragElement(draggableWindows[i]);
 }
 
+function attachOrderFocus(elmnt, handle) {
+    const known = ["ie", "documents", "help", "notepad", "trash"];
+    const matched = known.find(cls => elmnt.classList.contains(cls));
+    if (!matched) {
+        return;
+    }
+    const orderInput = document.getElementById(`windows-${matched}-input-on-top`);
+    const visibilityInput = document.getElementById(`windows-${matched}-input`);
+    [elmnt, handle].forEach(node => {
+        if (!node) {
+            return;
+        }
+        node.addEventListener("mousedown", () => {
+            if (orderInput) {
+                orderInput.checked = true;
+            }
+            if (visibilityInput) {
+                visibilityInput.checked = true;
+            }
+        });
+    });
+}
+
 function dragElement(elmnt) {
-    var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-    if (elmnt.querySelector(".header")) {
-        /* if present, the header is where you move the DIV from:*/
-        elmnt.querySelector(".header").onmousedown = dragMouseDown;
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    const header = elmnt.querySelector(".header");
+    if (header) {
+        header.onmousedown = dragMouseDown;
+        header.style.cursor = "move";
         elmnt.style.left = window.getComputedStyle(elmnt).getPropertyValue("left");
         elmnt.style.top = window.getComputedStyle(elmnt).getPropertyValue("top");
-    } else {
-        /* otherwise, move the DIV from anywhere inside the DIV:*/
-        // elmnt.onmousedown = dragMouseDown;
-        console.log("No header found for " + elmnt.id);
+        attachOrderFocus(elmnt, header);
     }
 
     function dragMouseDown(e) {
-        if (elmnt.getAttribute("maximized") == "false") {
+        if (elmnt.getAttribute("maximized") === "false") {
             e = e || window.event;
             e.preventDefault();
-            // get the mouse cursor position at startup:
             pos3 = e.clientX;
             pos4 = e.clientY;
             document.onmouseup = closeDragElement;
-            // call a function whenever the cursor moves:
             document.onmousemove = elementDrag;
         }
     }
@@ -33,23 +51,22 @@ function dragElement(elmnt) {
     function elementDrag(e) {
         e = e || window.event;
         e.preventDefault();
-        // calculate the new cursor position:
         pos1 = pos3 - e.clientX;
         pos2 = pos4 - e.clientY;
         pos3 = e.clientX;
         pos4 = e.clientY;
-        // calculate the minimum and maximum positions for the element:
-        var screenW = window.innerWidth;
-        var screenH = window.innerHeight;
-        var elemW = elmnt.offsetWidth;
-        var elemH = elmnt.offsetHeight;
-        var maxLeft = 0.99 * screenW - elemW;
-        var maxTop = 0.95 * screenH - elemH;
-        var minLeft = 0;
-        var minTop = 0;
-        // restrict the element to the bounds of the screen:
-        var newLeft = parseFloat(elmnt.style.left) - pos1;
-        var newTop = parseFloat(elmnt.style.top) - pos2;
+        const screenW = window.innerWidth;
+        const screenH = window.innerHeight;
+        const elemW = elmnt.offsetWidth;
+        const elemH = elmnt.offsetHeight;
+        const startBar = document.getElementById("start-bar");
+        const barHeight = startBar ? startBar.offsetHeight : 0;
+        const maxLeft = screenW - elemW - 4;
+        const maxTop = screenH - elemH - barHeight - 4;
+        const minLeft = 0;
+        const minTop = 0;
+        let newLeft = parseFloat(elmnt.style.left) - pos1;
+        let newTop = parseFloat(elmnt.style.top) - pos2;
         if (newLeft < minLeft) {
             newLeft = minLeft;
         } else if (newLeft > maxLeft) {
@@ -60,12 +77,11 @@ function dragElement(elmnt) {
         } else if (newTop > maxTop) {
             newTop = maxTop;
         }
-        elmnt.style.top = newTop + "px";
-        elmnt.style.left = newLeft + "px";
+        elmnt.style.top = `${newTop}px`;
+        elmnt.style.left = `${newLeft}px`;
     }
 
     function closeDragElement() {
-        /* stop moving when mouse button is released:*/
         document.onmouseup = null;
         document.onmousemove = null;
     }
