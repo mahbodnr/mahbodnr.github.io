@@ -7,7 +7,8 @@ body {
     font-weight: 300;
     -webkit-font-smoothing: none;
     -moz-osx-font-smoothing: grayscale;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* Selection behavior: only window content is selectable */
@@ -40,6 +41,7 @@ h2 {
     z-index: 999999999;
     justify-content: space-between;
     box-shadow: 0 -2px #fffdfc, 0 -4px #cce9eb;
+    overflow: visible;
 }
 
 #all-windows {
@@ -586,17 +588,16 @@ iframe {
     margin: 0 0 0 1rem;
     padding: 0 0 0 2rem;
     display: flex;
-    overflow: hidden;
+    overflow: visible;
     padding: 4px 0 0 2rem;
     position: relative;
-    position: relative;
     top: -3px;
-    height: calc(100% + -1px);
+    height: calc(100% + 6px);
 }
 
 
 #items>label {
-    height: calc(100% - 4px);
+    height: 100%;
     display: flex;
     width: 10.5rem;
     align-items: center;
@@ -607,7 +608,7 @@ iframe {
     font-weight: 600;
     padding: 0 0.5rem;
     white-space: nowrap;
-    overflow: hidden;
+    overflow: visible;
     text-overflow: ellipsis;
 }
 
