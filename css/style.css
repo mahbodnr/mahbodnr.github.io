@@ -237,7 +237,7 @@ label {
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    overflow: hidden;
 }
 
 .desktop-item {
@@ -1066,5 +1066,15 @@ hr {
         width: 100%;
         max-width: 420px;
         margin-right: 0;
+    }
+}
+
+@media (max-height: 520px) {
+    #desktop {
+        overflow: hidden;
+    }
+
+    #desktop .desktop-item {
+        display: none;
     }
 }
