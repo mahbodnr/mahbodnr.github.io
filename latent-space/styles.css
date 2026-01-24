@@ -51,8 +51,11 @@ body {
     background: #c0c0c0;
     margin: 20px auto;
     max-width: 900px;
-    min-height: 80vh;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 5.75rem); /* stay above the taskbar height */
+    overflow: hidden;  /* prevent outer window from scrolling */
 }
 
 .window-header {
@@ -121,15 +124,22 @@ body {
 .window-content {
     background: #c0c0c0;
     padding: 16px;
-    min-height: 60vh;
+    /* let content section flex to available space */
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0; /* allow flex child to shrink */
+    overflow: hidden; /* scrolling handled inside content-inner */
 }
 
 .content-inner {
     background: white;
     border: 2px inset;
     padding: 16px;
-    min-height: 50vh;
-    overflow: auto;
+    /* inner white panel fills remaining space and scrolls when needed */
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 /* Info Bar */
@@ -602,7 +612,7 @@ a:hover {
 @media (max-width: 768px) {
     .main-window {
         margin: 10px;
-        min-height: auto;
+        /* keep flex sizing; margin reduced for small screens */
     }
     
     .nav-bar {

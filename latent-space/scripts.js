@@ -29,7 +29,12 @@ try {
                 }
             },
             global: {
-                headers: { 'x-my-custom-header': 'latent-space' }
+                // Ensure all REST requests include authentication headers
+                headers: {
+                    apikey: SUPABASE_ANON_KEY,
+                    Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+                    'x-my-custom-header': 'latent-space'
+                }
             }
         });
         supabaseConfigured = true;
