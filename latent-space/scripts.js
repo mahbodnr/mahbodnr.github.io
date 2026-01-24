@@ -410,10 +410,10 @@ async function checkAnswer(puzzleId, answer) {
         hashPreview: answerHash.substring(0, 16) + '...'
     });
     
-    // Call the check_answer function with explicit schema and both the answer text and hash (new signature)
+    // Call the check_answer function with both the answer text and hash (new signature)
     let rpc;
     try {
-        rpc = await supabaseClient.rpc('public.check_answer', {
+        rpc = await supabaseClient.rpc('check_answer', {
             p_puzzle_id: puzzleId,
             p_user_id: user.id,
             p_answer_text: normalizedAnswer,
@@ -428,7 +428,7 @@ async function checkAnswer(puzzleId, answer) {
     // If the function signature is not found, try the older 3-argument signature
     if (rpc.error && (rpc.error.code === 'PGRST202' || String(rpc.error.message || '').includes('Could not find the function') || rpc.error.message?.includes('404'))) {
         console.log('[checkAnswer] Falling back to 3-arg signature...');
-        const fallback = await supabaseClient.rpc('public.check_answer', {
+        const fallback = await supabaseClient.rpc('check_answer', {
             p_answer_hash: answerHash,
             p_puzzle_id: puzzleId,
             p_user_id: user.id
