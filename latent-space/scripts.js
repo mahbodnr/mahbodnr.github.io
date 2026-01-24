@@ -546,6 +546,143 @@ async function fetchUpcomingHint(puzzleId) {
     return data?.[0] || null;
 }
 
+// ============== Rate Limiting & Anti-Bot (Google reCAPTCHA v3) ==============
+
+// reCAPTCHA v3 site key - runs invisibly in the background
+const RECAPTCHA_SITE_KEY = '6LdNOVUsAAAAAH_dUEx28ECJ1soJYvo8rI9BRJJD';
+
+const rateLimitState = {
+    attempts: [],           // Array of timestamps
+    captchaRequired: false,
+    maxAttemptsBeforeCaptcha: 3,
+    timeWindowMs: 60000     // 1 minute window
+};
+
+function recordAttempt() {
+    const now = Date.now();
+    rateLimitState.attempts.push(now);
+    
+    // Clean up old attempts outside the time window
+    rateLimitState.attempts = rateLimitState.attempts.filter(
+        timestamp => now - timestamp < rateLimitState.timeWindowMs
+    );
+    
+    // Check if captcha is needed
+    if (rateLimitState.attempts.length >= rateLimitState.maxAttemptsBeforeCaptcha) {
+        rateLimitState.captchaRequired = true;
+    }
+}
+
+function isCaptchaRequired() {
+    const now = Date.now();
+    // Clean up old attempts
+    rateLimitState.attempts = rateLimitState.attempts.filter(
+        timestamp => now - timestamp < rateLimitState.timeWindowMs
+    );
+    return rateLimitState.captchaRequired && rateLimitState.attempts.length >= rateLimitState.maxAttemptsBeforeCaptcha;
+}
+
+async function executeRecaptchaV3() {
+    // reCAPTCHA v3 runs invisibly - show a brief loading dialog
+    const dialog = document.createElement('div');
+    dialog.className = 'captcha-dialog';
+    dialog.innerHTML = `
+        <div class="captcha-content windows-box-shadow">
+            <div class="captcha-header">
+                <span>🤖 Verification Required</span>
+            </div>
+            <div class="captcha-body">
+                <p style="margin-bottom: 12px;">Too many attempts! Verifying you're human...</p>
+                <div id="recaptcha-status" style="text-align: center; padding: 20px;">
+                    <span style="font-size: 24px;">⏳</span>
+                    <p style="margin-top: 8px;">Please wait...</p>
+                </div>
+                <div id="captcha-error" style="color: red; font-size: 11px; margin-top: 8px; display: none;"></div>
+                <div class="captcha-buttons" id="captcha-buttons-container" style="display: none;">
+                    <button class="win-button windows-box-shadow" id="captcha-cancel-btn">Cancel</button>
+                    <button class="win-button windows-box-shadow primary" id="captcha-retry-btn">Retry</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(dialog);
+    
+    const errorEl = dialog.querySelector('#captcha-error');
+    const statusEl = dialog.querySelector('#recaptcha-status');
+    const buttonsContainer = dialog.querySelector('#captcha-buttons-container');
+    
+    function showError(message) {
+        statusEl.innerHTML = '<span style="font-size: 24px;">❌</span>';
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+        buttonsContainer.style.display = 'flex';
+    }
+    
+    return new Promise((resolve) => {
+        async function attemptVerification() {
+            statusEl.innerHTML = '<span style="font-size: 24px;">⏳</span><p style="margin-top: 8px;">Please wait...</p>';
+            errorEl.style.display = 'none';
+            buttonsContainer.style.display = 'none';
+            
+            if (!window.grecaptcha || !window.grecaptcha.execute) {
+                showError('Verification system not loaded. Please refresh the page.');
+                return;
+            }
+            
+            try {
+                const token = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: 'submit_answer' });
+                
+                if (token) {
+                    // Success - v3 returns a token which ideally should be verified server-side
+                    // For client-side only, getting a token indicates the check passed
+                    statusEl.innerHTML = '<span style="font-size: 24px;">✅</span><p style="margin-top: 8px;">Verified!</p>';
+                    
+                    // Clear the captcha requirement and reset attempts
+                    rateLimitState.captchaRequired = false;
+                    rateLimitState.attempts = [];
+                    
+                    setTimeout(() => {
+                        dialog.remove();
+                        resolve(true);
+                    }, 500);
+                } else {
+                    showError('Verification failed. Please try again.');
+                }
+            } catch (e) {
+                console.error('reCAPTCHA error:', e);
+                showError('Verification error. Please try again.');
+            }
+        }
+        
+        // Set up button handlers after dialog is in DOM
+        setTimeout(() => {
+            const cancelBtn = dialog.querySelector('#captcha-cancel-btn');
+            const retryBtn = dialog.querySelector('#captcha-retry-btn');
+            
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => {
+                    dialog.remove();
+                    resolve(false);
+                });
+            }
+            
+            if (retryBtn) {
+                retryBtn.addEventListener('click', attemptVerification);
+            }
+            
+            dialog.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    dialog.remove();
+                    resolve(false);
+                }
+            });
+        }, 0);
+        
+        // Start verification
+        attemptVerification();
+    });
+}
+
 // ============== Submissions ==============
 
 async function checkAnswer(puzzleId, answer) {
@@ -1039,6 +1176,15 @@ async function submitAnswer(event, puzzleId) {
         return;
     }
     
+    // Check if captcha is required due to rate limiting
+    if (isCaptchaRequired()) {
+        const passed = await executeRecaptchaV3();
+        if (!passed) {
+            showMessage('Verification cancelled. Please try again.', 'error');
+            return;
+        }
+    }
+    
     submitBtn.disabled = true;
     submitBtn.textContent = 'Checking...';
     
@@ -1050,9 +1196,14 @@ async function submitAnswer(event, puzzleId) {
     if (result === null) return;
     
     if (result.correct) {
+        // Reset rate limit on success
+        rateLimitState.attempts = [];
+        rateLimitState.captchaRequired = false;
         showMessage(`🎉 Correct! You earned ${result.score} points!`, 'success');
         await checkExistingSubmission(puzzleId);
     } else {
+        // Record failed attempt for rate limiting
+        recordAttempt();
         showMessage('❌ Incorrect answer. Try again!', 'error');
     }
     
