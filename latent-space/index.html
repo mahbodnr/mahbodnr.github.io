@@ -6,6 +6,7 @@
     <title>Latent Space | Mahbod Nouri</title>
     <meta name="description" content="Latent Space - A puzzle challenge by Mahbod Nouri">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/css/style.css">
     <link rel="icon" href="../img/favicon.ico">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
@@ -68,32 +69,12 @@
                 <div id="tab-howto" class="tab-content">
                     <h2>📖 How to Play</h2>
                     <ul class="how-to-list">
-                        <li><strong>Create an account</strong> - Log in with your Google account to track your progress and earn points.</li>
-                        <li><strong>Choose a puzzle</strong> - Select an active puzzle from the list to begin solving.</li>
-                        <li><strong>Read carefully</strong> - Each puzzle has a description and possibly artifacts (images, text, data) that contain clues.</li>
-                        <li><strong>Use hints wisely</strong> - Hints are released over time. Each hint halves your potential points!</li>
-                        <li><strong>Submit your answer</strong> - When you think you've found the solution, submit it. You can try as many times as you want.</li>
-                        <li><strong>Earn points</strong> - Correct answers earn you points. The earlier you solve (with fewer hints), the more points you get!</li>
-                        <li><strong>Climb the leaderboard</strong> - Compete with other solvers for the top spots.</li>
+                        <li><strong>Log in</strong> with Google so your points count.</li>
+                        <li><strong>Open a puzzle</strong> and read the short description.</li>
+                        <li><strong>Hints drip out</strong> over time; each one halves the points.</li>
+                        <li><strong>Submit answers</strong> as many times as you want.</li>
+                        <li><strong>Solve early</strong> to keep more points and climb the board.</li>
                     </ul>
-                    
-                    <h3>💯 Scoring System</h3>
-                    <p>
-                        Each puzzle has a base point value. Your score is calculated as:
-                    </p>
-                    <p style="text-align: center; font-family: 'Courier New', monospace; font-size: 14px; background: #FFFFCC; padding: 8px;">
-                        <strong>Score = Base Points ÷ 2<sup>(number of hints released)</sup></strong>
-                    </p>
-                    <p>
-                        For example, if a puzzle is worth 1000 points and 2 hints have been released when you solve it, 
-                        you earn 1000 ÷ 4 = 250 points.
-                    </p>
-                    
-                    <h3>⏰ Hint Schedule</h3>
-                    <p>
-                        Hints are released at scheduled times. Check the puzzle page to see when the next hint will be available. 
-                        The page updates automatically when new hints are released.
-                    </p>
                 </div>
             </div>
         </div>
@@ -103,7 +84,42 @@
             <span class="footer-section">© Mahbod Nouri</span>
         </div>
     </div>
-    
+
+    <!-- Start button toggle for taskbar -->
+    <input id="start-button-input" name="start-button-input" type="checkbox" />
+    <!-- Windows 98 style taskbar -->
+    <div id="start-bar">
+        <div id="start-button-items">
+            <label class="windows-box-shadow" for="start-button-input" id="start-button"></label>
+            <div id="items"></div>
+        </div>
+        <div class="windows-box-shadow" id="start-menu">
+            <div id="windows-start-menu-blue">Windows<span>98</span></div>
+            <ul>
+                <li><a href="https://www.linkedin.com/in/mahbodnr/" target="_blank"><label>
+                            <img alt="" src="/img/linkedin.png" style="width: 1.5rem;" />Linkedin
+                        </label></a></li>
+                <li><a href="https://github.com/mahbodnr" target="_blank"><label>
+                            <img alt="" src="/img/github.png" style="width: 1.5rem;" />GitHub
+                        </label></a></li>
+                <li class="line"><a href="https://scholar.google.com/citations?user=p7kqlIMAAAAJ&hl=en"
+                        target="_blank"><label>
+                            <img alt="" src="/img/scholar.png" style="width: 1.5rem;" />Google Scholar
+                        </label></a></li>
+                <li class="programs"><label><img alt="" src="/img/programs.png" style="width: 1.5rem;" />
+                        Progams</label>
+                    <ul class="windows-box-shadow">
+                        <li><a href="/latent-space/index.html"><label><img src="/img/help_book_computer-4.png" /> Latent Space</label></a>
+                        </li>
+                    </ul>
+                </li>
+                <li class="line"><a href="/index.html"><label><img alt="" src="/img/text_editor.png"
+                            style="width: 1.5rem;" /> Home</label></a></li>
+            </ul>
+        </div>
+        <div id="time-options"></div>
+    </div>
+
     <script src="scripts.js"></script>
     <script>
         function showTab(tabName) {

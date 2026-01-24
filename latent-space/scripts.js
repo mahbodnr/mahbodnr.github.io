@@ -309,13 +309,9 @@ async function fetchPuzzles() {
         const timeoutPromise = new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Query timeout')), 10000)
         );
-        
-        const queryPromise = supabaseClient
-            .from('puzzles')
-            .select('*')
-            .order('release_time', { ascending: true });
-        
-        const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+
+        const rpcPromise = supabaseClient.rpc('get_puzzles_list');
+        const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
         
         if (error) {
             console.error('Error fetching puzzles:', error);
@@ -640,6 +636,7 @@ async function initPuzzlePage(puzzleId) {
     await updateAuthUI();
     await loadPuzzle(puzzleId);
     await loadHints(puzzleId);
+    await loadPuzzleLeaderboard(puzzleId);
     await checkExistingSubmission(puzzleId);
     
     // Set up hint refresh
@@ -654,12 +651,21 @@ async function loadPuzzle(puzzleId) {
     }
     
     const titleEl = document.getElementById('puzzle-title');
+    const titleDisplayEl = document.getElementById('puzzle-title-display');
     const descEl = document.getElementById('puzzle-description');
     const pointsEl = document.getElementById('puzzle-points');
+    const releaseEl = document.getElementById('puzzle-release');
+    const footerEl = document.querySelector('.window-footer .footer-section');
     
     if (titleEl) titleEl.textContent = puzzle.title;
+    if (titleDisplayEl) titleDisplayEl.textContent = puzzle.title;
     if (descEl) descEl.innerHTML = puzzle.description;
     if (pointsEl) pointsEl.textContent = puzzle.base_points;
+    if (releaseEl) releaseEl.textContent = formatDate(puzzle.release_time);
+    if (footerEl) footerEl.textContent = puzzle.title;
+    
+    // Update page title
+    document.title = `${puzzle.title} | Latent Space`;
     
     // Store puzzle data for scoring
     window.currentPuzzle = puzzle;
@@ -725,6 +731,111 @@ async function loadHints(puzzleId) {
     }
     
     container.innerHTML = html;
+}
+
+// Per-puzzle leaderboard (fastest correct submissions)
+async function fetchPuzzleLeaderboard(puzzleId) {
+    if (!supabaseConfigured) return [];
+
+    try {
+        // Query without explicit join—fetch submissions first, then user data separately
+        const { data: submissions, error: subError } = await supabaseClient
+            .from('submissions')
+            .select('user_id, submitted_at')
+            .eq('puzzle_id', puzzleId)
+            .eq('is_correct', true)
+            .order('submitted_at', { ascending: true })
+            .limit(10);
+        
+        if (subError) throw subError;
+        
+        // Fetch user data for each submission
+        const data = await Promise.all((submissions || []).map(async (sub) => {
+            const { data: user, error: userError } = await supabaseClient
+                .from('users')
+                .select('username, avatar_url')
+                .eq('id', sub.user_id)
+                .single();
+            
+            if (userError) {
+                console.warn(`Could not fetch user ${sub.user_id}:`, userError);
+                return { ...sub, users: { username: 'Anonymous', avatar_url: null } };
+            }
+            return { ...sub, users: user };
+        }));
+        
+        const error = null;
+
+        if (error) {
+            console.error('Error fetching puzzle leaderboard:', error);
+            return [];
+        }
+        return data || [];
+    } catch (e) {
+        console.error('Error in fetchPuzzleLeaderboard:', e);
+        return [];
+    }
+}
+
+async function loadPuzzleLeaderboard(puzzleId) {
+    const container = document.getElementById('puzzle-leaderboard');
+    if (!container) return;
+
+    container.innerHTML = '<div class="loading">Loading leaderboard...</div>';
+
+    if (!supabaseConfigured) {
+        container.innerHTML = `
+            <div class="message-box message-error">
+                <strong>⚠️ Configuration Required</strong><br>
+                Leaderboard data is unavailable.
+            </div>
+        `;
+        return;
+    }
+
+    try {
+        const entries = await fetchPuzzleLeaderboard(puzzleId);
+        if (!entries.length) {
+            container.innerHTML = '<p style="color: #666; font-style: italic;">No correct submissions yet.</p>';
+            return;
+        }
+
+        let html = `
+            <table class="win-table leaderboard-table">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">Rank</th>
+                        <th>Player</th>
+                        <th style="width: 160px;">Solved On</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        entries.forEach((entry, index) => {
+            const rank = index + 1;
+            const username = entry?.users?.username || 'Anonymous';
+            const solvedDate = entry.submitted_at ? formatDate(entry.submitted_at) : '—';
+            html += `
+                <tr>
+                    <td class="rank-cell">${rank}</td>
+                    <td>${escapeHtml(username)}</td>
+                    <td>${escapeHtml(solvedDate)}</td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    } catch (e) {
+        console.error('Error loading puzzle leaderboard:', e);
+        container.innerHTML = `
+            <div class="message-box message-error">
+                <strong>Error loading leaderboard</strong><br>
+                ${escapeHtml(e.message || 'Unknown error')}
+            </div>
+        `;
+    }
 }
 
 async function checkExistingSubmission(puzzleId) {
@@ -866,3 +977,17 @@ async function initLoginPage() {
 document.addEventListener('DOMContentLoaded', () => {
     updateAuthUI();
 });
+
+// Taskbar clock updater for Latent Space pages
+(function () {
+    const timeDisplay = document.getElementById('time-options');
+    if (!timeDisplay) return;
+    function updateClock() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        timeDisplay.setAttribute('data-time', hours + ':' + minutes);
+    }
+    updateClock();
+    setInterval(updateClock, 30000);
+})();

@@ -29,6 +29,7 @@ function maximizeWindow(elmnt) {
         elmnt.style.top = "0";
         elmnt.style.width = "100%";
         elmnt.style.height = `calc(100% - ${barHeight}px)`;
+        elmnt.style.margin = "0";
         elmnt.style.position = "absolute";
         elmnt.style.zIndex = "100";
         elmnt.setAttribute("maximized", "true");
@@ -42,6 +43,7 @@ function maximizeWindow(elmnt) {
         elmnt.style.height = currentDefaults.height;
         elmnt.style.position = currentDefaults.position;
         elmnt.style.zIndex = currentDefaults.zIndex;
+        elmnt.style.margin = currentDefaults.margin;
         elmnt.setAttribute("maximized", "false");
     }
 
@@ -54,6 +56,7 @@ function maximizeWindow(elmnt) {
             height: styles.getPropertyValue("height"),
             position: styles.getPropertyValue("position"),
             zIndex: styles.getPropertyValue("z-index"),
+            margin: styles.getPropertyValue("margin"),
         };
     }
 }

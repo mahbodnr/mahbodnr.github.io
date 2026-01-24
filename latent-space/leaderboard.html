@@ -6,6 +6,7 @@
     <title>Leaderboard | Latent Space</title>
     <meta name="description" content="Latent Space puzzle challenge leaderboard">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/css/style.css">
     <link rel="icon" href="../img/favicon.ico">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
@@ -81,7 +82,42 @@
             <span class="footer-section">Updated in real-time</span>
         </div>
     </div>
-    
+
+    <!-- Start button toggle for taskbar -->
+    <input id="start-button-input" name="start-button-input" type="checkbox" />
+    <!-- Windows 98 style taskbar -->
+    <div id="start-bar">
+        <div id="start-button-items">
+            <label class="windows-box-shadow" for="start-button-input" id="start-button"></label>
+            <div id="items"></div>
+        </div>
+        <div class="windows-box-shadow" id="start-menu">
+            <div id="windows-start-menu-blue">Windows<span>98</span></div>
+            <ul>
+                <li><a href="https://www.linkedin.com/in/mahbodnr/" target="_blank"><label>
+                            <img alt="" src="/img/linkedin.png" style="width: 1.5rem;" />Linkedin
+                        </label></a></li>
+                <li><a href="https://github.com/mahbodnr" target="_blank"><label>
+                            <img alt="" src="/img/github.png" style="width: 1.5rem;" />GitHub
+                        </label></a></li>
+                <li class="line"><a href="https://scholar.google.com/citations?user=p7kqlIMAAAAJ&hl=en"
+                        target="_blank"><label>
+                            <img alt="" src="/img/scholar.png" style="width: 1.5rem;" />Google Scholar
+                        </label></a></li>
+                <li class="programs"><label><img alt="" src="/img/programs.png" style="width: 1.5rem;" />
+                        Progams</label>
+                    <ul class="windows-box-shadow">
+                        <li><a href="/latent-space/index.html"><label><img src="/img/help_book_computer-4.png" /> Latent Space</label></a>
+                        </li>
+                    </ul>
+                </li>
+                <li class="line"><a href="/index.html"><label><img alt="" src="/img/text_editor.png"
+                            style="width: 1.5rem;" /> Home</label></a></li>
+            </ul>
+        </div>
+        <div id="time-options"></div>
+    </div>
+
     <script src="scripts.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', initLeaderboardPage);

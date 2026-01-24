@@ -828,3 +828,11 @@ a:hover {
 .user-name-clickable:hover {
     color: #000080;
 }
+
+/* Release info spacing under puzzle title */
+.release-info {
+    margin-top: 4px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: #666;
+}

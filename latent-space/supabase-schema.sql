@@ -34,6 +34,9 @@ CREATE POLICY "Users can update own profile" ON users
 CREATE POLICY "Users can insert own profile" ON users
     FOR INSERT WITH CHECK (auth.uid() = id);
 
+-- Allow public read access (governed by RLS policies)
+GRANT SELECT ON users TO anon, authenticated;
+
 -- ============================================
 -- 2. PUZZLES TABLE
 -- ============================================
@@ -97,6 +100,10 @@ ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view own submissions" ON submissions
     FOR SELECT USING (auth.uid() = user_id);
 
+-- Anyone can view correct submissions (for per-puzzle leaderboards)
+CREATE POLICY "Anyone can view correct submissions" ON submissions
+    FOR SELECT USING (is_correct = true);
+
 -- Users can insert their own submissions
 CREATE POLICY "Users can insert own submissions" ON submissions
     FOR INSERT WITH CHECK (auth.uid() = user_id);
@@ -104,6 +111,9 @@ CREATE POLICY "Users can insert own submissions" ON submissions
 -- Create indexes
 CREATE INDEX IF NOT EXISTS submissions_user_id_idx ON submissions(user_id);
 CREATE INDEX IF NOT EXISTS submissions_puzzle_id_idx ON submissions(puzzle_id);
+
+-- Allow public read access to submissions (RLS restricts rows)
+GRANT SELECT ON submissions TO anon, authenticated;
 
 -- ============================================
 -- 5. LEADERBOARD VIEW
@@ -194,41 +204,29 @@ END;
 $$;
 
 -- ============================================
--- 7. SAMPLE DATA (OPTIONAL - for testing)
+-- 6a. PUBLIC PUZZLE LIST
 -- ============================================
--- Uncomment and modify to add your first puzzle
+-- Returns only non-sensitive fields for ALL puzzles.
+-- Orders active (released) puzzles first, then upcoming.
+CREATE OR REPLACE FUNCTION get_puzzles_list()
+RETURNS TABLE (
+    id INTEGER,
+    title TEXT,
+    release_time TIMESTAMP WITH TIME ZONE,
+    base_points INTEGER
+)
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+    SELECT p.id, p.title, p.release_time, p.base_points
+    FROM puzzles p
+    ORDER BY (p.release_time > NOW())::int, p.release_time;
+$$;
 
-/*
--- Insert a sample puzzle
--- First, generate the answer hash. For answer "hello world":
--- You can use this online tool: https://emn178.github.io/online-tools/sha256.html
--- Or run: echo -n "hello world" | sha256sum
--- The hash for "hello world" is: b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9
-
-INSERT INTO puzzles (id, title, description, answer_hash, release_time, base_points)
-VALUES (
-    1,
-    'The First Puzzle',
-    'This is your first puzzle! The answer is two words that are commonly used as a programming greeting.<br><br>
-    <div class="puzzle-artifact">
-    H _ _ _ _   W _ _ _ _
-    </div>
-    <br>Think about what programmers traditionally write as their first program...',
-    'b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9', -- SHA-256 of "hello world"
-    NOW(), -- Release immediately
-    1000
-);
-
--- Add some hints for the puzzle
-INSERT INTO hints (puzzle_id, hint_text, release_time)
-VALUES 
-    (1, 'The first word starts with "H" and is a greeting.', NOW() + INTERVAL '1 day'),
-    (1, 'The second word refers to our planet.', NOW() + INTERVAL '2 days'),
-    (1, 'It''s what every programmer learns to print first!', NOW() + INTERVAL '3 days');
-*/
+GRANT EXECUTE ON FUNCTION get_puzzles_list TO anon, authenticated;
 
 -- ============================================
--- 8. GRANT PERMISSIONS
+-- 7. GRANT PERMISSIONS
 -- ============================================
 -- Grant access to the check_answer function for authenticated users
 GRANT EXECUTE ON FUNCTION check_answer TO authenticated;
