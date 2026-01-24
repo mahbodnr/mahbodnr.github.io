@@ -397,21 +397,41 @@ async function checkAnswer(puzzleId, answer) {
     const normalizedAnswer = answer.toLowerCase().trim();
     const answerHash = await hashString(normalizedAnswer);
     
-    // Call the check_answer function with both the answer text and hash
-    const { data, error } = await supabaseClient.rpc('check_answer', {
-        p_puzzle_id: puzzleId,
-        p_user_id: user.id,
-        p_answer_text: normalizedAnswer,
-        p_answer_hash: answerHash
-    });
-    
-    if (error) {
-        console.error('Error checking answer:', error);
+    // Call the check_answer function with both the answer text and hash (new signature)
+    let rpc;
+    try {
+        rpc = await supabaseClient.rpc('check_answer', {
+            p_puzzle_id: puzzleId,
+            p_user_id: user.id,
+            p_answer_text: normalizedAnswer,
+            p_answer_hash: answerHash
+        });
+    } catch (e) {
+        rpc = { data: null, error: e };
+    }
+
+    // If the function signature is not found, try the older 3-argument signature
+    if (rpc.error && (rpc.error.code === 'PGRST202' || String(rpc.error.message || '').includes('Could not find the function'))) {
+        const fallback = await supabaseClient.rpc('check_answer', {
+            p_answer_hash: answerHash,
+            p_puzzle_id: puzzleId,
+            p_user_id: user.id
+        });
+        if (fallback.error) {
+            console.error('Error checking answer (fallback):', fallback.error);
+            showMessage('Error submitting answer. Please try again.', 'error');
+            return null;
+        }
+        return fallback.data;
+    }
+
+    if (rpc.error) {
+        console.error('Error checking answer:', rpc.error);
         showMessage('Error submitting answer. Please try again.', 'error');
         return null;
     }
-    
-    return data;
+
+    return rpc.data;
 }
 
 async function getUserSubmission(puzzleId) {
