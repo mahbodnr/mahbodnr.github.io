@@ -260,6 +260,8 @@ async function updateAuthUI() {
     const userInfos = document.querySelectorAll('.user-info-display');
     const requiresAuth = document.querySelectorAll('.requires-auth');
     const hideWhenAuth = document.querySelectorAll('.hide-when-auth');
+    const submitButtons = document.querySelectorAll('.submit-auth-btn');
+    const loginSubmitButtons = document.querySelectorAll('.login-submit-btn');
     
     if (user) {
         // Fetch custom username from database
@@ -278,11 +280,23 @@ async function updateAuthUI() {
         });
         requiresAuth.forEach(el => el.classList.remove('hidden'));
         hideWhenAuth.forEach(el => el.classList.add('hidden'));
+
+        submitButtons.forEach(btn => {
+            btn.classList.remove('hidden');
+            btn.disabled = false;
+        });
+        loginSubmitButtons.forEach(btn => btn.classList.add('hidden'));
     } else {
         authButtons.forEach(el => el.classList.remove('hidden'));
         userInfos.forEach(el => el.classList.add('hidden'));
         requiresAuth.forEach(el => el.classList.add('hidden'));
         hideWhenAuth.forEach(el => el.classList.remove('hidden'));
+
+        submitButtons.forEach(btn => {
+            btn.classList.add('hidden');
+            btn.disabled = true;
+        });
+        loginSubmitButtons.forEach(btn => btn.classList.remove('hidden'));
     }
 }
 
@@ -592,8 +606,9 @@ async function loadPuzzleList() {
             }
             
             const canAccess = status === 'active';
+            const puzzlePath = `puzzles/puzzle-${String(puzzle.id).padStart(3, '0')}/`;
             const titleCell = canAccess 
-                ? `<a href="puzzle-${String(puzzle.id).padStart(3, '0')}.html">${escapeHtml(puzzle.title)}</a>`
+                ? `<a href="${puzzlePath}">${escapeHtml(puzzle.title)}</a>`
                 : escapeHtml(puzzle.title);
             
             html += `
@@ -663,7 +678,7 @@ async function loadHints(puzzleId) {
     const scoreEl = document.getElementById('current-multiplier');
     if (scoreEl && window.currentPuzzle) {
         const currentPoints = Math.floor(window.currentPuzzle.base_points * scoreMultiplier);
-        scoreEl.textContent = `${currentPoints} pts (${hints.length} hint${hints.length !== 1 ? 's' : ''} used)`;
+        scoreEl.textContent = `${currentPoints} pts (${hints.length} hint${hints.length !== 1 ? 's' : ''} released)`;
     }
     
     if (hints.length === 0 && !upcomingHint) {

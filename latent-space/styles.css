@@ -12,6 +12,28 @@ body {
     min-height: 100vh;
 }
 
+/* Selection behavior: only puzzle content is selectable */
+.main-window,
+.main-window * {
+    user-select: none;
+}
+
+.content-inner,
+.content-inner * {
+    user-select: text;
+}
+
+/* Keep non-content UI elements unselectable */
+.content-inner .info-bar,
+.content-inner .info-bar * {
+    user-select: none;
+}
+
+.tabs,
+.tabs * {
+    user-select: none;
+}
+
 * {
     box-sizing: border-box;
 }
@@ -486,9 +508,9 @@ a:hover {
 
 /* Puzzle Content */
 .puzzle-description {
-    background: white;
-    border: 2px inset;
-    padding: 16px;
+    background: transparent;
+    border: none;
+    padding: 0;
     margin-bottom: 16px;
     font-family: 'Courier New', monospace;
     font-size: 13px;
