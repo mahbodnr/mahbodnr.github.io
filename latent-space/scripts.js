@@ -242,6 +242,162 @@ async function saveNewUsername() {
     }
 }
 
+function showEditAvatarDialog() {
+    const currentAvatar = document.querySelector('.user-avatar')?.src || '';
+    
+    const dialog = document.createElement('div');
+    dialog.className = 'edit-avatar-dialog';
+    dialog.innerHTML = `
+        <div class="edit-avatar-content windows-box-shadow">
+            <div class="edit-avatar-header">
+                <span>🖼️ Change Profile Picture</span>
+                <button class="close-btn" onclick="this.closest('.edit-avatar-dialog').remove()">×</button>
+            </div>
+            <div class="edit-avatar-body">
+                <div class="avatar-preview-container">
+                    <img src="${escapeHtml(currentAvatar)}" alt="Current avatar" class="avatar-preview" id="avatar-preview">
+                </div>
+                <label for="avatar-file" class="win-button windows-box-shadow avatar-upload-btn">
+                    📁 Choose Image...
+                </label>
+                <input type="file" id="avatar-file" accept="image/*" style="display: none;">
+                <p class="avatar-hint">Max size: 1MB. Square images work best.</p>
+                <div id="avatar-upload-status"></div>
+                <div class="edit-avatar-buttons">
+                    <button class="win-button windows-box-shadow" onclick="this.closest('.edit-avatar-dialog').remove()">Cancel</button>
+                    <button class="win-button windows-box-shadow primary" id="save-avatar-btn" disabled onclick="saveNewAvatar()">Save</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(dialog);
+    
+    const fileInput = dialog.querySelector('#avatar-file');
+    const preview = dialog.querySelector('#avatar-preview');
+    const saveBtn = dialog.querySelector('#save-avatar-btn');
+    const status = dialog.querySelector('#avatar-upload-status');
+    
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (file.size > 1024 * 1024) {
+            status.innerHTML = '<span style="color: red;">Image too large. Max 1MB.</span>';
+            saveBtn.disabled = true;
+            return;
+        }
+        
+        if (!file.type.startsWith('image/')) {
+            status.innerHTML = '<span style="color: red;">Please select an image file.</span>';
+            saveBtn.disabled = true;
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            preview.src = e.target.result;
+            saveBtn.disabled = false;
+            status.innerHTML = '<span style="color: green;">Image ready to upload.</span>';
+        };
+        reader.readAsDataURL(file);
+    });
+    
+    dialog.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') dialog.remove();
+    });
+}
+
+async function saveNewAvatar() {
+    const fileInput = document.querySelector('#avatar-file');
+    const saveBtn = document.querySelector('#save-avatar-btn');
+    const status = document.querySelector('#avatar-upload-status');
+    
+    if (!fileInput || !fileInput.files[0]) return;
+    
+    const user = await getCurrentUser();
+    if (!user) {
+        showMessage('Please log in to change your avatar.', 'error');
+        return;
+    }
+    
+    // Get the current session to ensure we have a valid token
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError || !session) {
+        showMessage('Session expired. Please log in again.', 'error');
+        return;
+    }
+    
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Uploading...';
+    status.innerHTML = '<span>Uploading image...</span>';
+    
+    try {
+        const file = fileInput.files[0];
+        const fileExt = file.name.split('.').pop().toLowerCase();
+        // Use timestamp to ensure unique filename
+        const fileName = `${user.id}/avatar_${Date.now()}.${fileExt}`;
+        
+        // Try to delete old avatar first (ignore errors)
+        const { data: existingFiles } = await supabaseClient.storage
+            .from('avatars')
+            .list(user.id);
+        
+        if (existingFiles && existingFiles.length > 0) {
+            const filesToDelete = existingFiles.map(f => `${user.id}/${f.name}`);
+            await supabaseClient.storage.from('avatars').remove(filesToDelete);
+        }
+        
+        // Upload using fetch with explicit auth header
+        const formData = new FormData();
+        formData.append('', file);
+        
+        const uploadResponse = await fetch(
+            `${SUPABASE_URL}/storage/v1/object/avatars/${fileName}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'apikey': SUPABASE_ANON_KEY
+                },
+                body: file
+            }
+        );
+        
+        if (!uploadResponse.ok) {
+            const errData = await uploadResponse.json().catch(() => ({}));
+            throw new Error(errData.message || `Upload failed: ${uploadResponse.status}`);
+        }
+        
+        // Get the public URL
+        const avatarUrl = `${SUPABASE_URL}/storage/v1/object/public/avatars/${fileName}`;
+        
+        // Update user profile using RPC function (bypasses RLS issues)
+        const { data: updateData, error: updateError } = await supabaseClient
+            .rpc('update_user_avatar', { p_user_id: user.id, p_avatar_url: avatarUrl });
+        
+        if (updateError) {
+            throw updateError;
+        }
+        
+        if (updateData && !updateData.success) {
+            throw new Error(updateData.error || 'Failed to update profile');
+        }
+        
+        // Update displayed avatars
+        document.querySelectorAll('.user-avatar').forEach(el => {
+            el.src = avatarUrl;
+        });
+        
+        showMessage('Profile picture updated!', 'success');
+        document.querySelector('.edit-avatar-dialog')?.remove();
+    } catch (e) {
+        console.error('Error uploading avatar:', e);
+        status.innerHTML = `<span style="color: red;">Error: ${escapeHtml(e.message || 'Upload failed')}</span>`;
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+    }
+}
+
 async function fetchUserProfile(userId) {
     if (!supabaseConfigured) return null;
     
@@ -269,9 +425,10 @@ async function updateAuthUI() {
     const loginSubmitButtons = document.querySelectorAll('.login-submit-btn');
     
     if (user) {
-        // Fetch custom username from database
+        // Fetch custom username and avatar from database
         const profile = await fetchUserProfile(user.id);
         const displayName = profile?.username || user.user_metadata?.full_name || user.email;
+        const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url || '';
         
         authButtons.forEach(el => el.classList.add('hidden'));
         userInfos.forEach(el => {
@@ -279,8 +436,8 @@ async function updateAuthUI() {
             const nameEl = el.querySelector('.user-name');
             const avatarEl = el.querySelector('.user-avatar');
             if (nameEl) nameEl.textContent = displayName;
-            if (avatarEl && user.user_metadata?.avatar_url) {
-                avatarEl.src = user.user_metadata.avatar_url;
+            if (avatarEl && avatarUrl) {
+                avatarEl.src = avatarUrl;
             }
         });
         requiresAuth.forEach(el => el.classList.remove('hidden'));
@@ -398,57 +555,23 @@ async function checkAnswer(puzzleId, answer) {
         return null;
     }
     
-    // Normalize and hash the answer for comparison
     const normalizedAnswer = answer.toLowerCase().trim();
     const answerHash = await hashString(normalizedAnswer);
     
-    // Log for debugging
-    console.log('[checkAnswer] Attempting RPC call with:', {
+    const { data, error } = await supabaseClient.rpc('check_answer', {
         p_puzzle_id: puzzleId,
         p_user_id: user.id,
-        answerPreview: normalizedAnswer.substring(0, 10) + '...',
-        hashPreview: answerHash.substring(0, 16) + '...'
+        p_answer_text: normalizedAnswer,
+        p_answer_hash: answerHash
     });
-    
-    // Call the check_answer function with both the answer text and hash (new signature)
-    let rpc;
-    try {
-        rpc = await supabaseClient.rpc('check_answer', {
-            p_puzzle_id: puzzleId,
-            p_user_id: user.id,
-            p_answer_text: normalizedAnswer,
-            p_answer_hash: answerHash
-        });
-        console.log('[checkAnswer] RPC response:', rpc);
-    } catch (e) {
-        rpc = { data: null, error: e };
-        console.log('[checkAnswer] RPC catch error:', e);
-    }
 
-    // If the function signature is not found, try the older 3-argument signature
-    if (rpc.error && (rpc.error.code === 'PGRST202' || String(rpc.error.message || '').includes('Could not find the function') || rpc.error.message?.includes('404'))) {
-        console.log('[checkAnswer] Falling back to 3-arg signature...');
-        const fallback = await supabaseClient.rpc('check_answer', {
-            p_answer_hash: answerHash,
-            p_puzzle_id: puzzleId,
-            p_user_id: user.id
-        });
-        console.log('[checkAnswer] Fallback response:', fallback);
-        if (fallback.error) {
-            console.error('Error checking answer (fallback):', fallback.error);
-            showMessage('Error submitting answer. Please try again.', 'error');
-            return null;
-        }
-        return fallback.data;
-    }
-
-    if (rpc.error) {
-        console.error('Error checking answer:', rpc.error);
+    if (error) {
+        console.error('Error checking answer:', error);
         showMessage('Error submitting answer. Please try again.', 'error');
         return null;
     }
 
-    return rpc.data;
+    return data;
 }
 
 async function getUserSubmission(puzzleId) {
@@ -852,11 +975,17 @@ async function loadPuzzleLeaderboard(puzzleId) {
         entries.forEach((entry, index) => {
             const rank = index + 1;
             const username = entry?.users?.username || 'Anonymous';
+            const avatarUrl = entry?.users?.avatar_url || '';
             const solvedDate = entry.submitted_at ? formatDate(entry.submitted_at) : '—';
+            
+            const avatarHtml = avatarUrl 
+                ? `<img src="${escapeHtml(avatarUrl)}" alt="" class="leaderboard-avatar">`
+                : `<span class="leaderboard-avatar-placeholder">👤</span>`;
+            
             html += `
                 <tr>
                     <td class="rank-cell">${rank}</td>
-                    <td>${escapeHtml(username)}</td>
+                    <td><div class="player-cell">${avatarHtml}<span>${escapeHtml(username)}</span></div></td>
                     <td>${escapeHtml(solvedDate)}</td>
                 </tr>
             `;
@@ -890,6 +1019,12 @@ async function checkExistingSubmission(puzzleId) {
                 <p>Submitted on: ${formatDate(submission.submitted_at)}</p>
             </div>
         `;
+        
+        // Hide the "📤 Submit Your Answer" heading
+        const submitHeading = form.previousElementSibling;
+        if (submitHeading && submitHeading.tagName === 'H2') {
+            submitHeading.classList.add('hidden');
+        }
     }
 }
 
@@ -978,10 +1113,14 @@ async function loadLeaderboard() {
             else if (rank === 2) { rankClass = 'rank-silver'; rankIcon = '🥈'; }
             else if (rank === 3) { rankClass = 'rank-bronze'; rankIcon = '🥉'; }
             
+            const avatarHtml = entry.avatar_url 
+                ? `<img src="${escapeHtml(entry.avatar_url)}" alt="" class="leaderboard-avatar">`
+                : `<span class="leaderboard-avatar-placeholder">👤</span>`;
+            
             html += `
                 <tr class="${rankClass}">
                     <td class="rank-cell">${rankIcon}</td>
-                    <td>${escapeHtml(entry.username || 'Anonymous')}</td>
+                    <td><div class="player-cell">${avatarHtml}<span>${escapeHtml(entry.username || 'Anonymous')}</span></div></td>
                     <td class="points-cell"><strong>${entry.total_points.toLocaleString()}</strong></td>
                     <td class="solved-cell">${entry.puzzles_solved}</td>
                 </tr>

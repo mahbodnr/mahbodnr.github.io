@@ -37,6 +37,15 @@ CREATE POLICY "Users can insert own profile" ON users
 -- Allow public read access (governed by RLS policies)
 GRANT SELECT ON users TO anon, authenticated;
 
+-- Storage bucket for user avatars
+CREATE POLICY "Users can upload avatars" ON storage.objects
+    FOR INSERT TO authenticated
+    WITH CHECK (bucket_id = 'avatars' AND(storage.foldername(name))[1] = auth.uid()::text);
+
+-- Allow public read access to avatars
+CREATE POLICY "Public read access to avatars" ON storage.objects
+    FOR SELECT USING (bucket_id = 'avatars');
+
 -- ============================================
 -- 2. PUZZLES TABLE
 -- ============================================
@@ -233,3 +242,22 @@ GRANT EXECUTE ON FUNCTION check_answer TO authenticated;
 
 -- Grant select on leaderboard view
 GRANT SELECT ON leaderboard_view TO anon, authenticated;
+
+-- ============================================
+-- 8. STORAGE POLICIES
+-- ============================================
+-- Enable storage policies for avatars bucket
+CREATE POLICY "Users can upload avatars" ON storage.objects
+    FOR INSERT TO authenticated
+    WITH CHECK (bucket_id = 'avatars' AND (regexp_split_to_array(name, '/'))[1] = auth.uid()::text);
+
+CREATE POLICY "Public read access to avatars" ON storage.objects
+    FOR SELECT USING (bucket_id = 'avatars');
+
+CREATE POLICY "Users can update their own avatars" ON storage.objects
+    FOR UPDATE TO authenticated
+    WITH CHECK (bucket_id = 'avatars' AND (regexp_split_to_array(name, '/'))[1] = auth.uid()::text);
+
+CREATE POLICY "Users can delete their own avatars" ON storage.objects
+    FOR DELETE TO authenticated
+    USING (bucket_id = 'avatars' AND (regexp_split_to_array(name, '/'))[1] = auth.uid()::text);

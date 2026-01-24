@@ -839,6 +839,116 @@ a:hover {
     color: #000080;
 }
 
+/* Edit Avatar Dialog */
+.edit-avatar-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.edit-avatar-content {
+    background: #c0c0c0;
+    min-width: 300px;
+    max-width: 400px;
+}
+
+.edit-avatar-header {
+    background: linear-gradient(90deg, #000b7c, #377cc6);
+    color: white;
+    padding: 4px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.edit-avatar-header .close-btn {
+    background: #c0c0c0;
+    border: none;
+    width: 16px;
+    height: 14px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.edit-avatar-body {
+    padding: 16px;
+    text-align: center;
+}
+
+.avatar-preview-container {
+    margin-bottom: 16px;
+}
+
+.avatar-preview {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    border: 3px solid #808080;
+    object-fit: cover;
+    background: #f0f0f0;
+}
+
+.avatar-upload-btn {
+    display: inline-block;
+    cursor: pointer;
+    margin-bottom: 8px;
+}
+
+.avatar-hint {
+    font-size: 10px;
+    color: #666;
+    margin: 4px 0 12px 0;
+}
+
+#avatar-upload-status {
+    font-size: 11px;
+    margin-bottom: 12px;
+    min-height: 16px;
+}
+
+.edit-avatar-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* Avatar placeholder for leaderboards */
+.leaderboard-avatar-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    border: 1px solid #808080;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+/* Clickable avatar */
+.user-avatar-clickable {
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.user-avatar-clickable:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 4px rgba(0, 0, 128, 0.5);
+}
+
 /* Release info spacing under puzzle title */
 .release-info {
     margin-top: 4px;

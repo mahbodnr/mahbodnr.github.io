@@ -56,8 +56,8 @@
                     
                     <div class="user-info-display hidden" style="flex-direction: column; align-items: center; gap: 12px;">
                         <p>✓ You are already logged in!</p>
-                        <img class="user-avatar" src="../img/computer_explorer-5.png" alt="Avatar" style="width: 48px; height: 48px;">
-                        <span class="user-name" style="font-weight: bold;">User</span>
+                        <img class="user-avatar user-avatar-clickable" onclick="showEditAvatarDialog()" title="Click to change picture" src="../img/computer_explorer-5.png" alt="Avatar" style="width: 48px; height: 48px; border-radius: 50%;">
+                        <span class="user-name user-name-clickable" onclick="showEditNameDialog()" title="Click to change name" style="font-weight: bold;">User</span>
                         <a href="index.html"><button class="win-button windows-box-shadow primary">Go to Puzzles</button></a>
                         <button class="win-button windows-box-shadow" onclick="signOut()">Logout</button>
                     </div>
