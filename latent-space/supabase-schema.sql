@@ -290,13 +290,13 @@ BEGIN
         RETURN json_build_object('success', false, 'error', 'Unauthorized');
     END IF;
     
-    -- Upsert the user
+    -- Upsert the user - preserve existing username/avatar to respect user edits
     INSERT INTO users (id, email, username, avatar_url)
     VALUES (p_user_id, p_email, p_username, p_avatar_url)
     ON CONFLICT (id) DO UPDATE SET
         email = COALESCE(EXCLUDED.email, users.email),
-        username = COALESCE(EXCLUDED.username, users.username),
-        avatar_url = COALESCE(EXCLUDED.avatar_url, users.avatar_url);
+        username = COALESCE(users.username, EXCLUDED.username),
+        avatar_url = COALESCE(users.avatar_url, EXCLUDED.avatar_url);
     
     RETURN json_build_object('success', true);
 END;
