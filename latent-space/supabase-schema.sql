@@ -2,6 +2,7 @@
 -- Latent Space - Supabase Database Schema
 -- ============================================
 -- Run this SQL in your Supabase SQL Editor (Database > SQL Editor)
+-- Make sure to run cleanup-database.sql first if updating existing schema
 -- ============================================
 
 -- Enable UUID extension if not already enabled
@@ -22,6 +23,11 @@ CREATE TABLE IF NOT EXISTS users (
 -- Enable RLS
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist (for re-running script)
+DROP POLICY IF EXISTS "Users can view all profiles" ON users;
+DROP POLICY IF EXISTS "Users can update own profile" ON users;
+DROP POLICY IF EXISTS "Users can insert own profile" ON users;
+
 -- Users can read all profiles
 CREATE POLICY "Users can view all profiles" ON users
     FOR SELECT USING (true);
@@ -33,18 +39,6 @@ CREATE POLICY "Users can update own profile" ON users
 -- Users can insert their own profile
 CREATE POLICY "Users can insert own profile" ON users
     FOR INSERT WITH CHECK (auth.uid() = id);
-
--- Allow public read access (governed by RLS policies)
-GRANT SELECT ON users TO anon, authenticated;
-
--- Storage bucket for user avatars
-CREATE POLICY "Users can upload avatars" ON storage.objects
-    FOR INSERT TO authenticated
-    WITH CHECK (bucket_id = 'avatars' AND(storage.foldername(name))[1] = auth.uid()::text);
-
--- Allow public read access to avatars
-CREATE POLICY "Public read access to avatars" ON storage.objects
-    FOR SELECT USING (bucket_id = 'avatars');
 
 -- ============================================
 -- 2. PUZZLES TABLE
@@ -61,6 +55,9 @@ CREATE TABLE IF NOT EXISTS puzzles (
 
 -- Enable RLS
 ALTER TABLE puzzles ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policy if it exists
+DROP POLICY IF EXISTS "Anyone can view released puzzles" ON puzzles;
 
 -- Anyone can view puzzles that have been released
 CREATE POLICY "Anyone can view released puzzles" ON puzzles
@@ -80,11 +77,14 @@ CREATE TABLE IF NOT EXISTS hints (
 -- Enable RLS
 ALTER TABLE hints ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policy if it exists
+DROP POLICY IF EXISTS "Anyone can view released hints" ON hints;
+
 -- Anyone can view released hints
 CREATE POLICY "Anyone can view released hints" ON hints
     FOR SELECT USING (release_time <= NOW());
 
--- Create index for faster queries
+-- Create indexes for faster queries
 CREATE INDEX IF NOT EXISTS hints_puzzle_id_idx ON hints(puzzle_id);
 CREATE INDEX IF NOT EXISTS hints_release_time_idx ON hints(release_time);
 
@@ -105,6 +105,11 @@ CREATE TABLE IF NOT EXISTS submissions (
 -- Enable RLS
 ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view own submissions" ON submissions;
+DROP POLICY IF EXISTS "Anyone can view correct submissions" ON submissions;
+DROP POLICY IF EXISTS "Users can insert own submissions" ON submissions;
+
 -- Users can view their own submissions
 CREATE POLICY "Users can view own submissions" ON submissions
     FOR SELECT USING (auth.uid() = user_id);
@@ -117,12 +122,11 @@ CREATE POLICY "Anyone can view correct submissions" ON submissions
 CREATE POLICY "Users can insert own submissions" ON submissions
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
--- Create indexes
+-- Create indexes for faster queries
 CREATE INDEX IF NOT EXISTS submissions_user_id_idx ON submissions(user_id);
 CREATE INDEX IF NOT EXISTS submissions_puzzle_id_idx ON submissions(puzzle_id);
-
--- Allow public read access to submissions (RLS restricts rows)
-GRANT SELECT ON submissions TO anon, authenticated;
+CREATE INDEX IF NOT EXISTS submissions_correct_idx ON submissions(is_correct);
+CREATE INDEX IF NOT EXISTS submissions_submitted_at_idx ON submissions(submitted_at);
 
 -- ============================================
 -- 5. LEADERBOARD VIEW
@@ -140,9 +144,9 @@ GROUP BY u.id, u.username, u.avatar_url
 HAVING COALESCE(SUM(s.score), 0) > 0
 ORDER BY total_points DESC;
 
--- ============================================\n-- 6. CHECK ANSWER FUNCTION
--- ============================================
--- This function checks the answer and records the submission
+-- Drop existing function if it exists
+DROP FUNCTION IF EXISTS check_answer(p_puzzle_id INTEGER, p_user_id UUID, p_answer_text TEXT, p_answer_hash TEXT);
+
 CREATE OR REPLACE FUNCTION check_answer(
     p_puzzle_id INTEGER,
     p_user_id UUID,
@@ -160,6 +164,8 @@ DECLARE
     v_is_correct BOOLEAN;
     v_existing_correct BOOLEAN;
 BEGIN
+    -- Ensure predictable search path in SECURITY DEFINER context
+    PERFORM set_config('search_path', 'public', true);
     -- Get the puzzle
     SELECT * INTO v_puzzle FROM puzzles WHERE id = p_puzzle_id;
     
@@ -195,7 +201,8 @@ BEGIN
     
     -- Calculate score if correct
     IF v_is_correct THEN
-        v_score := v_puzzle.base_points / POWER(2, v_hints_count);
+        -- Convert to integer deterministically
+        v_score := (v_puzzle.base_points / POWER(2, v_hints_count))::int;
     ELSE
         v_score := 0;
     END IF;
@@ -212,11 +219,9 @@ BEGIN
 END;
 $$;
 
--- ============================================
--- 6a. PUBLIC PUZZLE LIST
--- ============================================
--- Returns only non-sensitive fields for ALL puzzles.
--- Orders active (released) puzzles first, then upcoming.
+-- Drop existing function if it exists
+DROP FUNCTION IF EXISTS get_puzzles_list();
+
 CREATE OR REPLACE FUNCTION get_puzzles_list()
 RETURNS TABLE (
     id INTEGER,
@@ -226,38 +231,101 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 SECURITY DEFINER
+STABLE
 AS $$
     SELECT p.id, p.title, p.release_time, p.base_points
     FROM puzzles p
     ORDER BY (p.release_time > NOW())::int, p.release_time;
 $$;
 
-GRANT EXECUTE ON FUNCTION get_puzzles_list TO anon, authenticated;
+-- Drop existing function if it exists
+DROP FUNCTION IF EXISTS update_user_avatar(p_user_id UUID, p_avatar_url TEXT);
+
+CREATE OR REPLACE FUNCTION update_user_avatar(
+    p_user_id UUID,
+    p_avatar_url TEXT
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- Only allow users to update their own avatar
+    IF auth.uid() != p_user_id THEN
+        RETURN json_build_object('success', false, 'error', 'Unauthorized');
+    END IF;
+    
+    UPDATE users
+    SET avatar_url = p_avatar_url
+    WHERE id = p_user_id;
+    
+    IF NOT FOUND THEN
+        RETURN json_build_object('success', false, 'error', 'User not found');
+    END IF;
+    
+    RETURN json_build_object('success', true);
+END;
+$$;
 
 -- ============================================
--- 7. GRANT PERMISSIONS
+-- 9. STORAGE POLICIES (AVATARS BUCKET)
 -- ============================================
--- Grant access to the check_answer function for authenticated users
-GRANT EXECUTE ON FUNCTION check_answer TO authenticated;
+-- Note: Make sure the 'avatars' bucket is created in Supabase Storage
+-- and set to Public before running these policies
 
--- Grant select on leaderboard view
-GRANT SELECT ON leaderboard_view TO anon, authenticated;
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can upload avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Public read access to avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own avatars" ON storage.objects;
 
--- ============================================
--- 8. STORAGE POLICIES
--- ============================================
--- Enable storage policies for avatars bucket
+-- Users can upload avatars to their own folder
 CREATE POLICY "Users can upload avatars" ON storage.objects
     FOR INSERT TO authenticated
-    WITH CHECK (bucket_id = 'avatars' AND (regexp_split_to_array(name, '/'))[1] = auth.uid()::text);
+    WITH CHECK (
+        bucket_id = 'avatars' 
+        AND (regexp_split_to_array(name, '/'))[1] = auth.uid()::text
+    );
 
+-- Public read access to all avatars
 CREATE POLICY "Public read access to avatars" ON storage.objects
     FOR SELECT USING (bucket_id = 'avatars');
 
+-- Users can update their own avatars
 CREATE POLICY "Users can update their own avatars" ON storage.objects
     FOR UPDATE TO authenticated
-    WITH CHECK (bucket_id = 'avatars' AND (regexp_split_to_array(name, '/'))[1] = auth.uid()::text);
+    WITH CHECK (
+        bucket_id = 'avatars' 
+        AND (regexp_split_to_array(name, '/'))[1] = auth.uid()::text
+    );
 
+-- Users can delete their own avatars
 CREATE POLICY "Users can delete their own avatars" ON storage.objects
     FOR DELETE TO authenticated
-    USING (bucket_id = 'avatars' AND (regexp_split_to_array(name, '/'))[1] = auth.uid()::text);
+    USING (
+        bucket_id = 'avatars' 
+        AND (regexp_split_to_array(name, '/'))[1] = auth.uid()::text
+    );
+
+-- ============================================
+-- 10. GRANT PERMISSIONS
+-- ============================================
+-- Grant table permissions
+GRANT SELECT ON users TO anon, authenticated;
+GRANT INSERT, UPDATE ON users TO authenticated;
+
+GRANT SELECT ON puzzles TO anon, authenticated;
+
+GRANT SELECT ON hints TO anon, authenticated;
+
+GRANT SELECT ON submissions TO anon, authenticated;
+GRANT INSERT ON submissions TO authenticated;
+
+-- Grant view permissions
+GRANT SELECT ON leaderboard_view TO anon, authenticated;
+
+-- Grant function execution permissions
+GRANT EXECUTE ON FUNCTION check_answer(INTEGER, UUID, TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_puzzles_list TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION update_user_avatar(UUID, TEXT) TO authenticated;
+
