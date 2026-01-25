@@ -267,6 +267,41 @@ BEGIN
 END;
 $$;
 
+-- Drop existing function if it exists
+DROP FUNCTION IF EXISTS ensure_user_exists(p_user_id UUID, p_email TEXT, p_username TEXT, p_avatar_url TEXT);
+
+-- Function to create/update user profile (bypasses RLS timing issues during OAuth)
+CREATE OR REPLACE FUNCTION ensure_user_exists(
+    p_user_id UUID,
+    p_email TEXT,
+    p_username TEXT,
+    p_avatar_url TEXT DEFAULT NULL
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- Ensure predictable search path
+    PERFORM set_config('search_path', 'public', true);
+    
+    -- Only allow users to create/update their own profile
+    IF auth.uid() IS NULL OR auth.uid() != p_user_id THEN
+        RETURN json_build_object('success', false, 'error', 'Unauthorized');
+    END IF;
+    
+    -- Upsert the user
+    INSERT INTO users (id, email, username, avatar_url)
+    VALUES (p_user_id, p_email, p_username, p_avatar_url)
+    ON CONFLICT (id) DO UPDATE SET
+        email = COALESCE(EXCLUDED.email, users.email),
+        username = COALESCE(EXCLUDED.username, users.username),
+        avatar_url = COALESCE(EXCLUDED.avatar_url, users.avatar_url);
+    
+    RETURN json_build_object('success', true);
+END;
+$$;
+
 -- ============================================
 -- 9. STORAGE POLICIES (AVATARS BUCKET)
 -- ============================================
@@ -328,4 +363,5 @@ GRANT SELECT ON leaderboard_view TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION check_answer(INTEGER, UUID, TEXT, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_puzzles_list TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION update_user_avatar(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION ensure_user_exists(UUID, TEXT, TEXT, TEXT) TO authenticated;
 

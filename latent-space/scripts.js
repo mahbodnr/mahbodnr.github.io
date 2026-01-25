@@ -1,10 +1,8 @@
 // Latent Space - Puzzle System Scripts
-// Supabase Configuration
 
 const SUPABASE_URL = 'https://begtzhbfsvntrqaxjmah.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlZ3R6aGJmc3ZudHJxYXhqbWFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwOTI1MTAsImV4cCI6MjA4NDY2ODUxMH0.5W2khGK3va9a6cjM5jrsNhfPrzlrAjqAmzcjegy_47U';
 
-// Initialize Supabase client
 let supabaseClient = null;
 let supabaseConfigured = false;
 let currentSession = null;
@@ -13,9 +11,9 @@ let authInitPromise = null;
 
 try {
     if (typeof window.supabase === 'undefined') {
-        console.error('[Latent Space] Supabase library not loaded!');
+        console.error('Supabase library not loaded');
     } else if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY_HERE') {
-        console.error('[Latent Space] Supabase anon key not configured.');
+        console.error('Supabase anon key not configured');
     } else {
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
             auth: {
@@ -27,48 +25,49 @@ try {
                 params: {
                     eventsPerSecond: 2
                 }
-            },
-            global: {
-                // Ensure all REST requests include authentication headers
-                headers: {
-                    apikey: SUPABASE_ANON_KEY,
-                    Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
-                    'x-my-custom-header': 'latent-space'
-                }
             }
         });
         supabaseConfigured = true;
         
-        // Set up auth state listener and wait for initial state
-        authInitPromise = new Promise((resolve) => {
-            const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
-                currentSession = session;
-                
-                // Resolve the promise first (so getCurrentUser doesn't wait forever)
-                const wasInitialized = authInitialized;
-                if (!authInitialized) {
-                    authInitialized = true;
-                    resolve(session);
+        // Set up auth state listener for subsequent changes
+        supabaseClient.auth.onAuthStateChange(async (event, session) => {
+            currentSession = session;
+            
+            // Ensure user exists in database for SIGNED_IN events
+            if (event === 'SIGNED_IN' && session && typeof ensureUserExists === 'function') {
+                try {
+                    await ensureUserExists(session.user);
+                } catch (e) {
+                    console.error('Error ensuring user exists:', e);
                 }
-                
-                // Only run side effects AFTER initial page load (not during)
-                if (wasInitialized) {
-                    try {
-                        if (event === 'SIGNED_IN' && session && typeof ensureUserExists === 'function') {
-                            await ensureUserExists(session.user);
-                        }
-                        if (typeof updateAuthUI === 'function') {
-                            updateAuthUI();
-                        }
-                    } catch (e) {
-                        console.error('[Latent Space] Error in auth state handler:', e);
-                    }
+            }
+            
+            if (authInitialized && typeof updateAuthUI === 'function') {
+                try {
+                    updateAuthUI();
+                } catch (e) {
+                    console.error('Error in auth state handler:', e);
                 }
-            });
+            }
         });
+        
+        // Initialize auth state immediately via getSession (doesn't wait for listener)
+        authInitPromise = (async () => {
+            try {
+                const { data: { session }, error } = await supabaseClient.auth.getSession();
+                if (error) console.error('Error getting session:', error);
+                currentSession = session;
+                authInitialized = true;
+                return session;
+            } catch (e) {
+                console.error('Error in auth init:', e);
+                authInitialized = true;
+                return null;
+            }
+        })();
     }
 } catch (e) {
-    console.error('[Latent Space] Error initializing Supabase:', e);
+    console.error('Error initializing Supabase:', e);
     supabaseConfigured = false;
 }
 
@@ -91,7 +90,7 @@ async function getCurrentUser() {
         if (!session) return null;
         return session.user;
     } catch (e) {
-        console.error('[Latent Space] Error in getCurrentUser:', e);
+        console.error('Error in getCurrentUser:', e);
         return null;
     }
 }
@@ -111,11 +110,11 @@ async function signInWithGoogle() {
         });
         
         if (error) {
-            console.error('[Latent Space] Error signing in:', error);
+            console.error('Error signing in:', error);
             showMessage('Error signing in: ' + error.message, 'error');
         }
     } catch (e) {
-        console.error('[Latent Space] Error in signInWithGoogle:', e);
+        console.error('Error in signInWithGoogle:', e);
         showMessage('Error signing in. Please try again.', 'error');
     }
 }
@@ -137,17 +136,32 @@ async function ensureUserExists(user) {
     if (!user || !supabaseConfigured) return;
     
     try {
-        const { error } = await supabaseClient
-            .from('users')
-            .upsert({
-                id: user.id,
-                email: user.email,
-                username: user.user_metadata?.full_name || user.email.split('@')[0],
-                avatar_url: user.user_metadata?.avatar_url || null
-            }, { onConflict: 'id' });
+        const token = currentSession?.access_token || SUPABASE_ANON_KEY;
         
-        if (error) {
-            console.error('Error upserting user:', error);
+        // Use RPC function to bypass RLS timing issues during OAuth
+        const response = await fetch(SUPABASE_URL + '/rest/v1/rpc/ensure_user_exists', {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                p_user_id: user.id,
+                p_email: user.email,
+                p_username: user.user_metadata?.full_name || user.email.split('@')[0],
+                p_avatar_url: user.user_metadata?.avatar_url || null
+            })
+        });
+        
+        if (!response.ok) {
+            console.error('Error ensuring user exists:', response.status);
+            return;
+        }
+        
+        const data = await response.json();
+        if (data && !data.success) {
+            console.error('Error ensuring user exists:', data.error);
         }
     } catch (e) {
         console.error('Error in ensureUserExists:', e);
@@ -172,13 +186,24 @@ async function updateUsername(newUsername) {
     }
     
     try {
-        const { error } = await supabaseClient
-            .from('users')
-            .update({ username: trimmedName })
-            .eq('id', user.id);
+        const token = currentSession?.access_token || SUPABASE_ANON_KEY;
         
-        if (error) {
-            console.error('Error updating username:', error);
+        const response = await fetch(
+            SUPABASE_URL + '/rest/v1/users?id=eq.' + user.id,
+            {
+                method: 'PATCH',
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify({ username: trimmedName })
+            }
+        );
+        
+        if (!response.ok) {
+            console.error('Error updating username:', response.status);
             showMessage('Error updating name. Please try again.', 'error');
             return false;
         }
@@ -372,12 +397,21 @@ async function saveNewAvatar() {
         const avatarUrl = `${SUPABASE_URL}/storage/v1/object/public/avatars/${fileName}`;
         
         // Update user profile using RPC function (bypasses RLS issues)
-        const { data: updateData, error: updateError } = await supabaseClient
-            .rpc('update_user_avatar', { p_user_id: user.id, p_avatar_url: avatarUrl });
+        const updateResponse = await fetch(SUPABASE_URL + '/rest/v1/rpc/update_user_avatar', {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': 'Bearer ' + session.access_token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ p_user_id: user.id, p_avatar_url: avatarUrl })
+        });
         
-        if (updateError) {
-            throw updateError;
+        if (!updateResponse.ok) {
+            throw new Error('Failed to update profile: ' + updateResponse.status);
         }
+        
+        const updateData = await updateResponse.json();
         
         if (updateData && !updateData.success) {
             throw new Error(updateData.error || 'Failed to update profile');
@@ -402,14 +436,20 @@ async function fetchUserProfile(userId) {
     if (!supabaseConfigured) return null;
     
     try {
-        const { data, error } = await supabaseClient
-            .from('users')
-            .select('username, avatar_url')
-            .eq('id', userId)
-            .single();
+        const response = await fetch(
+            SUPABASE_URL + '/rest/v1/users?select=username,avatar_url&id=eq.' + userId,
+            {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+                }
+            }
+        );
         
-        if (error) return null;
-        return data;
+        if (!response.ok) return null;
+        
+        const data = await response.json();
+        return data?.[0] || null;
     } catch (e) {
         return null;
     }
@@ -468,18 +508,30 @@ async function fetchPuzzles() {
     if (!supabaseConfigured) return [];
     
     try {
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Query timeout')), 10000)
-        );
-
-        const rpcPromise = supabaseClient.rpc('get_puzzles_list');
-        const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
+        const rpcResponse = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_puzzles_list', {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: '{}'
+        });
         
-        if (error) {
-            console.error('Error fetching puzzles:', error);
-            return [];
+        if (rpcResponse.ok) {
+            return await rpcResponse.json() || [];
         }
-        return data || [];
+        
+        // Fallback: direct query (only shows released puzzles due to RLS)
+        const response = await fetch(SUPABASE_URL + '/rest/v1/puzzles?select=id,title,release_time,base_points&order=release_time.asc', {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+            }
+        });
+        
+        if (!response.ok) return [];
+        return await response.json() || [];
     } catch (e) {
         console.error('Error in fetchPuzzles:', e);
         return [];
@@ -487,63 +539,109 @@ async function fetchPuzzles() {
 }
 
 async function fetchPuzzle(puzzleId) {
-    const { data, error } = await supabaseClient
-        .from('puzzles')
-        .select('*')
-        .eq('id', puzzleId)
-        .single();
-    
-    if (error) {
-        console.error('Error fetching puzzle:', error);
+    try {
+        const response = await fetch(SUPABASE_URL + '/rest/v1/puzzles?select=*&id=eq.' + puzzleId, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+            }
+        });
+        
+        if (!response.ok) {
+            console.error('Error fetching puzzle:', response.status);
+            return null;
+        }
+        
+        const data = await response.json();
+        return data?.[0] || null;
+    } catch (e) {
+        console.error('Error fetching puzzle:', e);
         return null;
     }
-    return data;
 }
 
 async function fetchHints(puzzleId) {
-    const now = new Date().toISOString();
-    const { data, error } = await supabaseClient
-        .from('hints')
-        .select('*')
-        .eq('puzzle_id', puzzleId)
-        .lte('release_time', now)
-        .order('release_time', { ascending: true });
-    
-    if (error) {
-        console.error('Error fetching hints:', error);
+    try {
+        const now = new Date().toISOString();
+        const response = await fetch(
+            SUPABASE_URL + '/rest/v1/hints?select=*&puzzle_id=eq.' + puzzleId + '&release_time=lte.' + encodeURIComponent(now) + '&order=release_time.asc', 
+            {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+                }
+            }
+        );
+        
+        if (!response.ok) {
+            console.error('Error fetching hints:', response.status);
+            return [];
+        }
+        
+        const data = await response.json();
+        return data || [];
+    } catch (e) {
+        console.error('Error fetching hints:', e);
         return [];
     }
-    return data || [];
 }
 
 async function fetchAllHintsCount(puzzleId) {
-    const { count, error } = await supabaseClient
-        .from('hints')
-        .select('*', { count: 'exact', head: true })
-        .eq('puzzle_id', puzzleId);
-    
-    if (error) {
-        console.error('Error counting hints:', error);
+    try {
+        const response = await fetch(
+            SUPABASE_URL + '/rest/v1/hints?select=id&puzzle_id=eq.' + puzzleId, 
+            {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                    'Prefer': 'count=exact'
+                }
+            }
+        );
+        
+        if (!response.ok) {
+            console.error('Error counting hints:', response.status);
+            return 0;
+        }
+        
+        const contentRange = response.headers.get('content-range');
+        if (contentRange) {
+            const match = contentRange.match(/\/(\d+)/);
+            return match ? parseInt(match[1], 10) : 0;
+        }
+        
+        const data = await response.json();
+        return data?.length || 0;
+    } catch (e) {
+        console.error('Error counting hints:', e);
         return 0;
     }
-    return count || 0;
 }
 
 async function fetchUpcomingHint(puzzleId) {
-    const now = new Date().toISOString();
-    const { data, error } = await supabaseClient
-        .from('hints')
-        .select('release_time')
-        .eq('puzzle_id', puzzleId)
-        .gt('release_time', now)
-        .order('release_time', { ascending: true })
-        .limit(1);
-    
-    if (error) {
-        console.error('Error fetching upcoming hint:', error);
+    try {
+        const now = new Date().toISOString();
+        const response = await fetch(
+            SUPABASE_URL + '/rest/v1/hints?select=release_time&puzzle_id=eq.' + puzzleId + '&release_time=gt.' + encodeURIComponent(now) + '&order=release_time.asc&limit=1', 
+            {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+                }
+            }
+        );
+        
+        if (!response.ok) {
+            console.error('Error fetching upcoming hint:', response.status);
+            return null;
+        }
+        
+        const data = await response.json();
+        return data?.[0] || null;
+    } catch (e) {
+        console.error('Error fetching upcoming hint:', e);
         return null;
     }
-    return data?.[0] || null;
 }
 
 // ============== Rate Limiting & Anti-Bot (Google reCAPTCHA v3) ==============
@@ -695,56 +793,93 @@ async function checkAnswer(puzzleId, answer) {
     const normalizedAnswer = answer.toLowerCase().trim();
     const answerHash = await hashString(normalizedAnswer);
     
-    const { data, error } = await supabaseClient.rpc('check_answer', {
-        p_puzzle_id: puzzleId,
-        p_user_id: user.id,
-        p_answer_text: normalizedAnswer,
-        p_answer_hash: answerHash
-    });
-
-    if (error) {
-        console.error('Error checking answer:', error);
+    try {
+        const token = currentSession?.access_token || SUPABASE_ANON_KEY;
+        
+        const response = await fetch(SUPABASE_URL + '/rest/v1/rpc/check_answer', {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                p_puzzle_id: puzzleId,
+                p_user_id: user.id,
+                p_answer_text: normalizedAnswer,
+                p_answer_hash: answerHash
+            })
+        });
+        
+        if (!response.ok) {
+            console.error('Error checking answer:', response.status);
+            showMessage('Error submitting answer. Please try again.', 'error');
+            return null;
+        }
+        
+        const data = await response.json();
+        return data;
+    } catch (e) {
+        console.error('Error checking answer:', e);
         showMessage('Error submitting answer. Please try again.', 'error');
         return null;
     }
-
-    return data;
 }
 
 async function getUserSubmission(puzzleId) {
     const user = await getCurrentUser();
     if (!user) return null;
     
-    const { data, error } = await supabaseClient
-        .from('submissions')
-        .select('*')
-        .eq('puzzle_id', puzzleId)
-        .eq('user_id', user.id)
-        .eq('is_correct', true)
-        .limit(1);
-    
-    if (error) {
-        console.error('Error fetching submission:', error);
+    try {
+        // Get current session for auth token
+        const token = currentSession?.access_token || SUPABASE_ANON_KEY;
+        
+        const response = await fetch(
+            SUPABASE_URL + '/rest/v1/submissions?select=*&puzzle_id=eq.' + puzzleId + '&user_id=eq.' + user.id + '&is_correct=eq.true&limit=1',
+            {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': 'Bearer ' + token
+                }
+            }
+        );
+        
+        if (!response.ok) {
+            console.error('Error fetching submission:', response.status);
+            return null;
+        }
+        
+        const data = await response.json();
+        return data?.[0] || null;
+    } catch (e) {
+        console.error('Error fetching submission:', e);
         return null;
     }
-    return data?.[0] || null;
 }
 
 // ============== Leaderboard ==============
 
 async function fetchLeaderboard() {
-    const { data, error } = await supabaseClient
-        .from('leaderboard_view')
-        .select('*')
-        .order('total_points', { ascending: false })
-        .limit(100);
-    
-    if (error) {
-        console.error('Error fetching leaderboard:', error);
-        // Fallback: calculate from submissions
-        return await calculateLeaderboard();
+    try {
+        // Use direct fetch since Supabase client has issues
+        const response = await fetch(SUPABASE_URL + '/rest/v1/leaderboard_view?select=*&order=total_points.desc&limit=100', {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+            }
+        });
+        
+        if (!response.ok) {
+            console.error('Error fetching leaderboard:', response.status);
+            return [];
+        }
+        
+        const data = await response.json();
+        return data || [];
+    } catch (e) {
+        console.error('Error fetching leaderboard:', e);
+        return [];
     }
-    return data || [];
 }
 
 async function calculateLeaderboard() {
@@ -843,8 +978,8 @@ function getStatusBadgeClass(status) {
 
 // Index Page
 async function initIndexPage() {
-    await updateAuthUI();
-    await loadPuzzleList();
+    loadPuzzleList();
+    updateAuthUI();
 }
 
 async function loadPuzzleList() {
@@ -930,14 +1065,12 @@ async function loadPuzzleList() {
 
 // Puzzle Page
 async function initPuzzlePage(puzzleId) {
-    await updateAuthUI();
-    await loadPuzzle(puzzleId);
-    await loadHints(puzzleId);
-    await loadPuzzleLeaderboard(puzzleId);
-    await checkExistingSubmission(puzzleId);
-    
-    // Set up hint refresh
-    setInterval(() => loadHints(puzzleId), 60000); // Check for new hints every minute
+    loadPuzzle(puzzleId);
+    loadHints(puzzleId);
+    loadPuzzleLeaderboard(puzzleId);
+    updateAuthUI();
+    checkExistingSubmission(puzzleId);
+    setInterval(() => loadHints(puzzleId), 60000);
 }
 
 async function loadPuzzle(puzzleId) {
@@ -1035,38 +1168,49 @@ async function fetchPuzzleLeaderboard(puzzleId) {
     if (!supabaseConfigured) return [];
 
     try {
-        // Query without explicit join—fetch submissions first, then user data separately
-        const { data: submissions, error: subError } = await supabaseClient
-            .from('submissions')
-            .select('user_id, submitted_at')
-            .eq('puzzle_id', puzzleId)
-            .eq('is_correct', true)
-            .order('submitted_at', { ascending: true })
-            .limit(10);
+        // Fetch submissions via direct REST API
+        const subResponse = await fetch(
+            SUPABASE_URL + '/rest/v1/submissions?select=user_id,submitted_at&puzzle_id=eq.' + puzzleId + '&is_correct=eq.true&order=submitted_at.asc&limit=10',
+            {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+                }
+            }
+        );
         
-        if (subError) throw subError;
+        if (!subResponse.ok) {
+            console.error('Error fetching submissions:', subResponse.status);
+            return [];
+        }
+        
+        const submissions = await subResponse.json();
         
         // Fetch user data for each submission
         const data = await Promise.all((submissions || []).map(async (sub) => {
-            const { data: user, error: userError } = await supabaseClient
-                .from('users')
-                .select('username, avatar_url')
-                .eq('id', sub.user_id)
-                .single();
-            
-            if (userError) {
-                console.warn(`Could not fetch user ${sub.user_id}:`, userError);
+            try {
+                const userResponse = await fetch(
+                    SUPABASE_URL + '/rest/v1/users?select=username,avatar_url&id=eq.' + sub.user_id,
+                    {
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+                        }
+                    }
+                );
+                
+                if (!userResponse.ok) {
+                    return { ...sub, users: { username: 'Anonymous', avatar_url: null } };
+                }
+                
+                const users = await userResponse.json();
+                return { ...sub, users: users?.[0] || { username: 'Anonymous', avatar_url: null } };
+            } catch (e) {
+                console.warn(`Could not fetch user ${sub.user_id}:`, e);
                 return { ...sub, users: { username: 'Anonymous', avatar_url: null } };
             }
-            return { ...sub, users: user };
         }));
         
-        const error = null;
-
-        if (error) {
-            console.error('Error fetching puzzle leaderboard:', error);
-            return [];
-        }
         return data || [];
     } catch (e) {
         console.error('Error in fetchPuzzleLeaderboard:', e);
@@ -1212,8 +1356,8 @@ async function submitAnswer(event, puzzleId) {
 
 // Leaderboard Page
 async function initLeaderboardPage() {
-    await updateAuthUI();
-    await loadLeaderboard();
+    loadLeaderboard();
+    updateAuthUI();
 }
 
 async function loadLeaderboard() {

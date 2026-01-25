@@ -119,7 +119,11 @@
 
     <script src="scripts.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', initLoginPage);
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initLoginPage);
+        } else {
+            initLoginPage();
+        }
     </script>
 </body>
 </html>

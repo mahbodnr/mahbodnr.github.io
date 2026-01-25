@@ -158,7 +158,7 @@
     <script>
         const PUZZLE_ID = 1;
         
-        document.addEventListener('DOMContentLoaded', () => {
+        function initPage() {
             initPuzzlePage(PUZZLE_ID);
             
             // Update title display
@@ -166,7 +166,14 @@
             if (titleEl) {
                 titleEl.textContent = document.getElementById('puzzle-title')?.textContent || 'Puzzle #001';
             }
-        });
+        }
+        
+        // Initialize page - handle both cases: DOM ready or already loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initPage);
+        } else {
+            initPage();
+        }
         
         // Toggle individual hints
         function toggleHint(index) {

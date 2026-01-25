@@ -133,7 +133,11 @@
         }
         
         // Initialize page
-        document.addEventListener('DOMContentLoaded', initIndexPage);
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initIndexPage);
+        } else {
+            initIndexPage();
+        }
     </script>
 </body>
 </html>

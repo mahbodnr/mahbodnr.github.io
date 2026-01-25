@@ -120,7 +120,11 @@
 
     <script src="scripts.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', initLeaderboardPage);
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initLeaderboardPage);
+        } else {
+            initLeaderboardPage();
+        }
     </script>
 </body>
 </html>
