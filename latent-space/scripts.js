@@ -436,12 +436,15 @@ async function fetchUserProfile(userId) {
     if (!supabaseConfigured) return null;
     
     try {
+        const token = currentSession?.access_token || SUPABASE_ANON_KEY;
         const response = await fetch(
             SUPABASE_URL + '/rest/v1/users?select=username,avatar_url&id=eq.' + userId,
             {
                 headers: {
                     'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+                    'Authorization': 'Bearer ' + token,
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
                 }
             }
         );
@@ -857,6 +860,55 @@ async function getUserSubmission(puzzleId) {
     }
 }
 
+async function getUserAttemptCount(puzzleId) {
+    const user = await getCurrentUser();
+    if (!user) return 0;
+    
+    try {
+        // Get current session for auth token
+        const token = currentSession?.access_token || SUPABASE_ANON_KEY;
+        
+        const response = await fetch(
+            SUPABASE_URL + '/rest/v1/submissions?select=id&puzzle_id=eq.' + puzzleId + '&user_id=eq.' + user.id,
+            {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': 'Bearer ' + token
+                }
+            }
+        );
+        
+        if (!response.ok) {
+            console.error('Error fetching attempt count:', response.status);
+            return 0;
+        }
+        
+        const data = await response.json();
+        return data?.length || 0;
+    } catch (e) {
+        console.error('Error fetching attempt count:', e);
+        return 0;
+    }
+}
+
+async function updateAttemptCounter(puzzleId) {
+    const counterEl = document.getElementById('attempt-counter');
+    if (!counterEl) return;
+    
+    const user = await getCurrentUser();
+    if (!user) {
+        counterEl.textContent = '';
+        return;
+    }
+    
+    const attemptCount = await getUserAttemptCount(puzzleId);
+    if (attemptCount > 0) {
+        counterEl.textContent = `Attempts: ${attemptCount}`;
+    } else {
+        counterEl.textContent = '';
+    }
+}
+
 // ============== Leaderboard ==============
 
 async function fetchLeaderboard() {
@@ -1070,6 +1122,7 @@ async function initPuzzlePage(puzzleId) {
     loadPuzzleLeaderboard(puzzleId);
     updateAuthUI();
     checkExistingSubmission(puzzleId);
+    updateAttemptCounter(puzzleId);
     setInterval(() => loadHints(puzzleId), 60000);
 }
 
@@ -1291,12 +1344,14 @@ async function checkExistingSubmission(puzzleId) {
     const solvedMessage = document.getElementById('solved-message');
     
     if (submission && form && solvedMessage) {
+        const attemptCount = await getUserAttemptCount(puzzleId);
         form.classList.add('hidden');
         solvedMessage.classList.remove('hidden');
         solvedMessage.innerHTML = `
             <div class="message-box message-success">
                 <h3>✓ Puzzle Solved!</h3>
                 <p>You solved this puzzle and earned <strong>${submission.score} points</strong>!</p>
+                <p>Total attempts: <strong>${attemptCount}</strong></p>
                 <p>Submitted on: ${formatDate(submission.submitted_at)}</p>
             </div>
         `;
@@ -1343,11 +1398,14 @@ async function submitAnswer(event, puzzleId) {
         // Reset rate limit on success
         rateLimitState.attempts = [];
         rateLimitState.captchaRequired = false;
-        showMessage(`🎉 Correct! You earned ${result.score} points!`, 'success');
+        const attemptCount = await getUserAttemptCount(puzzleId);
+        showMessage(`🎉 Correct! You earned ${result.score} points! (Total attempts: ${attemptCount})`, 'success');
         await checkExistingSubmission(puzzleId);
     } else {
         // Record failed attempt for rate limiting
         recordAttempt();
+        // Update attempt counter
+        await updateAttemptCounter(puzzleId);
         showMessage('❌ Incorrect answer. Try again!', 'error');
     }
     

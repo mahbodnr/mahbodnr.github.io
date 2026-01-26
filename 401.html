@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error 401 - Authorization Required</title>
+    <link rel="stylesheet" href="/css/error.css">
+    <link rel="icon" href="/img/favicon.ico">
+</head>
+<body class="error-dialog">
+    <div class="dialog-window">
+        <div class="dialog-titlebar">
+            <span>Network Password</span>
+            <a href="/" class="dialog-close">×</a>
+        </div>
+        <div class="dialog-content">
+            <div class="dialog-icon warning">🔑</div>
+            <div class="dialog-text">
+                <h1>401 - Authorization Required</h1>
+                <p>
+                    You must enter a network password to access this resource.
+                    <br><br>
+                    The server could not verify that you are authorized to access
+                    the requested document. Either you supplied the wrong credentials
+                    (e.g., bad password), or your browser doesn't understand how to
+                    supply the credentials required.
+                    <br><br>
+                    Please press OK to return to the homepage or contact the
+                    system administrator for access.
+                </p>
+            </div>
+        </div>
+        <div class="dialog-buttons">
+            <a href="/" class="dialog-button">OK</a>
+            <a href="javascript:history.back()" class="dialog-button">Cancel</a>
+            <a href="mailto:mahbodnouri@gmail.com?subject=401%20Error" class="dialog-button">Contact</a>
+        </div>
+    </div>
+</body>
+</html>
