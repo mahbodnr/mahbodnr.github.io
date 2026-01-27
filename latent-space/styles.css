@@ -1,5 +1,11 @@
 /* Latent Space - Win98 Theme Styles */
 
+html,
+body {
+    height: 100%;
+    overflow: hidden;
+}
+
 body {
     background: #008080;
     margin: 0;

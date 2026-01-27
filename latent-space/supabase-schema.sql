@@ -34,7 +34,8 @@ CREATE POLICY "Users can view all profiles" ON users
 
 -- Users can update their own profile
 CREATE POLICY "Users can update own profile" ON users
-    FOR UPDATE USING (auth.uid() = id);
+    FOR UPDATE USING (auth.uid() = id)
+    WITH CHECK (auth.uid() = id);
 
 -- Users can insert their own profile
 CREATE POLICY "Users can insert own profile" ON users
@@ -131,7 +132,8 @@ CREATE INDEX IF NOT EXISTS submissions_submitted_at_idx ON submissions(submitted
 -- ============================================
 -- 5. LEADERBOARD VIEW
 -- ============================================
-CREATE OR REPLACE VIEW leaderboard_view AS
+CREATE OR REPLACE VIEW leaderboard_view
+WITH (security_invoker = true) AS
 SELECT 
     u.id as user_id,
     u.username,
@@ -156,6 +158,7 @@ CREATE OR REPLACE FUNCTION check_answer(
 RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     v_puzzle puzzles%ROWTYPE;
@@ -164,8 +167,6 @@ DECLARE
     v_is_correct BOOLEAN;
     v_existing_correct BOOLEAN;
 BEGIN
-    -- Ensure predictable search path in SECURITY DEFINER context
-    PERFORM set_config('search_path', 'public', true);
     -- Get the puzzle
     SELECT * INTO v_puzzle FROM puzzles WHERE id = p_puzzle_id;
     
@@ -232,6 +233,7 @@ RETURNS TABLE (
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
+SET search_path = public
 AS $$
     SELECT p.id, p.title, p.release_time, p.base_points
     FROM puzzles p
@@ -248,6 +250,7 @@ CREATE OR REPLACE FUNCTION update_user_avatar(
 RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
     -- Only allow users to update their own avatar
@@ -280,11 +283,9 @@ CREATE OR REPLACE FUNCTION ensure_user_exists(
 RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
-    -- Ensure predictable search path
-    PERFORM set_config('search_path', 'public', true);
-    
     -- Only allow users to create/update their own profile
     IF auth.uid() IS NULL OR auth.uid() != p_user_id THEN
         RETURN json_build_object('success', false, 'error', 'Unauthorized');

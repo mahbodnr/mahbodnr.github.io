@@ -27,8 +27,8 @@ function maximizeWindow(elmnt) {
         const barHeight = startBar ? startBar.offsetHeight : 0;
         elmnt.style.left = "0";
         elmnt.style.top = "0";
-        elmnt.style.width = "100%";
-        elmnt.style.height = `calc(100% - ${barHeight}px)`;
+        elmnt.style.width = "100vw";
+        elmnt.style.height = `calc(100vh - ${barHeight}px)`;
         elmnt.style.margin = "0";
         elmnt.style.position = "absolute";
         elmnt.style.zIndex = "100";
