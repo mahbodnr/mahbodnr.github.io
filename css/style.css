@@ -971,6 +971,31 @@ textarea:focus {
     /* margin-top: -1.25rem; */
 }
 
+.research-intro {
+    font-family: "Open Sans", "Source Sans Pro", "MS Sans Serif", Arial, sans-serif;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.research-intro p {
+    font-family: "Open Sans", "Helvetica Neue", Helvetica;
+    font-weight: 300;
+    line-height: 1.6;
+    color: #515151;
+    margin: 0;
+}
+
+.research-intro a {
+    color: #0000FF;
+    text-decoration: underline;
+}
+
+.research-intro a:hover {
+    color: #0000cc;
+}
+
 .research {
     font-family: "Open Sans", "Source Sans Pro";
     display: flex;
