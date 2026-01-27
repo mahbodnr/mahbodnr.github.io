@@ -312,6 +312,7 @@ a.desktop-item {
     width: 20rem;
     height: 21rem;
     border: 1px solid #0a0a0a;
+    box-sizing: border-box;
 }
 
 .window.ie {
@@ -326,7 +327,7 @@ a.desktop-item {
 }
 
 .window.help {
-    width: 80%;
+    width: 60%;
     left: 10vw;
     margin-top: 0;
     position: absolute;
@@ -339,8 +340,8 @@ a.desktop-item {
 
 
 .window.notepad {
-    width: 70%;
-    min-width: 60%;
+    width: 55%;
+    min-width: 40%;
     left: 20vw;
     margin-top: 0;
     position: absolute;
@@ -878,7 +879,7 @@ textarea:focus {
     cursor: pointer;
     width: 100%;
     float: left;
-    font-size: 11px;
+    font-size: 14px;
     transition: background 0.1s ease;
 }
 
@@ -895,6 +896,31 @@ textarea:focus {
     overflow: scroll;
     max-height: 70vh;
     top: 1.6rem;
+}
+
+.window.help[maximized="true"] {
+    display: block;
+    position: relative;
+}
+
+.window.help[maximized="true"] .tab-box-content {
+    position: absolute;
+    top: 4.5rem; /* header + options height */
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+    margin: 0;
+    display: flex;
+}
+
+.window.help[maximized="true"] .content {
+    width: auto;
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    height: 100%;
+    overflow-y: auto;
+    top: 0;
 }
 
 
@@ -931,7 +957,9 @@ textarea:focus {
 
 .about-me {
     font-family: "Open Sans", "Source Sans Pro", "MS Sans Serif", Arial, sans-serif;
-    line-height: 1.6;
+    line-height: 1.75;
+    font-size: 15px;
+    color: #111;
 }
 
 .about-me h2 {
@@ -939,6 +967,7 @@ textarea:focus {
     margin-top: 0;
     margin-bottom: 0.75rem;
     font-size: 1.35rem;
+    max-width: 80ch;
 }
 
 .about-me h3 {
@@ -950,6 +979,8 @@ textarea:focus {
 
 .about-me p {
     margin-bottom: 0.85rem;
+    font-size: 15px;
+    max-width: 80ch;
 }
 
 .about-me strong {
@@ -964,6 +995,68 @@ textarea:focus {
 
 .about-me a:hover {
     color: #0000cc;
+}
+
+/* Windows 98 style image frame for About Me section */
+/* Container to center the figure within the text column (80ch) */
+.about-me figure {
+    max-width: 80ch;
+    display: flex;
+    justify-content: center;
+    margin: 1.25rem 0;
+    padding: 0;
+}
+
+/* The actual frame wrapper */
+.about-me figure > .win98-frame {
+    display: inline-block;
+    background: #c0c0c0;
+    padding: 4px;
+    border: 2px solid;
+    border-color: #dfdfdf #808080 #808080 #dfdfdf;
+    box-shadow: 
+        1px 1px 0 #000,
+        inset 1px 1px 0 #fff;
+}
+
+/* Image inside the frame */
+.about-me figure img {
+    display: block;
+    max-width: 60ch;
+    height: auto;
+    border: 2px solid;
+    border-color: #808080 #dfdfdf #dfdfdf #808080;
+    box-shadow: inset 1px 1px 0 #000;
+}
+
+/* Caption styled like Windows 98 filename */
+.about-me figcaption {
+    background: #c0c0c0;
+    color: #222;
+    font-size: 11px;
+    text-align: center;
+    padding: 3px 6px 4px;
+    margin-top: 2px;
+    font-family: "MS Sans Serif", "Microsoft Sans Serif", Arial, sans-serif;
+    border: 1px solid;
+    border-color: #808080 #dfdfdf #dfdfdf #808080;
+}
+
+/* Standalone images (not in figure) */
+.about-me > div > img:not(figure img) {
+    display: block;
+    max-width: 60ch;
+    height: auto;
+    margin: 1rem 0;
+    margin-left: calc((80ch - 60ch) / 2);
+    padding: 4px;
+    background: #c0c0c0;
+    border: 2px solid;
+    border-color: #dfdfdf #808080 #808080 #dfdfdf;
+    box-shadow: 
+        1px 1px 0 #000,
+        inset 1px 1px 0 #fff,
+        inset -2px -2px 0 #808080;
 }
 
 .stars {

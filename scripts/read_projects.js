@@ -1,9 +1,16 @@
 
 const papers = [
     {
+        imageSrc: './img/research/Frontiers25.jpg',
+        title: 'Interleaving cortex-analog mixing improves deep non-negative matrix factorization networks',
+        text: 'Frontiers in Computational Neuroscience',
+        date: "2025/11/5",
+        link: 'https://www.frontiersin.org/journals/computational-neuroscience/articles/10.3389/fncom.2025.1692418/full',
+    },
+    {
         imageSrc: './img/research/LC.png',
         title: 'BioLCNet: Reward-Modulated Locally Connected Spiking Neural Networks',
-        text: ' Machine Learning, Optimization, and Data Science: 8th International Workshop, LOD 2022',
+        text: 'Machine Learning, Optimization, and Data Science: 8th International Workshop, LOD 2022',
         date: "2023/3/10",
         link: 'https://link.springer.com/chapter/10.1007/978-3-031-25891-6_42',
     },
