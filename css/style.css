@@ -613,7 +613,7 @@ iframe {
     cursor: pointer;
     display: none;
     box-sizing: border-box;
-    margin: 0 0.4rem 0 0;
+    margin: 0 0.75rem 0 0;
     font-weight: 600;
     padding: 0.35rem 0.4rem;
     white-space: nowrap;
@@ -1226,10 +1226,17 @@ hr {
         align-items: flex-start;
     }
 
+    /* Make research items stack vertically on mobile (text under images) */
+    #research .research {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
     .research img {
         width: 100%;
         max-width: 420px;
         margin-right: 0;
+        margin-bottom: 1rem;
     }
 
     /* Ensure maximized windows fit perfectly on mobile */
@@ -1256,7 +1263,7 @@ hr {
     #items>label {
         max-width: none;
         flex: 1 1 0;
-        margin: 0 0.2rem 0 0;
+        margin: 0 0.5rem 0 0;
         padding: 0.25rem 0.3rem;
         font-size: 0.85rem;
         height: calc(100% + 8px);
