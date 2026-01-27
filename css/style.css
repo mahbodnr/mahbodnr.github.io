@@ -327,14 +327,14 @@ a.desktop-item {
 }
 
 .window.help {
-    width: 60%;
+    width: 65%;
     left: 10vw;
     margin-top: 0;
     position: absolute;
     top: 5vh;
     height: 75vh;
     min-height: 75vh;
-    min-width: 50%;
+    min-width: 735px;
     max-height: 95vh;
 }
 
@@ -375,7 +375,7 @@ a.desktop-item {
 .window .header {
     background: linear-gradient(90deg, #000b7c, #1084d0);
     color: white;
-    padding: 0.25rem 0.5rem;
+    padding: 0.35rem 0.5rem;
     cursor: move;
     user-select: none;
     font-weight: 700;
@@ -383,7 +383,7 @@ a.desktop-item {
     letter-spacing: 0.3px;
     display: flex;
     align-items: center;
-    height: 1.5rem;
+    height: 1.75rem;
     box-sizing: border-box;
 }
 
@@ -518,7 +518,7 @@ iframe {
 .header-buttons {
     position: absolute;
     display: flex;
-    top: 0.3rem;
+    top: 0.35rem;
     z-index: 9999;
     right: 0.3rem;
     cursor: pointer;
@@ -582,7 +582,10 @@ iframe {
 
 #start-button-items {
     display: flex;
-    width: calc(100% - 4rem);
+    flex: 1;
+    min-width: 0;
+    /* Allow start button box-shadow/borders to render fully */
+    overflow: visible;
 }
 
 #items {
@@ -594,22 +597,27 @@ iframe {
     position: relative;
     top: -3px;
     height: calc(100% + 6px);
+    flex: 1;
+    min-width: 0;
+    max-width: calc(100% - 8rem);
 }
 
 
 #items>label {
-    height: 100%;
+    height: calc(100% + 10px);
     display: flex;
-    width: 10.5rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 7.5rem;
     align-items: center;
     cursor: pointer;
     display: none;
     box-sizing: border-box;
-    margin: 0 1rem 0 0;
+    margin: 0 0.4rem 0 0;
     font-weight: 600;
-    padding: 0 0.5rem;
+    padding: 0.35rem 0.4rem;
     white-space: nowrap;
-    overflow: visible;
+    overflow: hidden;
     text-overflow: ellipsis;
 }
 
@@ -1092,12 +1100,16 @@ textarea:focus {
 .research {
     font-family: "Open Sans", "Source Sans Pro";
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
     margin: 1rem 0;
     padding: 0.5rem 0;
     max-width: 900px;
+}
+
+#research .research {
+    flex-direction: row;
 }
 
 .research img {
@@ -1187,6 +1199,28 @@ hr {
         max-height: 60vh;
     }
 
+    /* Make the left menu smaller on mobile for better text visibility */
+    .help .tab-box {
+        min-width: 15%;
+        max-width: 18%;
+    }
+
+    .help .tab-box .box label {
+        font-size: 9px;
+        padding: 0.25rem 0.3rem;
+        line-height: 1.2;
+    }
+
+    .help .tab-box img {
+        width: 0.65rem;
+        padding: 0 0.1rem 0.3rem 0;
+    }
+
+    .help .tab-header {
+        font-size: 9px;
+        padding: 0.1rem 0.15rem;
+    }
+
     .research {
         flex-direction: column;
         align-items: flex-start;
@@ -1196,6 +1230,41 @@ hr {
         width: 100%;
         max-width: 420px;
         margin-right: 0;
+    }
+
+    /* Ensure maximized windows fit perfectly on mobile */
+    .window[maximized="true"] {
+        left: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+    }
+
+    /* Disable minimize and maximize buttons on mobile screens */
+    .header-buttons > label.minimize,
+    .header-buttons > label.maximize {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    /* Make task bar items more flexible on mobile */
+    #items {
+        max-width: 30%;
+    }
+
+    #items>label {
+        max-width: none;
+        flex: 1 1 0;
+        margin: 0 0.2rem 0 0;
+        padding: 0.25rem 0.3rem;
+        font-size: 0.85rem;
+        height: calc(100% + 8px);
+    }
+
+    #items>label img {
+        width: 1.4rem;
+        padding: 0 0.3rem 0 0;
     }
 }
 
