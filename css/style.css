@@ -586,6 +586,7 @@ iframe {
     min-width: 0;
     /* Allow start button box-shadow/borders to render fully */
     overflow: visible;
+    align-items: center;
 }
 
 #items {
