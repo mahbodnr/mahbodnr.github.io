@@ -1050,6 +1050,146 @@ textarea:focus {
     border-color: #808080 #dfdfdf #dfdfdf #808080;
 }
 
+/* Windows 98 FAQ Section - Help Dialog Style */
+.win98-faq {
+    width: 100%;
+    max-width: none;
+    margin-top: 0.5rem;
+    background: #fff;
+    border: 2px solid;
+    border-color: #808080 #dfdfdf #dfdfdf #808080;
+    padding: 2px;
+}
+
+.win98-faq-header {
+    background: linear-gradient(90deg, #000080, #1084d0);
+    color: #fff;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 6px 12px;
+    font-family: "MS Sans Serif", "Microsoft Sans Serif", Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.win98-faq-header::before {
+    content: '?';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: #ffffcc;
+    color: #000080;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.win98-faq-list {
+    background: #fff;
+    padding: 16px;
+}
+
+.faq-item {
+    margin-bottom: 10px;
+    border-radius: 0;
+}
+
+.faq-item:last-child {
+    margin-bottom: 0;
+}
+
+.faq-toggle {
+    display: none;
+}
+
+.faq-question {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px 14px;
+    cursor: pointer;
+    font-size: 15px;
+    color: #000080;
+    background: #ffffcc;
+    font-family: "MS Sans Serif", "Microsoft Sans Serif", Arial, sans-serif;
+    user-select: none;
+    border: 1px solid #808080;
+    transition: all 0.15s ease;
+    text-decoration: underline;
+    gap: 10px;
+    line-height: 1.5;
+}
+
+.faq-question:hover {
+    background: #fff8b0;
+    color: #0000cc;
+}
+
+.faq-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    background: #000080;
+    color: #fff;
+    font-size: 13px;
+    font-weight: bold;
+    font-family: "MS Sans Serif", Arial, sans-serif;
+    flex-shrink: 0;
+    margin-top: 1px;
+    border: 1px solid #000;
+}
+
+.faq-icon::before {
+    content: '?';
+}
+
+/* When expanded */
+.faq-toggle:checked + .faq-question {
+    background: #000080;
+    color: #fff;
+    border-color: #000080;
+}
+
+.faq-toggle:checked + .faq-question .faq-icon {
+    background: #fff;
+    color: #000080;
+    border-color: #fff;
+}
+
+.faq-answer {
+    display: none;
+    background: #f8f8f8;
+    border: 1px solid #808080;
+    border-top: none;
+    margin-top: -1px;
+}
+
+.faq-toggle:checked ~ .faq-answer {
+    display: block;
+}
+
+.faq-answer p {
+    margin: 0;
+    padding: 14px 18px;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #222;
+    font-family: "Open Sans", "MS Sans Serif", Arial, sans-serif;
+}
+
+.faq-answer a {
+    color: #0000ff;
+    text-decoration: underline;
+}
+
+.faq-answer a:hover {
+    color: #cc0000;
+}
+
 /* Standalone images (not in figure) */
 .about-me > div > img:not(figure img) {
     display: block;
