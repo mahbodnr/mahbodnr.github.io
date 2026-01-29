@@ -1414,6 +1414,25 @@ hr {
         width: 1.4rem;
         padding: 0 0.3rem 0 0;
     }
+
+    /* About Me: align photos full width on phone so they line up */
+    .about-me figure {
+        width: 100%;
+        max-width: 100%;
+        display: block;
+    }
+
+    .about-me figure > .win98-frame {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .about-me figure img {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
 }
 
 @media (max-height: 520px) {

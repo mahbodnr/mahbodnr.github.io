@@ -522,11 +522,12 @@ async function fetchPuzzles() {
         });
         
         if (rpcResponse.ok) {
-            return await rpcResponse.json() || [];
+            const data = await rpcResponse.json() || [];
+            return data.sort((a, b) => a.id - b.id);
         }
         
         // Fallback: direct query (only shows released puzzles due to RLS)
-        const response = await fetch(SUPABASE_URL + '/rest/v1/puzzles?select=id,title,release_time,base_points&order=release_time.asc', {
+        const response = await fetch(SUPABASE_URL + '/rest/v1/puzzles?select=id,title,release_time,base_points&order=id.asc', {
             headers: {
                 'apikey': SUPABASE_ANON_KEY,
                 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
@@ -534,7 +535,8 @@ async function fetchPuzzles() {
         });
         
         if (!response.ok) return [];
-        return await response.json() || [];
+        const data = await response.json() || [];
+        return data.sort((a, b) => a.id - b.id);
     } catch (e) {
         console.error('Error in fetchPuzzles:', e);
         return [];
@@ -1096,7 +1098,7 @@ async function loadPuzzleList() {
                     <td>${puzzle.id}</td>
                     <td>${titleCell}</td>
                     <td>${formatDate(puzzle.release_time)}</td>
-                    <td>${puzzle.base_points}</td>
+                    <td>${puzzle.base_points === 0 ? 'TBA' : puzzle.base_points}</td>
                     <td><span class="status-badge ${getStatusBadgeClass(userStatus)}">${userStatus.toUpperCase()}</span></td>
                 </tr>
             `;
