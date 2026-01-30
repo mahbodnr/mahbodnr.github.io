@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+      // Short puzzle links: /p1 -> puzzle 001, /p2 -> puzzle 002, etc.
+      (function() {
+        var m = location.pathname.match(/^\/p(\d+)\/?$/);
+        if (m) {
+          var num = m[1].padStart(3, '0');
+          location.replace('/latent-space/puzzles/puzzle-' + num + '/');
+          return;
+        }
+      })();
+    </script>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KYW12YQM6N"></script>
     <script>

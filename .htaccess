@@ -1,8 +1,14 @@
 # Custom Error Pages
-ErrorDocument 401 /errors/401.html
-ErrorDocument 403 /errors/403.html
-ErrorDocument 404 /errors/404.html
-ErrorDocument 500 /errors/500.html
+ErrorDocument 401 /401.html
+ErrorDocument 403 /403.html
+ErrorDocument 404 /404.html
+ErrorDocument 500 /500.html
+
+# Short puzzle links: /p1 -> puzzle 1, /p2 -> puzzle 2, etc.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^p1/?$ /latent-space/puzzles/puzzle-001/ [L,R=302]
+</IfModule>
 
 # Redirect www to non-www
 <IfModule mod_rewrite.c>
