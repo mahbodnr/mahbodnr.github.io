@@ -1028,3 +1028,104 @@ a:hover {
     display: none !important;
 }
 
+/* ============================================
+   Email Preferences Page
+   ============================================ */
+
+.preferences-container {
+    max-width: 450px;
+    margin: 20px auto;
+    text-align: center;
+}
+
+.preferences-container img.logo {
+    margin-bottom: 16px;
+}
+
+.preferences-form {
+    text-align: left;
+    margin-top: 20px;
+}
+
+/* Windows 98 Fieldset */
+.win-fieldset {
+    border: 2px groove #c0c0c0;
+    padding: 16px;
+    margin: 0 0 16px 0;
+    background: #f8f8f8;
+}
+
+.win-fieldset legend {
+    font-weight: bold;
+    font-size: 12px;
+    padding: 0 8px;
+    color: #000;
+}
+
+/* Checkbox Group */
+.checkbox-group {
+    margin-bottom: 16px;
+}
+
+.checkbox-group:last-child {
+    margin-bottom: 0;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    padding: 8px;
+    border: 1px solid transparent;
+    transition: background-color 0.1s;
+}
+
+.checkbox-label:hover {
+    background-color: #e8e8e8;
+    border-color: #c0c0c0;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+    cursor: pointer;
+    accent-color: #000080;
+}
+
+.checkbox-text {
+    flex: 1;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.checkbox-text strong {
+    color: #000080;
+}
+
+.checkbox-description {
+    color: #666;
+    font-size: 11px;
+}
+
+/* Quick Actions */
+.quick-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding-top: 8px;
+    border-top: 1px dotted #c0c0c0;
+}
+
+/* Form Actions */
+.form-actions {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.form-actions .win-button {
+    min-width: 150px;
+    padding: 8px 24px;
+}
+

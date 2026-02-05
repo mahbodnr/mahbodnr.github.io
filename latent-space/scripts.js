@@ -1504,6 +1504,140 @@ async function initLoginPage() {
     }
 }
 
+// ============== Email Preferences ==============
+
+// Fetch email preferences by unsubscribe token (no auth required)
+async function fetchEmailPreferences(token) {
+    if (!token) return null;
+    
+    try {
+        const response = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_email_preferences_by_token', {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ p_token: token })
+        });
+        
+        if (!response.ok) {
+            console.error('Error fetching email preferences:', response.status);
+            return null;
+        }
+        
+        return await response.json();
+    } catch (e) {
+        console.error('Error in fetchEmailPreferences:', e);
+        return null;
+    }
+}
+
+// Update email preferences by unsubscribe token (no auth required)
+async function updateEmailPreferences(token, notifyNewPuzzles, notifyNewHints) {
+    if (!token) return { success: false, error: 'No token provided' };
+    
+    try {
+        const response = await fetch(SUPABASE_URL + '/rest/v1/rpc/update_email_preferences_by_token', {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                p_token: token,
+                p_notify_new_puzzles: notifyNewPuzzles,
+                p_notify_new_hints: notifyNewHints
+            })
+        });
+        
+        if (!response.ok) {
+            console.error('Error updating email preferences:', response.status);
+            return { success: false, error: 'Server error' };
+        }
+        
+        return await response.json();
+    } catch (e) {
+        console.error('Error in updateEmailPreferences:', e);
+        return { success: false, error: e.message };
+    }
+}
+
+// Fetch current user's email preferences (when logged in)
+async function fetchMyEmailPreferences() {
+    const user = await getCurrentUser();
+    if (!user || !supabaseConfigured) return null;
+    
+    try {
+        const token = currentSession?.access_token || SUPABASE_ANON_KEY;
+        const response = await fetch(
+            SUPABASE_URL + '/rest/v1/email_preferences?user_id=eq.' + user.id,
+            {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': 'Bearer ' + token
+                }
+            }
+        );
+        
+        if (!response.ok) {
+            console.error('Error fetching my email preferences:', response.status);
+            return null;
+        }
+        
+        const data = await response.json();
+        return data?.[0] || null;
+    } catch (e) {
+        console.error('Error in fetchMyEmailPreferences:', e);
+        return null;
+    }
+}
+
+// Update current user's email preferences (when logged in)
+async function updateMyEmailPreferences(notifyNewPuzzles, notifyNewHints) {
+    const user = await getCurrentUser();
+    if (!user || !supabaseConfigured) {
+        showMessage('Please log in to update your preferences.', 'error');
+        return false;
+    }
+    
+    try {
+        const token = currentSession?.access_token || SUPABASE_ANON_KEY;
+        
+        const response = await fetch(
+            SUPABASE_URL + '/rest/v1/email_preferences?user_id=eq.' + user.id,
+            {
+                method: 'PATCH',
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify({
+                    notify_new_puzzles: notifyNewPuzzles,
+                    notify_new_hints: notifyNewHints,
+                    updated_at: new Date().toISOString()
+                })
+            }
+        );
+        
+        if (!response.ok) {
+            console.error('Error updating email preferences:', response.status);
+            showMessage('Error updating preferences. Please try again.', 'error');
+            return false;
+        }
+        
+        showMessage('Email preferences updated!', 'success');
+        return true;
+    } catch (e) {
+        console.error('Error in updateMyEmailPreferences:', e);
+        showMessage('Error updating preferences. Please try again.', 'error');
+        return false;
+    }
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     updateAuthUI();

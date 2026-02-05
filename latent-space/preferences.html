@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KYW12YQM6N"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-KYW12YQM6N');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Preferences | Latent Space</title>
+    <meta name="description" content="Manage your Latent Space email notification preferences">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="../img/favicon.ico">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="main-window windows-box-shadow" style="max-width: 550px;">
+        <div class="window-header">
+            <div class="title">
+                <img src="../img/outlook_express-5.png" alt="">
+                Email Preferences - Latent Space
+            </div>
+            <div class="header-buttons">
+                <button onclick="window.location.href='index.html'">_</button>
+                <button>□</button>
+                <button onclick="window.location.href='index.html'">X</button>
+            </div>
+        </div>
+        
+        <div class="menu-bar">
+            <span>File</span>
+            <span>Edit</span>
+            <span>View</span>
+            <span>Help</span>
+        </div>
+        
+        <div class="window-content">
+            <div id="message-container" class="hidden"></div>
+            
+            <div class="content-inner">
+                <!-- Loading State -->
+                <div id="loading-state">
+                    <div class="loading">Loading preferences...</div>
+                </div>
+                
+                <!-- Error State (no token or invalid) -->
+                <div id="error-state" class="hidden">
+                    <div class="preferences-container">
+                        <img src="../img/latent_space.png" alt="Latent Space" class="logo" style="width: 64px; height: auto;">
+                        
+                        <h1>⚠️ Invalid Link</h1>
+                        
+                        <div class="message-box message-error">
+                            <p>This preferences link is invalid or has expired.</p>
+                            <p>If you're logged in, you can manage your preferences from your account settings.</p>
+                        </div>
+                        
+                        <div style="margin-top: 24px;">
+                            <a href="index.html"><button class="win-button windows-box-shadow">← Back to Puzzles</button></a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Preferences Form -->
+                <div id="preferences-state" class="hidden">
+                    <div class="preferences-container">
+                        <img src="../img/latent_space.png" alt="Latent Space" class="logo" style="width: 64px; height: auto;">
+                        
+                        <h1>📧 Email Preferences</h1>
+                        
+                        <p>Manage your notification settings for <strong id="user-email">your account</strong>.</p>
+                        
+                        <div class="preferences-form">
+                            <fieldset class="win-fieldset">
+                                <legend>Notification Settings</legend>
+                                
+                                <div class="checkbox-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="notify-puzzles" checked>
+                                        <span class="checkbox-text">
+                                            <strong>🧩 New Puzzle Alerts</strong><br>
+                                            <span class="checkbox-description">Get notified when a new puzzle is released</span>
+                                        </span>
+                                    </label>
+                                </div>
+                                
+                                <div class="checkbox-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="notify-hints" checked>
+                                        <span class="checkbox-text">
+                                            <strong>💡 New Hint Alerts</strong><br>
+                                            <span class="checkbox-description">Get notified when hints are released for active puzzles</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            </fieldset>
+                            
+                            <div class="quick-actions">
+                                <button class="win-button windows-box-shadow" onclick="selectAll()">Select All</button>
+                                <button class="win-button windows-box-shadow" onclick="selectNone()">Unsubscribe All</button>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button class="win-button windows-box-shadow primary" id="save-btn" onclick="savePreferences()">
+                                    💾 Save Preferences
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <hr style="margin: 24px 0; border: 1px inset;">
+                        
+                        <p style="font-size: 11px; color: #666;">
+                            Changes are saved immediately. You can update these preferences at any time using the link in our emails.
+                        </p>
+                        
+                        <div style="margin-top: 24px;">
+                            <a href="index.html"><button class="win-button windows-box-shadow">← Back to Puzzles</button></a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Success State -->
+                <div id="success-state" class="hidden">
+                    <div class="preferences-container">
+                        <img src="../img/latent_space.png" alt="Latent Space" class="logo" style="width: 64px; height: auto;">
+                        
+                        <h1>✅ Preferences Saved!</h1>
+                        
+                        <div class="message-box message-success">
+                            <p>Your email preferences have been updated successfully.</p>
+                        </div>
+                        
+                        <div id="saved-summary" style="margin: 16px 0; padding: 12px; background: #f0f0f0; border: 1px solid #c0c0c0;">
+                            <!-- Summary will be inserted here -->
+                        </div>
+                        
+                        <div style="margin-top: 24px;">
+                            <button class="win-button windows-box-shadow" onclick="showPreferencesForm()">✏️ Edit Preferences</button>
+                            <a href="index.html"><button class="win-button windows-box-shadow primary">🎮 Go to Puzzles</button></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="window-footer">
+            <span class="footer-section">Email Preferences</span>
+            <span class="footer-section">© Mahbod Nouri</span>
+        </div>
+    </div>
+
+    <!-- Start button toggle for taskbar -->
+    <input id="start-button-input" name="start-button-input" type="checkbox" />
+    <!-- Windows 98 style taskbar -->
+    <div id="start-bar">
+        <div id="start-button-items">
+            <label class="windows-box-shadow" for="start-button-input" id="start-button"></label>
+            <div id="items"></div>
+        </div>
+        <div class="windows-box-shadow" id="start-menu">
+            <div id="windows-start-menu-blue">Windows<span>98</span></div>
+            <ul>
+                <li><a href="https://www.linkedin.com/in/mahbodnr/" target="_blank"><label>
+                            <img alt="" src="/img/linkedin.png" style="width: 1.5rem;" />Linkedin
+                        </label></a></li>
+                <li><a href="https://github.com/mahbodnr" target="_blank"><label>
+                            <img alt="" src="/img/github.png" style="width: 1.5rem;" />GitHub
+                        </label></a></li>
+                <li class="line"><a href="https://scholar.google.com/citations?user=p7kqlIMAAAAJ&hl=en"
+                        target="_blank"><label>
+                            <img alt="" src="/img/scholar.png" style="width: 1.5rem;" />Google Scholar
+                        </label></a></li>
+                <li class="programs"><label><img alt="" src="/img/programs.png" style="width: 1.5rem;" />
+                        Progams</label>
+                    <ul class="windows-box-shadow">
+                        <li><a href="/latent-space/index.html"><label><img src="/img/latent_space.png" /> Latent Space</label></a>
+                        </li>
+                    </ul>
+                </li>
+                <li class="line"><a href="/index.html"><label><img alt="" src="/img/text_editor.png"
+                            style="width: 1.5rem;" /> Home</label></a></li>
+            </ul>
+        </div>
+        <div id="time-options"></div>
+    </div>
+
+    <script src="scripts.js"></script>
+    <script>
+        let currentToken = null;
+        
+        function getTokenFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('token');
+        }
+        
+        function showState(stateId) {
+            ['loading-state', 'error-state', 'preferences-state', 'success-state'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(stateId).classList.remove('hidden');
+        }
+        
+        function showPreferencesForm() {
+            showState('preferences-state');
+        }
+        
+        function selectAll() {
+            document.getElementById('notify-puzzles').checked = true;
+            document.getElementById('notify-hints').checked = true;
+        }
+        
+        function selectNone() {
+            document.getElementById('notify-puzzles').checked = false;
+            document.getElementById('notify-hints').checked = false;
+        }
+        
+        async function loadPreferences() {
+            currentToken = getTokenFromUrl();
+            
+            if (!currentToken) {
+                showState('error-state');
+                return;
+            }
+            
+            try {
+                const prefs = await fetchEmailPreferences(currentToken);
+                
+                if (!prefs || !prefs.success) {
+                    showState('error-state');
+                    return;
+                }
+                
+                // Populate form
+                document.getElementById('user-email').textContent = prefs.email;
+                document.getElementById('notify-puzzles').checked = prefs.notify_new_puzzles;
+                document.getElementById('notify-hints').checked = prefs.notify_new_hints;
+                
+                showState('preferences-state');
+            } catch (e) {
+                console.error('Error loading preferences:', e);
+                showState('error-state');
+            }
+        }
+        
+        async function savePreferences() {
+            if (!currentToken) {
+                showMessage('Invalid token. Please use the link from your email.', 'error');
+                return;
+            }
+            
+            const saveBtn = document.getElementById('save-btn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = '⏳ Saving...';
+            
+            const notifyPuzzles = document.getElementById('notify-puzzles').checked;
+            const notifyHints = document.getElementById('notify-hints').checked;
+            
+            try {
+                const result = await updateEmailPreferences(currentToken, notifyPuzzles, notifyHints);
+                
+                if (result && result.success) {
+                    // Show success state
+                    const summaryHtml = `
+                        <p style="margin: 0; font-size: 12px;">
+                            <strong>Your current settings:</strong><br>
+                            ${notifyPuzzles ? '✅' : '❌'} New Puzzle Alerts: ${notifyPuzzles ? 'Enabled' : 'Disabled'}<br>
+                            ${notifyHints ? '✅' : '❌'} New Hint Alerts: ${notifyHints ? 'Enabled' : 'Disabled'}
+                        </p>
+                    `;
+                    document.getElementById('saved-summary').innerHTML = summaryHtml;
+                    showState('success-state');
+                } else {
+                    showMessage(result?.error || 'Error saving preferences. Please try again.', 'error');
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '💾 Save Preferences';
+                }
+            } catch (e) {
+                console.error('Error saving preferences:', e);
+                showMessage('Error saving preferences. Please try again.', 'error');
+                saveBtn.disabled = false;
+                saveBtn.textContent = '💾 Save Preferences';
+            }
+        }
+        
+        // Initialize page
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadPreferences);
+        } else {
+            loadPreferences();
+        }
+    </script>
+</body>
+</html>
