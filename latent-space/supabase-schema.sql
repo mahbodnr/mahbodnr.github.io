@@ -51,6 +51,8 @@ CREATE TABLE IF NOT EXISTS puzzles (
     answer_hash TEXT NOT NULL, -- SHA-256 hash of the lowercase, trimmed answer
     release_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     base_points INTEGER NOT NULL DEFAULT 1000,
+    congrat_email_subject TEXT,
+    congrat_email_html TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -137,6 +139,7 @@ CREATE TABLE IF NOT EXISTS email_preferences (
     user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     notify_new_puzzles BOOLEAN DEFAULT TRUE,
     notify_new_hints BOOLEAN DEFAULT TRUE,
+    notify_on_solve BOOLEAN DEFAULT TRUE,
     unsubscribe_token UUID DEFAULT uuid_generate_v4() UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -166,6 +169,11 @@ CREATE POLICY "Users can insert own email preferences" ON email_preferences
 -- Create index for token lookups
 CREATE INDEX IF NOT EXISTS email_preferences_token_idx ON email_preferences(unsubscribe_token);
 
+-- Migration: add puzzle congrat and notify_on_solve (for existing databases)
+ALTER TABLE puzzles ADD COLUMN IF NOT EXISTS congrat_email_subject TEXT;
+ALTER TABLE puzzles ADD COLUMN IF NOT EXISTS congrat_email_html TEXT;
+ALTER TABLE email_preferences ADD COLUMN IF NOT EXISTS notify_on_solve BOOLEAN DEFAULT TRUE;
+
 -- ============================================
 -- 6. EMAIL LOGS TABLE
 -- ============================================
@@ -174,7 +182,7 @@ CREATE TABLE IF NOT EXISTS email_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     email TEXT NOT NULL,
-    notification_type TEXT NOT NULL, -- 'new_puzzle' or 'new_hint'
+    notification_type TEXT NOT NULL, -- 'new_puzzle', 'new_hint', or 'puzzle_solved'
     puzzle_id INTEGER REFERENCES puzzles(id) ON DELETE SET NULL,
     hint_id INTEGER REFERENCES hints(id) ON DELETE SET NULL,
     success BOOLEAN NOT NULL DEFAULT TRUE,
@@ -434,16 +442,19 @@ BEGIN
         'success', true,
         'email', v_masked_email,
         'notify_new_puzzles', v_prefs.notify_new_puzzles,
-        'notify_new_hints', v_prefs.notify_new_hints
+        'notify_new_hints', v_prefs.notify_new_hints,
+        'notify_on_solve', COALESCE(v_prefs.notify_on_solve, true)
     );
 END;
 $$;
 
 -- Function to update email preferences by unsubscribe token (no auth required)
+DROP FUNCTION IF EXISTS update_email_preferences_by_token(p_token UUID, p_notify_new_puzzles BOOLEAN, p_notify_new_hints BOOLEAN);
 CREATE OR REPLACE FUNCTION update_email_preferences_by_token(
     p_token UUID,
     p_notify_new_puzzles BOOLEAN,
-    p_notify_new_hints BOOLEAN
+    p_notify_new_hints BOOLEAN,
+    p_notify_on_solve BOOLEAN DEFAULT NULL
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -460,11 +471,12 @@ BEGIN
         RETURN json_build_object('success', false, 'error', 'Invalid or expired token');
     END IF;
     
-    -- Update preferences
+    -- Update preferences (only set notify_on_solve if provided)
     UPDATE email_preferences
     SET 
         notify_new_puzzles = p_notify_new_puzzles,
         notify_new_hints = p_notify_new_hints,
+        notify_on_solve = COALESCE(p_notify_on_solve, notify_on_solve),
         updated_at = NOW()
     WHERE unsubscribe_token = p_token;
     
@@ -595,7 +607,7 @@ GRANT EXECUTE ON FUNCTION ensure_user_exists(UUID, TEXT, TEXT, TEXT) TO authenti
 
 -- Email preferences functions (accessible without auth via token)
 GRANT EXECUTE ON FUNCTION get_email_preferences_by_token(UUID) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION update_email_preferences_by_token(UUID, BOOLEAN, BOOLEAN) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION update_email_preferences_by_token(UUID, BOOLEAN, BOOLEAN, BOOLEAN) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION get_users_for_notification(TEXT, INTEGER) TO authenticated;
 GRANT EXECUTE ON FUNCTION ensure_email_preferences_exist(UUID) TO authenticated;
 

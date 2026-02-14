@@ -1191,7 +1191,7 @@ async function loadHints(puzzleId) {
                         <span class="hint-time">Released: ${formatDate(hint.release_time)}</span>
                     </div>
                     <div class="hint-content hidden" id="hint-content-${index}">
-                        ${escapeHtml(hint.hint_text)}
+                        ${hint.hint_text}
                     </div>
                 </div>
             `;
