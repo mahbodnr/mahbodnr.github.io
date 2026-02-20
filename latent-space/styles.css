@@ -362,6 +362,13 @@ a:hover {
     font-size: 11px;
     color: #666;
     font-weight: normal;
+    margin-left: auto;
+}
+
+.hint-timer-inline {
+    font-size: 11px;
+    color: #333;
+    margin-left: 8px;
 }
 
 .hint-content {

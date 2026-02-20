@@ -627,26 +627,32 @@ async function fetchAllHintsCount(puzzleId) {
 
 async function fetchUpcomingHint(puzzleId) {
     try {
-        const now = new Date().toISOString();
         const response = await fetch(
-            SUPABASE_URL + '/rest/v1/hints?select=release_time&puzzle_id=eq.' + puzzleId + '&release_time=gt.' + encodeURIComponent(now) + '&order=release_time.asc&limit=1', 
+            SUPABASE_URL + '/rest/v1/rpc/get_next_hint_release',
             {
+                method: 'POST',
                 headers: {
                     'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
-                }
+                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ p_puzzle_id: puzzleId })
             }
         );
         
         if (!response.ok) {
-            console.error('Error fetching upcoming hint:', response.status);
+            console.error('Error fetching upcoming hint (RPC):', response.status);
             return null;
         }
         
         const data = await response.json();
-        return data?.[0] || null;
+        if (!data) return null;
+        if (Array.isArray(data)) {
+            return data[0] || null;
+        }
+        return data;
     } catch (e) {
-        console.error('Error fetching upcoming hint:', e);
+        console.error('Error fetching upcoming hint (RPC):', e);
         return null;
     }
 }
@@ -1310,6 +1316,12 @@ async function loadHints(puzzleId) {
     const container = document.getElementById('hints-container');
     if (!container) return;
     
+    // Clear any existing countdown timer interval
+    if (window.nextHintTimerId) {
+        clearInterval(window.nextHintTimerId);
+        window.nextHintTimerId = null;
+    }
+    
     const hints = await fetchHints(puzzleId);
     const totalHints = await fetchAllHintsCount(puzzleId);
     const upcomingHint = await fetchUpcomingHint(puzzleId);
@@ -1386,7 +1398,7 @@ async function loadHints(puzzleId) {
             <div class="hint-card hint-locked">
                 <div class="hint-header">
                     <button class="hint-toggle">🔒</button>
-                    <strong>Next hint</strong>
+                    <span id="next-hint-timer" class="hint-timer-inline" style="margin-left: 0;">Next hint in ...</span>
                     <span class="hint-time">Available: ${formatDate(upcomingHint.release_time)}</span>
                 </div>
             </div>
@@ -1399,6 +1411,56 @@ async function loadHints(puzzleId) {
     }
     
     container.innerHTML = html;
+    
+    if (upcomingHint) {
+        const timerEl = document.getElementById('next-hint-timer');
+        if (timerEl) {
+            const releaseTime = new Date(upcomingHint.release_time).getTime();
+            
+            function formatRemaining(ms) {
+                const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+                const days = Math.floor(totalSeconds / 86400);
+                const hours = Math.floor((totalSeconds % 86400) / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
+                
+                const parts = [];
+                if (days > 0) parts.push(days + 'd');
+                if (days > 0 || hours > 0) {
+                    parts.push(String(hours).padStart(2, '0') + 'h');
+                }
+                parts.push(String(minutes).padStart(2, '0') + 'm');
+                parts.push(String(seconds).padStart(2, '0') + 's');
+                return parts.join(' ');
+            }
+            
+            function updateTimer() {
+                const now = Date.now();
+                const diff = releaseTime - now;
+                
+                if (diff <= 0) {
+                    timerEl.textContent = 'Next hint is unlocking...';
+                    clearInterval(window.nextHintTimerId);
+                    window.nextHintTimerId = null;
+                    // Refresh hints shortly after unlock to show the new hint
+                    setTimeout(() => loadHints(puzzleId), 2000);
+                    return;
+                }
+                
+                timerEl.textContent = 'Next hint in ' + formatRemaining(diff);
+            }
+            
+            updateTimer();
+            window.nextHintTimerId = setInterval(() => {
+                if (!document.body.contains(timerEl)) {
+                    clearInterval(window.nextHintTimerId);
+                    window.nextHintTimerId = null;
+                    return;
+                }
+                updateTimer();
+            }, 1000);
+        }
+    }
 }
 
 // Per-puzzle leaderboard (fastest correct submissions)

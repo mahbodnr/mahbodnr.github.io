@@ -640,3 +640,28 @@ GRANT EXECUTE ON FUNCTION update_email_preferences_by_token(UUID, BOOLEAN, BOOLE
 GRANT EXECUTE ON FUNCTION get_users_for_notification(TEXT, INTEGER) TO authenticated;
 GRANT EXECUTE ON FUNCTION ensure_email_preferences_exist(UUID) TO authenticated;
 
+-- Next-hint timer helper (client-safe: only returns next release_time)
+DROP FUNCTION IF EXISTS get_next_hint_release(INTEGER);
+
+CREATE OR REPLACE FUNCTION get_next_hint_release(
+    p_puzzle_id INTEGER
+)
+RETURNS TABLE (
+    release_time TIMESTAMP WITH TIME ZONE
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT h.release_time
+    FROM hints h
+    JOIN puzzles p ON p.id = h.puzzle_id
+    WHERE h.puzzle_id = p_puzzle_id
+      AND h.release_time > NOW()
+      AND p.release_time <= NOW()
+    ORDER BY h.release_time ASC
+    LIMIT 1;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_next_hint_release(INTEGER) TO anon, authenticated;
+
