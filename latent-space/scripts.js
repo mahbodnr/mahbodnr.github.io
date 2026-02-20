@@ -649,6 +649,121 @@ async function fetchUpcomingHint(puzzleId) {
     }
 }
 
+// --------------- Superhint: fetch/record reads (authenticated only) ---------------
+async function fetchSuperhintReads(hintIds) {
+    if (!supabaseConfigured || !supabaseClient || !hintIds || hintIds.length === 0) return new Set();
+    try {
+        const session = await waitForAuth();
+        if (!session) return new Set();
+        const { data, error } = await supabaseClient
+            .from('superhint_reads')
+            .select('hint_id')
+            .in('hint_id', hintIds);
+        if (error) {
+            console.error('Error fetching superhint reads:', error);
+            return new Set();
+        }
+        return new Set((data || []).map(r => r.hint_id));
+    } catch (e) {
+        console.error('Error in fetchSuperhintReads:', e);
+        return new Set();
+    }
+}
+
+async function recordSuperhintRead(hintId) {
+    if (!supabaseConfigured || !supabaseClient) return false;
+    try {
+        const session = await waitForAuth();
+        if (!session) return false;
+        const { error } = await supabaseClient
+            .from('superhint_reads')
+            .insert({ user_id: session.user.id, hint_id: hintId });
+        if (error) {
+            console.error('Error recording superhint read:', error);
+            return false;
+        }
+        return true;
+    } catch (e) {
+        console.error('Error in recordSuperhintRead:', e);
+        return false;
+    }
+}
+
+function showSuperhintDialog(options) {
+    const { signedIn, onSeeHint, onSignIn } = options || {};
+    const dialog = document.createElement('div');
+    dialog.className = 'superhint-dialog edit-name-dialog';
+    const message = signedIn
+        ? 'This is a superhint and may spoil parts of the puzzle. We suggest trying on your own first. Do you want to see it anyway?'
+        : 'This is a superhint. You need to sign in to view it.';
+    const secondButton = signedIn
+        ? '<button class="win-button windows-box-shadow primary" id="superhint-see-btn">See the hint</button>'
+        : '<button class="win-button windows-box-shadow primary" id="superhint-signin-btn">Sign in to see the hint</button>';
+    dialog.innerHTML = `
+        <div class="edit-name-content windows-box-shadow superhint-dialog-content">
+            <div class="edit-name-header">
+                <span>Superhint</span>
+                <button class="close-btn" id="superhint-dialog-close">×</button>
+            </div>
+            <div class="edit-name-body">
+                <p class="superhint-dialog-message">${escapeHtml(message)}</p>
+                <div class="edit-name-buttons">
+                    <button class="win-button windows-box-shadow" id="superhint-cancel-btn">Cancel</button>
+                    ${secondButton}
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(dialog);
+
+    const close = () => dialog.remove();
+    dialog.querySelector('#superhint-cancel-btn').addEventListener('click', close);
+    dialog.querySelector('#superhint-dialog-close').addEventListener('click', close);
+    if (signedIn && typeof onSeeHint === 'function') {
+        dialog.querySelector('#superhint-see-btn').addEventListener('click', () => { close(); onSeeHint(); });
+    } else if (!signedIn && typeof onSignIn === 'function') {
+        dialog.querySelector('#superhint-signin-btn').addEventListener('click', () => { close(); onSignIn(); });
+    }
+    dialog.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') close();
+    });
+}
+
+function revealSuperhintContent(index) {
+    const content = document.getElementById('hint-content-' + index);
+    const button = document.getElementById('hint-toggle-' + index);
+    if (!content || !button) return;
+    const hint = window.currentHints && window.currentHints[index];
+    if (hint && hint.hint_text) {
+        content.innerHTML = escapeHtml(hint.hint_text);
+        content.classList.remove('hidden');
+        button.textContent = '▼';
+    }
+}
+
+async function handleSuperhintClick(index, hintId) {
+    const user = await getCurrentUser();
+    const readIds = window.superhintReadIds || new Set();
+
+    if (!user) {
+        showSuperhintDialog({ signedIn: false, onSignIn: () => signInWithGoogle() });
+        return;
+    }
+    if (!readIds.has(hintId)) {
+        showSuperhintDialog({
+            signedIn: true,
+            onSeeHint: async () => {
+                await recordSuperhintRead(hintId);
+                if (!window.superhintReadIds) window.superhintReadIds = new Set();
+                window.superhintReadIds.add(hintId);
+                revealSuperhintContent(index);
+            }
+        });
+        return;
+    }
+    revealSuperhintContent(index);
+}
+
 // ============== Rate Limiting & Anti-Bot (Google reCAPTCHA v3) ==============
 
 // reCAPTCHA v3 site key - runs invisibly in the background
@@ -1164,6 +1279,20 @@ async function loadHints(puzzleId) {
     const totalHints = await fetchAllHintsCount(puzzleId);
     const upcomingHint = await fetchUpcomingHint(puzzleId);
     
+    window.currentHints = hints;
+    window.currentPuzzleId = puzzleId;
+    const superhintIds = (hints || []).filter(h => h.superhint).map(h => h.id);
+    if (superhintIds.length > 0) {
+        const user = await getCurrentUser();
+        if (user) {
+            window.superhintReadIds = await fetchSuperhintReads(superhintIds);
+        } else {
+            window.superhintReadIds = new Set();
+        }
+    } else {
+        window.superhintReadIds = new Set();
+    }
+    
     // Update current score display
     const scoreMultiplier = 1 / Math.pow(2, hints.length);
     const scoreEl = document.getElementById('current-multiplier');
@@ -1183,15 +1312,24 @@ async function loadHints(puzzleId) {
         html += '<p style="color: #666; font-style: italic;">No hints released yet. Check back later!</p>';
     } else {
         hints.forEach((hint, index) => {
+            const isSuperhint = !!hint.superhint;
+            const cardClass = isSuperhint ? 'hint-card hint-card-superhint' : 'hint-card';
+            const label = isSuperhint ? '<span class="hint-superhint-badge">Superhint</span>' : '';
+            const headerClick = isSuperhint
+                ? `onclick="handleSuperhintClick(${index}, ${hint.id})"`
+                : `onclick="toggleHint(${index})"`;
+            const contentHtml = isSuperhint
+                ? '<span class="hint-superhint-placeholder">Sign in to view this superhint.</span>'
+                : escapeHtml(hint.hint_text);
             html += `
-                <div class="hint-card">
-                    <div class="hint-header" onclick="toggleHint(${index})">
+                <div class="${cardClass}">
+                    <div class="hint-header" ${headerClick}>
                         <button class="hint-toggle" id="hint-toggle-${index}">▶</button>
-                        <strong>Hint ${index + 1}</strong>
+                        <strong>Hint ${index + 1}</strong> ${label}
                         <span class="hint-time">Released: ${formatDate(hint.release_time)}</span>
                     </div>
                     <div class="hint-content hidden" id="hint-content-${index}">
-                        ${escapeHtml(hint.hint_text)}
+                        ${contentHtml}
                     </div>
                 </div>
             `;

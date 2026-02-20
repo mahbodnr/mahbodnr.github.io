@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS hints (
     puzzle_id INTEGER NOT NULL REFERENCES puzzles(id) ON DELETE CASCADE,
     hint_text TEXT NOT NULL,
     release_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    superhint BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -88,6 +89,32 @@ CREATE POLICY "Anyone can view released hints" ON hints
 -- Create indexes for faster queries
 CREATE INDEX IF NOT EXISTS hints_puzzle_id_idx ON hints(puzzle_id);
 CREATE INDEX IF NOT EXISTS hints_release_time_idx ON hints(release_time);
+
+-- Add superhint column for existing deployments (no-op if already present)
+ALTER TABLE hints ADD COLUMN IF NOT EXISTS superhint BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- ============================================
+-- 3b. SUPERHINT_READS TABLE
+-- ============================================
+-- Tracks which user has acknowledged (read) which superhint; used to show spoiler warning only once per user per superhint
+CREATE TABLE IF NOT EXISTS superhint_reads (
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    hint_id INTEGER NOT NULL REFERENCES hints(id) ON DELETE CASCADE,
+    read_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    PRIMARY KEY (user_id, hint_id)
+);
+
+ALTER TABLE superhint_reads ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own superhint reads" ON superhint_reads;
+CREATE POLICY "Users can view own superhint reads" ON superhint_reads
+    FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own superhint reads" ON superhint_reads;
+CREATE POLICY "Users can insert own superhint reads" ON superhint_reads
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS superhint_reads_hint_id_idx ON superhint_reads(hint_id);
 
 -- ============================================
 -- 4. SUBMISSIONS TABLE
@@ -574,6 +601,8 @@ GRANT INSERT, UPDATE ON users TO authenticated;
 GRANT SELECT ON puzzles TO anon, authenticated;
 
 GRANT SELECT ON hints TO anon, authenticated;
+
+GRANT SELECT, INSERT ON superhint_reads TO authenticated;
 
 GRANT SELECT ON submissions TO anon, authenticated;
 GRANT INSERT ON submissions TO authenticated;
