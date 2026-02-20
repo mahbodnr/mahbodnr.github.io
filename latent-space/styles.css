@@ -1099,6 +1099,12 @@ a:hover {
     color: #000;
 }
 
+.preferences-form .checkbox-legend {
+    font-size: 11px;
+    color: #666;
+    margin: -8px 0 12px 0;
+}
+
 /* Checkbox Group */
 .checkbox-group {
     margin-bottom: 16px;
@@ -1113,22 +1119,45 @@ a:hover {
     align-items: flex-start;
     gap: 10px;
     cursor: pointer;
-    padding: 8px;
-    border: 1px solid transparent;
-    transition: background-color 0.1s;
+    padding: 10px 12px;
+    border: 2px solid #c0c0c0;
+    border-radius: 2px;
+    transition: background-color 0.15s, border-color 0.15s;
+    background-color: #f0f0f0;
+}
+
+/* Clear selected state: row looks "on" when checked */
+.checkbox-label:has(input[type="checkbox"]:checked) {
+    background-color: #d4e4f7;
+    border-color: #000080;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 128, 0.2);
 }
 
 .checkbox-label:hover {
     background-color: #e8e8e8;
+    border-color: #808080;
+}
+
+.checkbox-label:has(input[type="checkbox"]:checked):hover {
+    background-color: #c5daf2;
+    border-color: #000080;
+}
+
+/* Unchecked row: subtle "off" look */
+.checkbox-label:has(input[type="checkbox"]:not(:checked)) {
+    background-color: #f5f5f5;
     border-color: #c0c0c0;
 }
 
 .checkbox-label input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
     margin-top: 2px;
     cursor: pointer;
     accent-color: #000080;
+    flex-shrink: 0;
 }
 
 .checkbox-text {
@@ -1165,4 +1194,3 @@ a:hover {
     min-width: 150px;
     padding: 8px 24px;
 }
-
