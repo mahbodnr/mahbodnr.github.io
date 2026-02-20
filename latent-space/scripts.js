@@ -95,17 +95,19 @@ async function getCurrentUser() {
     }
 }
 
-async function signInWithGoogle() {
+async function signInWithGoogle(redirectUrl) {
     if (!supabaseConfigured || !supabaseClient) {
         showMessage('Authentication not configured. Please contact the site administrator.', 'error');
         return;
     }
     
+    const redirectTo = redirectUrl || (window.location.origin + '/latent-space/');
+    
     try {
         const { data, error } = await supabaseClient.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin + '/latent-space/'
+                redirectTo: redirectTo
             }
         });
         
@@ -693,9 +695,7 @@ function showSuperhintDialog(options) {
     const { signedIn, onSeeHint, onSignIn } = options || {};
     const dialog = document.createElement('div');
     dialog.className = 'superhint-dialog edit-name-dialog';
-    const message = signedIn
-        ? 'This is a superhint and may spoil parts of the puzzle. We suggest trying on your own first. Do you want to see it anyway?'
-        : 'This is a superhint. You need to sign in to view it.';
+    const message = 'This is a superhint and may reveal significant information about the puzzle. We recommend trying to solve it on your own first.';
     const secondButton = signedIn
         ? '<button class="win-button windows-box-shadow primary" id="superhint-see-btn">See the hint</button>'
         : '<button class="win-button windows-box-shadow primary" id="superhint-signin-btn">Sign in to see the hint</button>';
@@ -706,7 +706,10 @@ function showSuperhintDialog(options) {
                 <button class="close-btn" id="superhint-dialog-close">×</button>
             </div>
             <div class="edit-name-body">
-                <p class="superhint-dialog-message">${escapeHtml(message)}</p>
+                <div class="superhint-dialog-message-container">
+                    <img src="/img/msg_warning-0.png" alt="Warning" class="superhint-warning-icon">
+                    <p class="superhint-dialog-message">${escapeHtml(message)}</p>
+                </div>
                 <div class="edit-name-buttons">
                     <button class="win-button windows-box-shadow" id="superhint-cancel-btn">Cancel</button>
                     ${secondButton}
@@ -716,13 +719,21 @@ function showSuperhintDialog(options) {
     `;
     document.body.appendChild(dialog);
 
-    const close = () => dialog.remove();
+    const close = () => {
+        if (dialog.parentNode) dialog.remove();
+    };
     dialog.querySelector('#superhint-cancel-btn').addEventListener('click', close);
     dialog.querySelector('#superhint-dialog-close').addEventListener('click', close);
     if (signedIn && typeof onSeeHint === 'function') {
-        dialog.querySelector('#superhint-see-btn').addEventListener('click', () => { close(); onSeeHint(); });
+        dialog.querySelector('#superhint-see-btn').addEventListener('click', () => {
+            close();
+            setTimeout(() => onSeeHint(), 0);
+        });
     } else if (!signedIn && typeof onSignIn === 'function') {
-        dialog.querySelector('#superhint-signin-btn').addEventListener('click', () => { close(); onSignIn(); });
+        dialog.querySelector('#superhint-signin-btn').addEventListener('click', () => {
+            close();
+            onSignIn();
+        });
     }
     dialog.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') close();
@@ -732,23 +743,47 @@ function showSuperhintDialog(options) {
 function revealSuperhintContent(index) {
     const content = document.getElementById('hint-content-' + index);
     const button = document.getElementById('hint-toggle-' + index);
-    if (!content || !button) return;
+    const header = button?.closest('.hint-header');
+    if (!content || !button || !header) return;
     const hint = window.currentHints && window.currentHints[index];
     if (hint && hint.hint_text) {
-        content.innerHTML = escapeHtml(hint.hint_text);
+        content.innerHTML = hint.hint_text;
         content.classList.remove('hidden');
         button.textContent = '▼';
+        // From now on, header toggles like a normal hint
+        header.setAttribute('onclick', `toggleHint(${index})`);
     }
 }
 
 async function handleSuperhintClick(index, hintId) {
+    const content = document.getElementById('hint-content-' + index);
+    const hasPlaceholder = content && content.querySelector('.hint-superhint-placeholder');
+    
+    // If already open and has real content, toggle closed
+    if (content && !content.classList.contains('hidden') && !hasPlaceholder) {
+        if (typeof toggleHint === 'function') toggleHint(index);
+        return;
+    }
+    
     const user = await getCurrentUser();
     const readIds = window.superhintReadIds || new Set();
 
     if (!user) {
-        showSuperhintDialog({ signedIn: false, onSignIn: () => signInWithGoogle() });
+        showSuperhintDialog({ signedIn: false, onSignIn: () => signInWithGoogle(window.location.href) });
         return;
     }
+    
+    // If already read and content has hint text (not placeholder), just toggle open
+    if (readIds.has(hintId) && !hasPlaceholder) {
+        if (typeof toggleHint === 'function') {
+            toggleHint(index);
+            // Set onclick to toggleHint for future clicks
+            const header = content?.closest('.hint-header');
+            if (header) header.setAttribute('onclick', `toggleHint(${index})`);
+        }
+        return;
+    }
+    
     if (!readIds.has(hintId)) {
         showSuperhintDialog({
             signedIn: true,
@@ -1318,18 +1353,28 @@ async function loadHints(puzzleId) {
             const headerClick = isSuperhint
                 ? `onclick="handleSuperhintClick(${index}, ${hint.id})"`
                 : `onclick="toggleHint(${index})"`;
+            // Check if superhint was already read - if so, content can be opened without dialog
+            const isAlreadyRead = isSuperhint && window.superhintReadIds && window.superhintReadIds.has(hint.id);
+            // Superhints always start closed, but if already read, use actual hint text instead of placeholder
             const contentHtml = isSuperhint
-                ? '<span class="hint-superhint-placeholder">Sign in to view this superhint.</span>'
-                : escapeHtml(hint.hint_text);
+                ? (isAlreadyRead ? hint.hint_text : '<span class="hint-superhint-placeholder">Sign in to view this superhint.</span>')
+                : hint.hint_text;
+            const contentClass = 'hint-content hidden';
+            const finalHeaderClick = headerClick;
+            const finalButtonText = '▶';
+            
+            const titlePart = isSuperhint
+                ? `<span class="hint-header-left"><strong>Hint ${index + 1}</strong> ${label}</span>`
+                : `<strong>Hint ${index + 1}</strong>`;
             html += `
                 <div class="${cardClass}">
-                    <div class="hint-header" ${headerClick}>
-                        <button class="hint-toggle" id="hint-toggle-${index}">▶</button>
-                        <strong>Hint ${index + 1}</strong> ${label}
+                    <div class="hint-header" ${finalHeaderClick}>
+                        <button class="hint-toggle" id="hint-toggle-${index}">${finalButtonText}</button>
+                        ${titlePart}
                         <span class="hint-time">Released: ${formatDate(hint.release_time)}</span>
                     </div>
-                    <div class="hint-content hidden" id="hint-content-${index}">
-                        ${hint.hint_text}
+                    <div class="${contentClass}" id="hint-content-${index}">
+                        ${contentHtml}
                     </div>
                 </div>
             `;

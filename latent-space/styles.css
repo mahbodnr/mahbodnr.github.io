@@ -395,6 +395,18 @@ a:hover {
     background: #e8e8f0;
 }
 
+/* Keep hint number + Superhint tag together on the left */
+.hint-header-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+}
+
+.hint-header-left strong {
+    flex: 0 0 auto;
+}
+
 .hint-superhint-badge {
     font-size: 10px;
     font-weight: bold;
@@ -402,12 +414,19 @@ a:hover {
     background: #c0c0ff;
     padding: 2px 6px;
     border-radius: 2px;
-    margin-left: 4px;
 }
 
 .hint-superhint-placeholder {
     color: #888;
     font-style: italic;
+}
+
+.hint-header-revealed {
+    cursor: default !important;
+}
+
+.hint-header-revealed:hover {
+    background: inherit !important;
 }
 
 /* Superhint dialog (Windows 98 style) */
@@ -416,10 +435,25 @@ a:hover {
     max-width: 420px;
 }
 
+.superhint-dialog-message-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.superhint-warning-icon {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
 .superhint-dialog-message {
-    margin: 0 0 16px 0;
+    margin: 0;
     font-size: 12px;
     line-height: 1.5;
+    flex: 1;
 }
 
 /* Form Groups */
