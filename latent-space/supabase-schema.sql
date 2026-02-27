@@ -214,12 +214,13 @@ SELECT
     u.username,
     u.avatar_url,
     COALESCE(SUM(s.score), 0) as total_points,
-    COUNT(DISTINCT s.puzzle_id) as puzzles_solved
+    COUNT(DISTINCT s.puzzle_id) as puzzles_solved,
+    MAX(s.submitted_at) as last_correct_submission_at
 FROM users u
 LEFT JOIN submissions s ON u.id = s.user_id AND s.is_correct = true
 GROUP BY u.id, u.username, u.avatar_url
 HAVING COALESCE(SUM(s.score), 0) > 0
-ORDER BY total_points DESC;
+ORDER BY total_points DESC, last_correct_submission_at ASC;
 
 -- Drop existing function if it exists
 DROP FUNCTION IF EXISTS check_answer(p_puzzle_id INTEGER, p_user_id UUID, p_answer_text TEXT, p_answer_hash TEXT);

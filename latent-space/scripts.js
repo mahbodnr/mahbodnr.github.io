@@ -916,7 +916,7 @@ async function updateAttemptCounter(puzzleId) {
 async function fetchLeaderboard() {
     try {
         // Use direct fetch since Supabase client has issues
-        const response = await fetch(SUPABASE_URL + '/rest/v1/leaderboard_view?select=*&order=total_points.desc&limit=100', {
+        const response = await fetch(SUPABASE_URL + '/rest/v1/leaderboard_view?select=*&order=total_points.desc,last_correct_submission_at.asc&limit=100', {
             headers: {
                 'apikey': SUPABASE_ANON_KEY,
                 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
