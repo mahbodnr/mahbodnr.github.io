@@ -95,17 +95,19 @@ async function getCurrentUser() {
     }
 }
 
-async function signInWithGoogle() {
+async function signInWithGoogle(redirectUrl) {
     if (!supabaseConfigured || !supabaseClient) {
         showMessage('Authentication not configured. Please contact the site administrator.', 'error');
         return;
     }
     
+    const redirectTo = redirectUrl || (window.location.origin + '/latent-space/');
+    
     try {
         const { data, error } = await supabaseClient.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin + '/latent-space/'
+                redirectTo: redirectTo
             }
         });
         
@@ -625,28 +627,182 @@ async function fetchAllHintsCount(puzzleId) {
 
 async function fetchUpcomingHint(puzzleId) {
     try {
-        const now = new Date().toISOString();
         const response = await fetch(
-            SUPABASE_URL + '/rest/v1/hints?select=release_time&puzzle_id=eq.' + puzzleId + '&release_time=gt.' + encodeURIComponent(now) + '&order=release_time.asc&limit=1', 
+            SUPABASE_URL + '/rest/v1/rpc/get_next_hint_release',
             {
+                method: 'POST',
                 headers: {
                     'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
-                }
+                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ p_puzzle_id: puzzleId })
             }
         );
         
         if (!response.ok) {
-            console.error('Error fetching upcoming hint:', response.status);
+            console.error('Error fetching upcoming hint (RPC):', response.status);
             return null;
         }
         
         const data = await response.json();
-        return data?.[0] || null;
+        if (!data) return null;
+        if (Array.isArray(data)) {
+            return data[0] || null;
+        }
+        return data;
     } catch (e) {
-        console.error('Error fetching upcoming hint:', e);
+        console.error('Error fetching upcoming hint (RPC):', e);
         return null;
     }
+}
+
+// --------------- Superhint: fetch/record reads (authenticated only) ---------------
+async function fetchSuperhintReads(hintIds) {
+    if (!supabaseConfigured || !supabaseClient || !hintIds || hintIds.length === 0) return new Set();
+    try {
+        const session = await waitForAuth();
+        if (!session) return new Set();
+        const { data, error } = await supabaseClient
+            .from('superhint_reads')
+            .select('hint_id')
+            .in('hint_id', hintIds);
+        if (error) {
+            console.error('Error fetching superhint reads:', error);
+            return new Set();
+        }
+        return new Set((data || []).map(r => r.hint_id));
+    } catch (e) {
+        console.error('Error in fetchSuperhintReads:', e);
+        return new Set();
+    }
+}
+
+async function recordSuperhintRead(hintId) {
+    if (!supabaseConfigured || !supabaseClient) return false;
+    try {
+        const session = await waitForAuth();
+        if (!session) return false;
+        const { error } = await supabaseClient
+            .from('superhint_reads')
+            .insert({ user_id: session.user.id, hint_id: hintId });
+        if (error) {
+            console.error('Error recording superhint read:', error);
+            return false;
+        }
+        return true;
+    } catch (e) {
+        console.error('Error in recordSuperhintRead:', e);
+        return false;
+    }
+}
+
+function showSuperhintDialog(options) {
+    const { signedIn, onSeeHint, onSignIn } = options || {};
+    const dialog = document.createElement('div');
+    dialog.className = 'superhint-dialog edit-name-dialog';
+    const message = 'This is a superhint and may reveal significant information about the puzzle. We recommend trying to solve it on your own first.';
+    const secondButton = signedIn
+        ? '<button class="win-button windows-box-shadow primary" id="superhint-see-btn">See the hint</button>'
+        : '<button class="win-button windows-box-shadow primary" id="superhint-signin-btn">Sign in to see the hint</button>';
+    dialog.innerHTML = `
+        <div class="edit-name-content windows-box-shadow superhint-dialog-content">
+            <div class="edit-name-header">
+                <span>Superhint</span>
+                <button class="close-btn" id="superhint-dialog-close">×</button>
+            </div>
+            <div class="edit-name-body">
+                <div class="superhint-dialog-message-container">
+                    <img src="/img/msg_warning-0.png" alt="Warning" class="superhint-warning-icon">
+                    <p class="superhint-dialog-message">${escapeHtml(message)}</p>
+                </div>
+                <div class="edit-name-buttons">
+                    <button class="win-button windows-box-shadow" id="superhint-cancel-btn">Cancel</button>
+                    ${secondButton}
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(dialog);
+
+    const close = () => {
+        if (dialog.parentNode) dialog.remove();
+    };
+    dialog.querySelector('#superhint-cancel-btn').addEventListener('click', close);
+    dialog.querySelector('#superhint-dialog-close').addEventListener('click', close);
+    if (signedIn && typeof onSeeHint === 'function') {
+        dialog.querySelector('#superhint-see-btn').addEventListener('click', () => {
+            close();
+            setTimeout(() => onSeeHint(), 0);
+        });
+    } else if (!signedIn && typeof onSignIn === 'function') {
+        dialog.querySelector('#superhint-signin-btn').addEventListener('click', () => {
+            close();
+            onSignIn();
+        });
+    }
+    dialog.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') close();
+    });
+}
+
+function revealSuperhintContent(index) {
+    const content = document.getElementById('hint-content-' + index);
+    const button = document.getElementById('hint-toggle-' + index);
+    const header = button?.closest('.hint-header');
+    if (!content || !button || !header) return;
+    const hint = window.currentHints && window.currentHints[index];
+    if (hint && hint.hint_text) {
+        content.innerHTML = hint.hint_text;
+        content.classList.remove('hidden');
+        button.textContent = '▼';
+        // From now on, header toggles like a normal hint
+        header.setAttribute('onclick', `toggleHint(${index})`);
+    }
+}
+
+async function handleSuperhintClick(index, hintId) {
+    const content = document.getElementById('hint-content-' + index);
+    const hasPlaceholder = content && content.querySelector('.hint-superhint-placeholder');
+    
+    // If already open and has real content, toggle closed
+    if (content && !content.classList.contains('hidden') && !hasPlaceholder) {
+        if (typeof toggleHint === 'function') toggleHint(index);
+        return;
+    }
+    
+    const user = await getCurrentUser();
+    const readIds = window.superhintReadIds || new Set();
+
+    if (!user) {
+        showSuperhintDialog({ signedIn: false, onSignIn: () => signInWithGoogle(window.location.href) });
+        return;
+    }
+    
+    // If already read and content has hint text (not placeholder), just toggle open
+    if (readIds.has(hintId) && !hasPlaceholder) {
+        if (typeof toggleHint === 'function') {
+            toggleHint(index);
+            // Set onclick to toggleHint for future clicks
+            const header = content?.closest('.hint-header');
+            if (header) header.setAttribute('onclick', `toggleHint(${index})`);
+        }
+        return;
+    }
+    
+    if (!readIds.has(hintId)) {
+        showSuperhintDialog({
+            signedIn: true,
+            onSeeHint: async () => {
+                await recordSuperhintRead(hintId);
+                if (!window.superhintReadIds) window.superhintReadIds = new Set();
+                window.superhintReadIds.add(hintId);
+                revealSuperhintContent(index);
+            }
+        });
+        return;
+    }
+    revealSuperhintContent(index);
 }
 
 // ============== Rate Limiting & Anti-Bot (Google reCAPTCHA v3) ==============
@@ -1160,9 +1316,29 @@ async function loadHints(puzzleId) {
     const container = document.getElementById('hints-container');
     if (!container) return;
     
+    // Clear any existing countdown timer interval
+    if (window.nextHintTimerId) {
+        clearInterval(window.nextHintTimerId);
+        window.nextHintTimerId = null;
+    }
+    
     const hints = await fetchHints(puzzleId);
     const totalHints = await fetchAllHintsCount(puzzleId);
     const upcomingHint = await fetchUpcomingHint(puzzleId);
+    
+    window.currentHints = hints;
+    window.currentPuzzleId = puzzleId;
+    const superhintIds = (hints || []).filter(h => h.superhint).map(h => h.id);
+    if (superhintIds.length > 0) {
+        const user = await getCurrentUser();
+        if (user) {
+            window.superhintReadIds = await fetchSuperhintReads(superhintIds);
+        } else {
+            window.superhintReadIds = new Set();
+        }
+    } else {
+        window.superhintReadIds = new Set();
+    }
     
     // Update current score display
     const scoreMultiplier = 1 / Math.pow(2, hints.length);
@@ -1183,15 +1359,34 @@ async function loadHints(puzzleId) {
         html += '<p style="color: #666; font-style: italic;">No hints released yet. Check back later!</p>';
     } else {
         hints.forEach((hint, index) => {
+            const isSuperhint = !!hint.superhint;
+            const cardClass = isSuperhint ? 'hint-card hint-card-superhint' : 'hint-card';
+            const label = isSuperhint ? '<span class="hint-superhint-badge">Superhint</span>' : '';
+            const headerClick = isSuperhint
+                ? `onclick="handleSuperhintClick(${index}, ${hint.id})"`
+                : `onclick="toggleHint(${index})"`;
+            // Check if superhint was already read - if so, content can be opened without dialog
+            const isAlreadyRead = isSuperhint && window.superhintReadIds && window.superhintReadIds.has(hint.id);
+            // Superhints always start closed, but if already read, use actual hint text instead of placeholder
+            const contentHtml = isSuperhint
+                ? (isAlreadyRead ? hint.hint_text : '<span class="hint-superhint-placeholder">Sign in to view this superhint.</span>')
+                : hint.hint_text;
+            const contentClass = 'hint-content hidden';
+            const finalHeaderClick = headerClick;
+            const finalButtonText = '▶';
+            
+            const titlePart = isSuperhint
+                ? `<span class="hint-header-left"><strong>Hint ${index + 1}</strong> ${label}</span>`
+                : `<strong>Hint ${index + 1}</strong>`;
             html += `
-                <div class="hint-card">
-                    <div class="hint-header" onclick="toggleHint(${index})">
-                        <button class="hint-toggle" id="hint-toggle-${index}">▶</button>
-                        <strong>Hint ${index + 1}</strong>
+                <div class="${cardClass}">
+                    <div class="hint-header" ${finalHeaderClick}>
+                        <button class="hint-toggle" id="hint-toggle-${index}">${finalButtonText}</button>
+                        ${titlePart}
                         <span class="hint-time">Released: ${formatDate(hint.release_time)}</span>
                     </div>
-                    <div class="hint-content hidden" id="hint-content-${index}">
-                        ${hint.hint_text}
+                    <div class="${contentClass}" id="hint-content-${index}">
+                        ${contentHtml}
                     </div>
                 </div>
             `;
@@ -1203,7 +1398,7 @@ async function loadHints(puzzleId) {
             <div class="hint-card hint-locked">
                 <div class="hint-header">
                     <button class="hint-toggle">🔒</button>
-                    <strong>Next hint</strong>
+                    <span id="next-hint-timer" class="hint-timer-inline" style="margin-left: 0;">Next hint in ...</span>
                     <span class="hint-time">Available: ${formatDate(upcomingHint.release_time)}</span>
                 </div>
             </div>
@@ -1216,6 +1411,56 @@ async function loadHints(puzzleId) {
     }
     
     container.innerHTML = html;
+    
+    if (upcomingHint) {
+        const timerEl = document.getElementById('next-hint-timer');
+        if (timerEl) {
+            const releaseTime = new Date(upcomingHint.release_time).getTime();
+            
+            function formatRemaining(ms) {
+                const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+                const days = Math.floor(totalSeconds / 86400);
+                const hours = Math.floor((totalSeconds % 86400) / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
+                
+                const parts = [];
+                if (days > 0) parts.push(days + 'd');
+                if (days > 0 || hours > 0) {
+                    parts.push(String(hours).padStart(2, '0') + 'h');
+                }
+                parts.push(String(minutes).padStart(2, '0') + 'm');
+                parts.push(String(seconds).padStart(2, '0') + 's');
+                return parts.join(' ');
+            }
+            
+            function updateTimer() {
+                const now = Date.now();
+                const diff = releaseTime - now;
+                
+                if (diff <= 0) {
+                    timerEl.textContent = 'Next hint is unlocking...';
+                    clearInterval(window.nextHintTimerId);
+                    window.nextHintTimerId = null;
+                    // Refresh hints shortly after unlock to show the new hint
+                    setTimeout(() => loadHints(puzzleId), 2000);
+                    return;
+                }
+                
+                timerEl.textContent = 'Next hint in ' + formatRemaining(diff);
+            }
+            
+            updateTimer();
+            window.nextHintTimerId = setInterval(() => {
+                if (!document.body.contains(timerEl)) {
+                    clearInterval(window.nextHintTimerId);
+                    window.nextHintTimerId = null;
+                    return;
+                }
+                updateTimer();
+            }, 1000);
+        }
+    }
 }
 
 // Per-puzzle leaderboard (fastest correct submissions)

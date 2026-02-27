@@ -362,6 +362,13 @@ a:hover {
     font-size: 11px;
     color: #666;
     font-weight: normal;
+    margin-left: auto;
+}
+
+.hint-timer-inline {
+    font-size: 11px;
+    color: #333;
+    margin-left: 8px;
 }
 
 .hint-content {
@@ -383,6 +390,77 @@ a:hover {
 
 .hint-card.hint-locked .hint-header:hover {
     background: #f0f0f0;
+}
+
+/* Superhint card: visual differentiation */
+.hint-card.hint-card-superhint {
+    border-left: 3px solid #000080;
+    background: #f5f5ff;
+}
+
+.hint-card.hint-card-superhint .hint-header {
+    background: #e8e8f0;
+}
+
+/* Keep hint number + Superhint tag together on the left */
+.hint-header-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+}
+
+.hint-header-left strong {
+    flex: 0 0 auto;
+}
+
+.hint-superhint-badge {
+    font-size: 10px;
+    font-weight: bold;
+    color: #000080;
+    background: #c0c0ff;
+    padding: 2px 6px;
+    border-radius: 2px;
+}
+
+.hint-superhint-placeholder {
+    color: #888;
+    font-style: italic;
+}
+
+.hint-header-revealed {
+    cursor: default !important;
+}
+
+.hint-header-revealed:hover {
+    background: inherit !important;
+}
+
+/* Superhint dialog (Windows 98 style) */
+.superhint-dialog .superhint-dialog-content {
+    min-width: 320px;
+    max-width: 420px;
+}
+
+.superhint-dialog-message-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.superhint-warning-icon {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.superhint-dialog-message {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    flex: 1;
 }
 
 /* Form Groups */

@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS hints (
     puzzle_id INTEGER NOT NULL REFERENCES puzzles(id) ON DELETE CASCADE,
     hint_text TEXT NOT NULL,
     release_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    superhint BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -90,6 +91,32 @@ CREATE POLICY "Anyone can view released hints" ON hints
 -- Create indexes for faster queries
 CREATE INDEX IF NOT EXISTS hints_puzzle_id_idx ON hints(puzzle_id);
 CREATE INDEX IF NOT EXISTS hints_release_time_idx ON hints(release_time);
+
+-- Add superhint column for existing deployments (no-op if already present)
+ALTER TABLE hints ADD COLUMN IF NOT EXISTS superhint BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- ============================================
+-- 3b. SUPERHINT_READS TABLE
+-- ============================================
+-- Tracks which user has acknowledged (read) which superhint; used to show spoiler warning only once per user per superhint
+CREATE TABLE IF NOT EXISTS superhint_reads (
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    hint_id INTEGER NOT NULL REFERENCES hints(id) ON DELETE CASCADE,
+    read_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    PRIMARY KEY (user_id, hint_id)
+);
+
+ALTER TABLE superhint_reads ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own superhint reads" ON superhint_reads;
+CREATE POLICY "Users can view own superhint reads" ON superhint_reads
+    FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own superhint reads" ON superhint_reads;
+CREATE POLICY "Users can insert own superhint reads" ON superhint_reads
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS superhint_reads_hint_id_idx ON superhint_reads(hint_id);
 
 -- ============================================
 -- 4. SUBMISSIONS TABLE
@@ -588,6 +615,8 @@ GRANT SELECT ON puzzles TO anon, authenticated;
 
 GRANT SELECT ON hints TO anon, authenticated;
 
+GRANT SELECT, INSERT ON superhint_reads TO authenticated;
+
 GRANT SELECT ON submissions TO anon, authenticated;
 GRANT INSERT ON submissions TO authenticated;
 
@@ -611,4 +640,29 @@ GRANT EXECUTE ON FUNCTION get_email_preferences_by_token(UUID) TO anon, authenti
 GRANT EXECUTE ON FUNCTION update_email_preferences_by_token(UUID, BOOLEAN, BOOLEAN, BOOLEAN) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION get_users_for_notification(TEXT, INTEGER) TO authenticated;
 GRANT EXECUTE ON FUNCTION ensure_email_preferences_exist(UUID) TO authenticated;
+
+-- Next-hint timer helper (client-safe: only returns next release_time)
+DROP FUNCTION IF EXISTS get_next_hint_release(INTEGER);
+
+CREATE OR REPLACE FUNCTION get_next_hint_release(
+    p_puzzle_id INTEGER
+)
+RETURNS TABLE (
+    release_time TIMESTAMP WITH TIME ZONE
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT h.release_time
+    FROM hints h
+    JOIN puzzles p ON p.id = h.puzzle_id
+    WHERE h.puzzle_id = p_puzzle_id
+      AND h.release_time > NOW()
+      AND p.release_time <= NOW()
+    ORDER BY h.release_time ASC
+    LIMIT 1;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_next_hint_release(INTEGER) TO anon, authenticated;
 
