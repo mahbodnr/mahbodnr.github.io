@@ -1,0 +1,465 @@
+body {
+  font: normal small verdana, arial, helvetica, sans-serif;
+  margin: 0;
+  background-color: white;
+}
+
+a {
+  text-decoration: none;
+  color: #336699;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+#topbar {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+}
+
+.topmenu {
+  text-align: right;
+}
+
+.menu-item {
+  color: #336699;
+}
+
+.sel-menu-item {
+  color: white;
+  background-color: #336699;
+}
+
+#topstrip {
+  color: #c7def7;
+  padding: 2px 0;
+  background-color: #c6def7;
+}
+
+#topstrip a {
+  padding: 2px 7px;
+  border-right: 2px solid white;
+  color: #336699;
+}
+
+#topstrip a.sel-menu-item {
+  color: white;
+  background-color: #336699;
+}
+
+#topstrip a:hover {
+  color: white;
+  background-color: #336699;
+  text-decoration: none;
+}
+
+#infobar {
+  background-color: #ffff99;
+  margin: 5px 10px;
+  padding: 5px;
+}
+
+#main {
+  padding: 0 10px 20px 10px;
+  margin-right: 240px;
+}
+
+#right {
+  float: right;
+  width: 220px;
+  margin: 0 10px 10px 10px;
+}
+
+#right .pbox {
+  width: 100%;
+}
+
+#siteTable {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.numbercol {
+  font-size: medium;
+  text-align: right;
+  color: darkgray;
+  padding-right: 4px;
+  vertical-align: top;
+}
+
+.title {
+  font-size: medium;
+  color: blue;
+}
+
+.title:visited {
+  color: #551a8b;
+}
+
+.little {
+  font-size: x-small;
+  color: gray;
+}
+
+.little a {
+  color: #336699;
+}
+
+.evenRow {
+  background-color: white;
+}
+
+.spacing {
+  height: 3px;
+}
+
+.arrow {
+  margin: 2px 0 0 0;
+  width: 0;
+  height: 0;
+  display: block;
+  cursor: pointer;
+}
+
+.arrow.up {
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 10px solid #c6c6c6;
+}
+
+.arrow.down {
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 10px solid #c6c6c6;
+  margin-top: 4px;
+}
+
+.menu {
+  color: gray;
+}
+
+.menu a {
+  color: #336699;
+  padding: 0 3px;
+}
+
+.menu a:hover {
+  text-decoration: underline;
+}
+
+.header {
+  margin: 10px;
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ff4500;
+}
+
+.logo img {
+  display: block;
+  border: 0;
+  height: 22px;
+}
+
+.tagline {
+  color: gray;
+  font-size: x-small;
+}
+
+.bylink {
+  background-color: #f0f0f0;
+  color: #848484;
+  margin: 0 1px 0 2px;
+  padding: 0 2px;
+}
+
+.pboxwrap {
+  padding-right: 5px;
+}
+
+.pbox {
+  border: 2px solid #73a1ca;
+  border-collapse: collapse;
+}
+
+.pboxhead {
+  background-color: #73a1ca;
+  color: white;
+  text-align: center;
+  padding: 2px;
+}
+
+.pboxbody {
+  padding: 5px;
+}
+
+.txt {
+  background-color: #f7f7f7;
+  border: 1px solid #336699;
+  margin: 0;
+}
+
+.btn {
+  background-color: #e9e9e9;
+  border: 1px solid #336699;
+  margin: 0 5px 0 5px;
+  vertical-align: bottom;
+}
+
+.nomargin {
+  margin: 0;
+}
+
+.wide {
+  width: 100%;
+}
+
+.footer {
+  width: 100%;
+  text-align: center;
+  clear: both;
+  padding-top: 1em;
+  font-size: x-small;
+  color: gray;
+}
+
+.footer a {
+  color: #336699;
+  padding: 0 3px;
+}
+
+.view-more {
+  margin: 5px 10px 0 10px;
+  font-size: x-small;
+}
+
+#header {
+  background: #cee3f8;
+  border-bottom: 1px solid #5f99cf;
+}
+
+#sr-header-area {
+  background: #f0f7fc;
+  font-size: x-small;
+  padding: 2px 8px;
+}
+
+.sr-bar a {
+  color: #336699;
+}
+
+.separator {
+  color: #808080;
+  padding: 0 4px;
+}
+
+#header-bottom-left {
+  padding: 5px 8px 0 8px;
+}
+
+#header-img img {
+  height: 40px;
+  vertical-align: bottom;
+}
+
+.redditname a {
+  font-size: medium;
+  font-weight: bold;
+  color: #336699;
+}
+
+.tabmenu {
+  list-style: none;
+  margin: 6px 0 0 0;
+  padding: 0;
+}
+
+.tabmenu li {
+  display: inline-block;
+  margin-right: 4px;
+}
+
+.tabmenu a {
+  background: #eff7ff;
+  border: 1px solid #5f99cf;
+  border-bottom: none;
+  padding: 2px 6px;
+  color: #336699;
+}
+
+.tabmenu .selected a {
+  background: white;
+  font-weight: bold;
+}
+
+#header-bottom-right {
+  float: right;
+  font-size: x-small;
+  padding: 4px 8px;
+}
+
+.side {
+  float: right;
+  width: 300px;
+  margin: 10px;
+}
+
+.side .spacer {
+  margin-bottom: 10px;
+}
+
+.side input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.linkinfo {
+  background: #f7f7f7;
+  border: 1px solid #ccc;
+  padding: 6px;
+  font-size: x-small;
+}
+
+.linkinfo .score {
+  margin: 6px 0;
+}
+
+.shortlink input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.morelink {
+  background: #5f99cf;
+  color: white;
+  text-align: center;
+  padding: 6px;
+}
+
+.morelink a {
+  color: white;
+  font-weight: bold;
+}
+
+.titlebox {
+  border: 1px solid #5f99cf;
+  background: #f7f7f7;
+  padding: 6px;
+}
+
+.titlebox h1 {
+  font-size: small;
+  margin: 0 0 4px 0;
+}
+
+.content {
+  margin: 10px 330px 0 10px;
+}
+
+.thing {
+  margin-bottom: 12px;
+}
+
+.midcol {
+  float: left;
+  width: 40px;
+  text-align: center;
+}
+
+.entry {
+  margin-left: 50px;
+}
+
+.domain {
+  color: gray;
+  font-size: x-small;
+}
+
+.tagline {
+  color: gray;
+  font-size: x-small;
+}
+
+.flat-list {
+  list-style: none;
+  margin: 4px 0 0 0;
+  padding: 0;
+}
+
+.flat-list li {
+  display: inline;
+  margin-right: 6px;
+}
+
+.comments {
+  font-weight: bold;
+}
+
+.commentarea {
+  margin-top: 20px;
+}
+
+.panestack-title {
+  font-size: medium;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.menuarea {
+  font-size: x-small;
+  color: gray;
+  margin-bottom: 10px;
+}
+
+.comment .entry {
+  margin-left: 40px;
+}
+
+.usertext-body .md {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.post-header {
+  margin: 10px 10px 0 10px;
+}
+
+.post-title {
+  font-size: medium;
+  color: blue;
+}
+
+.comment-list {
+  margin: 10px;
+}
+
+.comment {
+  margin: 6px 0 6px 0;
+  padding-left: 20px;
+}
+
+.comment .meta {
+  font-size: x-small;
+  color: gray;
+  margin: 0 0 2px 0;
+}
+
+.comment .body {
+  margin: 0 0 6px 0;
+  font-size: small;
+}
+
+.comment .arrows {
+  float: left;
+  width: 18px;
+  margin-left: -18px;
+}
+
+.clear {
+  clear: both;
+}

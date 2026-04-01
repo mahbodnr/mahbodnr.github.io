@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Magic Squares</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #1a1024;
+      color: #f6e7b4;
+      font-family: "Courier New", monospace;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 24px;
+      border: 4px solid #ffcc66;
+      background: #2a1738;
+      box-shadow: 0 0 0 6px #5b2d82, 0 0 30px rgba(255, 204, 102, 0.3);
+    }
+
+    h1, h2 {
+      text-align: center;
+      color: #ffcc66;
+      text-shadow: 2px 2px #7a3ea3;
+      letter-spacing: 2px;
+    }
+
+    p {
+      line-height: 1.7;
+      font-size: 18px;
+    }
+
+    .highlight {
+      color: #8fffd1;
+      font-weight: bold;
+    }
+
+    .magic-example {
+      position: relative;
+      width: fit-content;
+      margin: 28px auto 26px;
+      overflow: visible;
+      padding-right: 78px;
+    }
+
+    .magic-grid {
+      position: relative;
+      width: fit-content;
+    }
+
+    .square-table {
+      width: 100%;
+      height: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin: 0 auto;
+      background: #ffcc66;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+    }
+
+    .square-table td {
+      position: relative;
+      background: linear-gradient(180deg, #4b2d68 0%, #3c2354 100%);
+      border: 3px solid #ffcc66;
+      padding: 0;
+      text-align: center;
+      vertical-align: middle;
+      line-height: 1;
+      color: #f6e7b4;
+      box-shadow: inset 0 0 10px rgba(255,255,255,0.1);
+    }
+
+    .magic-example .square-table {
+      width: auto;
+      height: auto;
+    }
+
+    .square-table.square-3 {
+      width: 252px;
+    }
+
+    .square-3 td {
+      width: 84px;
+      height: 84px;
+      font-size: 38px;
+    }
+
+    .square-3 .cell-value {
+      position: relative;
+      z-index: 1;
+      display: inline-block;
+      text-shadow: 0 0 10px rgba(42, 23, 56, 0.95);
+    }
+
+    .square-5 {
+      width: 350px;
+      height: 350px;
+      margin: 24px auto;
+    }
+
+    .square-5 td {
+      width: 70px;
+      height: 70px;
+      font-size: 28px;
+    }
+
+    .blank {
+      color: #8fffd1;
+      border-style: dashed;
+      text-shadow: 0 0 8px rgba(143,255,209,0.95), 0 0 18px rgba(143,255,209,0.45);
+    }
+
+    .note {
+      margin-top: 20px;
+      padding: 14px;
+      background: #20102c;
+      border-left: 5px solid #8fffd1;
+      color: #d9ffe9;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 30px;
+      color: #c6a7ff;
+      font-size: 14px;
+    }
+
+    .magic-grid .magic-visual {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .overlay-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      overflow: visible;
+    }
+
+    .overlay-svg line {
+      stroke: rgba(143,255,209,0.34);
+      stroke-width: 1.3;
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 2px rgba(143,255,209,0.22));
+    }
+
+    .overlay-svg .guide-line-emphasis {
+      stroke: rgba(143,255,209,0.58);
+      stroke-width: 1.8;
+      filter: drop-shadow(0 0 3px rgba(143,255,209,0.3));
+    }
+
+    .sum-callout {
+      position: absolute;
+      top: 16.6667%;
+      right: 0;
+      transform: translateY(-50%);
+      color: #ff8cd4;
+      font-size: 20px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      line-height: 1;
+      text-shadow: 0 0 8px rgba(32, 16, 44, 0.95);
+      z-index: 3;
+    }
+
+    .sum-callout::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: calc(100% + 10px);
+      width: 30px;
+      height: 0;
+      border-top: 2px solid rgba(143,255,209,0.58);
+      transform: translateY(-50%);
+      filter: drop-shadow(0 0 3px rgba(143,255,209,0.3));
+    }
+
+    .sum-callout::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: 100%;
+      width: 0;
+      height: 0;
+      border-top: 6px solid transparent;
+      border-bottom: 6px solid transparent;
+      border-left: 9px solid rgba(143,255,209,0.58);
+      transform: translate(3px, -50%);
+      filter: drop-shadow(0 0 3px rgba(143,255,209,0.3));
+    }
+
+    .retro-banner {
+      margin: 16px auto 28px;
+      width: fit-content;
+      padding: 8px 14px;
+      border: 3px solid #8fffd1;
+      background: #20102c;
+      color: #8fffd1;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-align: center;
+      box-shadow: 0 0 14px rgba(143,255,209,0.2);
+    }
+
+    @keyframes blink {
+      from {
+        opacity: 0.65;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>✦ THE MYSTERY OF MAGIC SQUARES ✦</h1>
+
+    <p>
+      A <span class="highlight">magic square</span> is a square grid of numbers where every row,
+      every column, and both long diagonals all add up to the exact same total.
+    </p>
+
+    <p>
+      People have studied magic squares for hundreds of years. They appear in old puzzles,
+      art, and even stories about magic and hidden knowledge.
+    </p>
+
+    <h2>Example: A 3×3 Magic Square</h2>
+
+    <p>
+      In this famous 3×3 magic square, every row, column, and diagonal adds up to
+      <span class="highlight">15</span>.
+    </p>
+
+    <div class="magic-example">
+      <div class="magic-grid">
+        <table class="square-table square-3" aria-label="3 by 3 magic square example">
+          <tbody>
+            <tr>
+              <td><span class="cell-value">8</span></td>
+              <td><span class="cell-value">1</span></td>
+              <td><span class="cell-value">6</span></td>
+            </tr>
+            <tr>
+              <td><span class="cell-value">3</span></td>
+              <td><span class="cell-value">5</span></td>
+              <td><span class="cell-value">7</span></td>
+            </tr>
+            <tr>
+              <td><span class="cell-value">4</span></td>
+              <td><span class="cell-value">9</span></td>
+              <td><span class="cell-value">2</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="magic-visual" aria-hidden="true">
+          <svg class="overlay-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <line class="guide-line-emphasis" x1="0" y1="16.6667" x2="100" y2="16.6667"></line>
+            <line x1="0" y1="50" x2="100" y2="50"></line>
+            <line x1="0" y1="83.3333" x2="100" y2="83.3333"></line>
+            <line x1="16.6667" y1="0" x2="16.6667" y2="100"></line>
+            <line x1="50" y1="0" x2="50" y2="100"></line>
+            <line x1="83.3333" y1="0" x2="83.3333" y2="100"></line>
+            <line x1="16.6667" y1="16.6667" x2="83.3333" y2="83.3333"></line>
+            <line x1="16.6667" y1="83.3333" x2="83.3333" y2="16.6667"></line>
+          </svg>
+        </div>
+      </div>
+      <div class="sum-callout">15</div>
+    </div>
+
+    <div class="retro-banner">➤ EVERY DIRECTION GIVES THE SAME TOTAL! ◄</div>
+
+    <h2>Your Turn: Finish This 5×5 Magic Square</h2>
+
+    <p>
+      Below is a partly completed 5×5 magic square using the numbers 1 through 25.
+      Every row, column, and diagonal should add up to <span class="highlight">65</span>.
+      Can you fill in the missing spaces?
+    </p>
+
+    <table class="square-table square-5" aria-label="5 by 5 magic square puzzle">
+      <tbody>
+        <tr>
+          <td>11</td>
+          <td class="blank">?</td>
+          <td class="blank">?</td>
+          <td>23</td>
+          <td>17</td>
+        </tr>
+        <tr>
+          <td class="blank">?</td>
+          <td>12</td>
+          <td>6</td>
+          <td class="blank">?</td>
+          <td>24</td>
+        </tr>
+        <tr>
+          <td class="blank">?</td>
+          <td class="blank">?</td>
+          <td class="blank">?</td>
+          <td class="blank">?</td>
+          <td>1</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>21</td>
+          <td class="blank">?</td>
+          <td>14</td>
+          <td class="blank">?</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td class="blank">?</td>
+          <td class="blank">?</td>
+          <td>16</td>
+          <td class="blank">?</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <footer>
+      Retro Puzzle Page • Best viewed with curiosity ✨
+    </footer>
+  </div>
+</body>
+</html>

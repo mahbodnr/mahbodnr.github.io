@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+     xmlns:atom="http://www.w3.org/2005/Atom"
+     xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Crossword Monthly</title>
+    <link>https://mahbodnr.github.io/latent-space/puzzles/</link>
+    <description>Monthly crossword puzzles with themed clues and printable layouts.</description>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 05 Mar 2026 00:00:00 GMT</lastBuildDate>
+    <atom:link href="https://mahbodnr.github.io/latent-space/puzzles/puzzle-002/feed.xml" rel="self" type="application/rss+xml" />
+
+    <item>
+      <title>Blocked MAC (Puzzle #68)</title>
+      <link>https://mahbodnr.github.io/latent-space/puzzles/puzzle-002/crossword.html</link>
+      <guid isPermaLink="true">https://mahbodnr.github.io/latent-space/puzzles/puzzle-002/crossword.html</guid>
+      <pubDate>Thu, 05 Mar 2026 00:00:00 GMT</pubDate>
+      <category>Crossword</category>
+      <category>Technology</category>
+      <description><![CDATA[
+        Crossword Monthly Puzzle #68: "Blocked MAC". Difficulty: Intermediate. Estimated solve time: 25-35 minutes.
+      ]]></description>
+      <content:encoded><![CDATA[
+        <p><strong>Blocked MAC</strong> is a technology-themed crossword focused on networking terms.</p>
+        <p><a href="https://mahbodnr.github.io/latent-space/puzzles/puzzle-002/crossword.html">Open puzzle page</a></p>
+        <p><img src="https://mahbodnr.github.io/latent-space/puzzles/puzzle-002/blocked_mac_crossword.png" alt="Blocked MAC Crossword Puzzle" /></p>
+      ]]></content:encoded>
+      <enclosure
+        url="https://mahbodnr.github.io/latent-space/puzzles/puzzle-002/blocked_mac_crossword.png"
+        type="image/png" />
+    </item>
+  </channel>
+</rss>

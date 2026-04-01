@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KYW12YQM6N"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-KYW12YQM6N');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puzzle #002 | Latent Space</title>
+    <meta name="description" content="Puzzle #002 - Latent Space challenge - In memory of Aaron Swartz">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/latent-space/styles.css">
+    <link rel="icon" href="/img/favicon.ico">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://www.google.com/recaptcha/api.js?render=6LdNOVUsAAAAAH_dUEx28ECJ1soJYvo8rI9BRJJD"></script>
+    <style>
+        /* Windows 98 browser popup overlay */
+        .win98-browser-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 99999;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 5vh;
+        }
+
+        .win98-browser-overlay.active {
+            display: flex;
+        }
+
+        .win98-browser {
+            width: 90%;
+            max-width: 950px;
+            max-height: 85vh;
+            background: #c0c0c0;
+            border: 2px solid #fff;
+            border-right-color: #000;
+            border-bottom-color: #000;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .win98-browser-header {
+            background: linear-gradient(to right, #000080, #1084d0);
+            padding: 2px 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .win98-browser-header img {
+            width: 16px;
+            height: 16px;
+            margin-right: 4px;
+        }
+
+        .win98-browser-title {
+            display: flex;
+            align-items: center;
+        }
+
+        .win98-browser-close {
+            width: 16px;
+            height: 14px;
+            background: #c0c0c0;
+            border: 1px solid #fff;
+            border-right-color: #000;
+            border-bottom-color: #000;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .win98-browser-toolbar {
+            background: #c0c0c0;
+            padding: 4px;
+            border-bottom: 1px solid #808080;
+        }
+
+        .win98-browser-addressbar {
+            background: #fff;
+            border: 1px solid #808080;
+            padding: 2px 4px;
+            margin: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .win98-browser-content {
+            background: #fff;
+            padding: 0;
+            overflow-y: auto;
+            flex: 1;
+            font-family: Verdana, Arial, sans-serif;
+            font-size: 11px;
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+        }
+
+        /* 2000s Blog Header */
+        .blog-header {
+            background: linear-gradient(to bottom, #003366, #0066cc);
+            color: white;
+            padding: 15px 20px;
+            border-bottom: 3px solid #ff6600;
+        }
+
+        .blog-header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: bold;
+            font-family: Arial, sans-serif;
+        }
+
+        .blog-header .tagline {
+            font-size: 10px;
+            color: #ccddff;
+            margin-top: 3px;
+        }
+
+        /* Navigation bar */
+        .blog-nav {
+            background: #f0f0f0;
+            border-bottom: 1px solid #999;
+            padding: 5px 20px;
+            font-size: 11px;
+        }
+
+        .blog-nav a {
+            color: #0066cc;
+            text-decoration: none;
+            margin-right: 15px;
+            font-weight: bold;
+        }
+
+        .blog-nav a:hover {
+            text-decoration: underline;
+            color: #ff6600;
+        }
+
+        /* Main content area */
+        .blog-main {
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .blog-article {
+            flex: 1;
+            max-width: 900px;
+        }
+
+        .blog-article h1 {
+            font-size: 20px;
+            font-weight: bold;
+            color: #003366;
+            margin: 0 0 10px 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .blog-meta {
+            color: #666;
+            font-size: 10px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+
+        .blog-meta span {
+            margin-right: 15px;
+        }
+
+        .blog-article p {
+            line-height: 1.6;
+            margin-bottom: 12px;
+            text-align: left;
+            color: #333;
+        }
+
+        .blog-article em {
+            display: block;
+            background: #ffffcc;
+            border-left: 3px solid #ff6600;
+            padding: 10px;
+            margin: 15px 0;
+            font-style: italic;
+            color: #333;
+        }
+
+        .quote-text {
+            padding-left: 20px;
+            margin: 20px 0 20px 15px;
+            font-style: italic;
+            color: #555;
+            font-size: 11px;
+            line-height: 1.6;
+            position: relative;
+        }
+
+        .quote-text::before {
+            content: '\201C';
+            font-size: 48px;
+            position: absolute;
+            left: -10px;
+            top: -20px;
+            color: #999;
+            opacity: 0.4;
+        }
+
+        .memorial-box {
+            background: #f5f5f5;
+            border: 2px solid #ccc;
+            padding: 15px;
+            text-align: center;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .msn-button {
+            display: inline-block;
+            margin-top: 4px;
+            padding: 5px 14px;
+            font: bold 11px Tahoma, Verdana, sans-serif;
+            color: #fff;
+            background: linear-gradient(to bottom, #56b7ff 0%, #1787d9 45%, #0c67bb 100%);
+            border: 1px solid #0a4f92;
+            border-top-color: #8dd6ff;
+            border-left-color: #8dd6ff;
+            border-right-color: #084a8a;
+            border-bottom-color: #084a8a;
+            border-radius: 3px;
+            text-shadow: 0 1px 0 #084a8a;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 1px 0 rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+        }
+
+        .msn-button:hover {
+            background: linear-gradient(to bottom, #6bc4ff 0%, #2694e3 45%, #1272c7 100%);
+        }
+
+        .msn-button:active {
+            background: linear-gradient(to bottom, #0e65b8 0%, #157fd0 55%, #4eaef6 100%);
+            border-top-color: #084a8a;
+            border-left-color: #084a8a;
+            border-right-color: #8dd6ff;
+            border-bottom-color: #8dd6ff;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+            transform: translateY(1px);
+        }
+
+        .msn-button:focus-visible {
+            outline: 1px dotted #003f7f;
+            outline-offset: 1px;
+        }
+
+        /* Sidebar */
+        .blog-sidebar {
+            width: 200px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-module {
+            background: #f9f9f9;
+            border: 1px solid #ccc;
+            margin-bottom: 15px;
+            padding: 10px;
+        }
+
+        .sidebar-module h3 {
+            margin: 0 0 10px 0;
+            font-size: 12px;
+            font-weight: bold;
+            color: #003366;
+            border-bottom: 2px solid #ff6600;
+            padding-bottom: 3px;
+        }
+
+        .sidebar-module ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-module li {
+            margin: 5px 0;
+            font-size: 10px;
+        }
+
+        .sidebar-module a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+
+        .sidebar-module a:hover {
+            text-decoration: underline;
+        }
+
+        /* Footer */
+        .blog-footer {
+            background: #003366;
+            color: #ccddff;
+            padding: 15px 20px;
+            text-align: center;
+            font-size: 10px;
+            border-top: 3px solid #ff6600;
+        }
+
+        .blog-footer a {
+            color: #ccddff;
+            text-decoration: underline;
+        }
+
+        /* Ad placeholder (for authenticity) */
+        .ad-banner {
+            background: #e0e0e0;
+            border: 1px solid #999;
+            padding: 10px;
+            text-align: center;
+            margin: 10px 0;
+            color: #666;
+            font-size: 10px;
+        }
+
+        .download-files {
+            background: #f9f9f9;
+            border: 2px solid #808080;
+            padding: 16px;
+            margin: 20px 0;
+        }
+
+        .download-files p {
+            margin: 0 0 12px 0;
+            color: #333;
+        }
+
+        .download-file-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .download-file-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 12px;
+            color: #003366;
+            text-decoration: none;
+            background: #fff;
+            border: 1px solid #999;
+            box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.8), inset -1px -1px 0 rgba(0, 0, 0, 0.08);
+        }
+
+        .download-file-link:hover {
+            background: #eef5ff;
+            border-color: #0066cc;
+        }
+
+        .download-file-meta {
+            font-size: 11px;
+            color: #666;
+            white-space: nowrap;
+        }
+
+        .frame-wrapper {
+        position: relative;
+        width: 480px;
+        height: 290px; 
+        max-width: 100%;
+        margin: 20px auto;
+        overflow: hidden;
+        border: none;
+        box-shadow: none;
+        }
+
+        .frame-title {
+        text-align: center;
+        margin-top: 0px;
+        margin-bottom: 15px;
+        font-size: 11px;
+        color: #999;
+        font-weight: normal;
+        letter-spacing: 0;
+        text-shadow: none;
+        }
+
+        iframe {
+        display: block;
+        width: 960px;
+        height: 540px;
+        border: none;
+        background: #000;
+        transform: scale(0.5);
+        transform-origin: top left;
+        position: relative;
+        margin-right: -263px;
+        margin-bottom: -147px;
+        }
+
+        .iframe-overlay {
+        position: absolute;
+        inset: 0;
+        cursor: default;
+        pointer-events: auto;
+        }
+
+        .iframe-overlay img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        opacity: 0;
+        pointer-events: auto;
+        }
+
+        .youtube-embed-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin: 20px auto;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            border: 2px solid #999;
+            box-shadow: inset 1px 1px 0 rgba(255,255,255,0.5), inset -1px -1px 0 rgba(0,0,0,0.5);
+        }
+
+        .youtube-embed-wrapper iframe {
+            width: 100%;
+            height: 100%;
+            display: block;
+            border: none;
+            margin: 0;
+            padding: 0;
+            transform: none;
+            transform-origin: center;
+            margin-right: 0;
+            margin-bottom: 0;
+        }
+
+        /* Magic square iframe styling - override default iframe rules */
+        #magicSquareOverlay .win98-browser {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        #magicSquareOverlay .win98-browser-content {
+            background: #1a1024;
+            flex: 1;
+            display: flex;
+        }
+
+        #magicSquareOverlay .win98-browser-content iframe {
+            width: 100%;
+            height: 100%;
+            display: block;
+            border: none;
+            margin: 0;
+            padding: 0;
+            transform: none;
+            transform-origin: center;
+            margin-right: 0;
+            margin-bottom: 0;
+            background: #1a1024;
+        }
+
+    </style>
+</head>
+
+<body>
+    <div class="main-window windows-box-shadow">
+        <div class="window-header">
+            <div class="title">
+                <img src="/img/latent_space.png" alt="Latent Space">
+                <span id="puzzle-title">Puzzle #002</span> - Latent Space
+            </div>
+            <div class="header-buttons">
+                <button onclick="window.location.href='/latent-space/index.html'">_</button>
+                <button>□</button>
+                <button onclick="window.location.href='/latent-space/index.html'">X</button>
+            </div>
+        </div>
+
+        <div class="menu-bar">
+            <span>File</span>
+            <span>Edit</span>
+            <span>View</span>
+            <span>Help</span>
+        </div>
+
+        <div class="window-content">
+            <!-- Navigation Bar -->
+            <div class="nav-bar">
+                <a href="/latent-space/index.html"><button class="win-button windows-box-shadow">← Back to
+                        Puzzles</button></a>
+                <a href="/latent-space/leaderboard.html"><button class="win-button windows-box-shadow">🏆
+                        Leaderboard</button></a>
+                <div class="auth-buttons">
+                    <button class="win-button windows-box-shadow" onclick="signInWithGoogle()">🔑 Sign in to
+                        Submit</button>
+                </div>
+                <div class="user-info-display hidden">
+                    <img class="user-avatar user-avatar-clickable" onclick="showEditAvatarDialog()"
+                        title="Click to change picture"
+                        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23808080'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E"
+                        alt="Avatar">
+                    <span class="user-name user-name-clickable" onclick="showEditNameDialog()"
+                        title="Click to change name">User</span>
+                    <button class="win-button windows-box-shadow" onclick="signOut()">Logout</button>
+                </div>
+            </div>
+
+            <div id="message-container" class="hidden"></div>
+
+            <div class="content-inner">
+                <h1>🕯️  <span id="puzzle-title-display">Loading...</span></h1>
+                <div class="release-info" style="margin-top: 4px; font-size: 11px; color: #666;">
+                    Released: <span id="puzzle-release">—</span>
+                </div>
+
+                <div class="info-bar">
+                    <div class="info-item">
+                        <strong>Base Points:</strong> <span id="puzzle-points">---</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Current Points:</strong> <span id="current-multiplier">Loading...</span>
+                    </div>
+                </div>
+
+                <!-- Memorial Text -->
+                <div class="memorial-text">
+                    <p><strong>This puzzle is dedicated to the memory of Aaron Swartz (1986-2013)</strong></p>
+                    <p>A brilliant programmer, writer, political organizer, and Internet activist who believed in the free and open exchange of information.</p>
+                    <p>
+                        <button type="button" class="msn-button"
+                            onclick="openBlogPost();">Read about Aaron Swartz</button>
+                    </p>
+                </div>
+
+                <h2>📎 Files</h2>
+                <div class="download-files">
+                    <div class="download-file-list">
+                    <a class="download-file-link" href="Webmail.pdf" download>
+                            <strong>Webmail.pdf</strong>
+                            <span class="download-file-meta">PDF document</span>
+                        </a>
+                        <a class="download-file-link" href="Swartz_FOIA.zip" download>
+                            <strong>Swartz_FOIA.zip</strong>
+                            <span class="download-file-meta">ZIP archive</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="solved-message" class="hidden"></div>
+
+                <h2>📤 Submit Your Answer</h2>
+                <div id="submission-form" class="submission-form">
+                    <form onsubmit="submitAnswer(event, 2); return false;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="answer-input">Your Answer:</label>
+                                <input type="text" id="answer-input" class="win-input inverse-windows-box-shadow"
+                                    placeholder="Enter your answer..." autocomplete="off" required
+                                    style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();">
+                            </div>
+                            <button type="submit" id="submit-btn"
+                                class="win-button windows-box-shadow primary submit-auth-btn">Submit</button>
+                            <button type="button" class="win-button windows-box-shadow primary login-submit-btn hidden"
+                                onclick="signInWithGoogle()">🔒 Login to submit</button>
+                        </div>
+                        <div id="attempt-counter" style="margin-top: 8px; color: #666;"></div>
+                    </form>
+                </div>
+
+
+                <div style="height: 16px;"></div>
+
+                <h2>🏁 Fastest Solves</h2>
+                <div id="puzzle-leaderboard" class="leaderboard-container">
+                    <div class="loading">Loading leaderboard...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="window-footer">
+            <span class="footer-section">Puzzle #002</span>
+            <span class="footer-section">In memory of Aaron Swartz</span>
+        </div>
+    </div>
+
+    <!-- Windows 98 Browser Popup -->
+    <div class="win98-browser-overlay" id="blogPostOverlay" onclick="closeBlogPost(event)">
+        <div class="win98-browser" onclick="event.stopPropagation()">
+            <div class="win98-browser-header">
+                <div class="win98-browser-title">
+                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3E%3Cpath d='M2 2h12v12H2z'/%3E%3C/svg%3E" alt="Browser">
+                    <span>Remembering Aaron Swartz: Internet Activist - Microsoft Internet Explorer</span>
+                </div>
+                <div class="win98-browser-close" onclick="closeBlogPost()">×</div>
+            </div>
+            <div class="win98-browser-toolbar">
+                <div class="win98-browser-addressbar">http://www.techwatchdaily.com/2013/01/remembering-aaron-swartz.html</div>
+            </div>
+            <div class="win98-browser-content">
+                <!-- Blog Header -->
+                <div class="blog-header">
+                    <h1>TechWatch Daily</h1>
+                    <div class="tagline">Your Source for Technology News and Digital Culture</div>
+                </div>
+
+                <!-- Navigation -->
+                <div class="blog-nav">
+                    <a href="#">HOME</a>
+                    <a href="#">NEWS</a>
+                    <a href="#">TECH</a>
+                    <a href="#">CULTURE</a>
+                    <a href="#">OPINION</a>
+                    <a href="#">ARCHIVES</a>
+                </div>
+
+                <!-- Main Content -->
+                <div class="blog-main">
+                    <!-- Article -->
+                    <div class="blog-article">
+                        <div class="ad-banner">Your Advertisement Here</div>
+
+                        <h1>Information is Power</h1>
+                        <div class="blog-meta">
+                            <span><strong>By:</strong> Mahbod Nouri</span>
+                            <span><strong>Published:</strong> February 1, 2026</span>
+                            <span><strong>Category:</strong> Technology </span>
+                        </div>
+                        
+                        <p>Aaron Swartz was born in Chicago in 1986. He was the oldest of three brothers, but from an early age, he was so obviously different from other kids. He taught himself to read at three. His father Robert, a computer consultant, noticed Aaron's fascination with machines and puzzles. When Aaron became interested in <a href="#" onclick="openMagicSquareWindow(); return false;">magic squares</a>, Robert helped him write a program to generate them. Aaron picked up programming quickly and didn't need much help after that. He started making websites before graphical browsers existed. He built sites for himself, his family, a Star Wars fan club, and even one for "all of the illegal things Microsoft has done throughout their history".</p>
+
+                        <p>At 14, Aaron co-authored RSS 1.0, the specification that lets websites syndicate content. It's the technology behind podcast feeds and news readers. He joined the working group online and contributed to the technical standard that would eventually run on billions of devices.</p>
+
+                        <p style="text-align: center;">
+                                <a href="feed.xml" target="_blank">
+                                <img src="https://upload.wikimedia.org/wikipedia/en/4/43/Feed-icon.svg" alt="RSS Icon" style="width: 60px; height: 60px;">
+                            </a>
+
+                        <p>A year later, he was invited to join Creative Commons, an organization building legal tools for sharing creative work. He helped develop the technical infrastructure that would let creators license their work freely instead of locking it behind traditional copyright. He was 15.</p>
+
+                        <div class="youtube-embed-wrapper">
+                            <iframe src="https://www.youtube.com/embed/YpT_V-DB1JU" title="Aaron Swartz and Creative Commons" allowfullscreen></iframe>
+                        </div>
+                        <div class="frame-title">Aaron explaining Creative Commons licenses</div>
+
+                        <p>Aaron didn't finish high school in the traditional sense. He found school frustrating. Sitting through lectures on things he'd already taught himself, completing assignments that felt pointless</p>
+
+                        <p class="quote-text">Seriously, who really cares how long the Nile river is, or who was the first to discover cheese. How is memorizing that ever going to help anyone? Instead, we need to give kids projects that allow them to exercise their minds and discover things for themselves. Instead of stuffing them with 'knowledge' we need to give them the power to find out what they want to know.</p>
+
+                        <p>He applied to Stanford and was accepted at 18. He enrolled but quickly realized university wasn't much different. The classroom felt slow compared to what he could learn and build on his own. He left after a year.</p>
+
+                        <p>After leaving Stanford, Aaron started working on Infogami, a platform for building structured wikis. He applied to Y Combinator's first batch in 2005 and was accepted. Paul Graham saw potential in the idea, but the project struggled to gain traction. Y Combinator pushed Aaron to merge with another startup from the same batch: Reddit, founded by Steve Huffman and Alexis Ohanian. Aaron became a co-founder. The team worked intensely, and in 2006, Condé Nast acquired Reddit. Aaron was 19 and a millionaire. He stayed for a year, then left. Working inside a corporation wasn't what he wanted.</p>
+
+                        <div class="frame-wrapper">
+                            <iframe src="reddit/index.html" title="Reddit" tabindex="-1" allowfullscreen="false"></iframe>
+                            <div class="iframe-overlay">
+                            <img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="" />
+                            </div>
+                        </div>
+                        <div class="frame-title">Reddit Homepage in 2006</div>
+
+                        <p>The money didn't matter as much as the work. He wanted to build things that made the world more open, more fair. He'd already worked on Creative Commons and helped the Internet Archive build the Open Library, a project to catalog every book ever published.</p>
+
+                        <p>In 2008, Aaron wrote the Guerilla Open Access Manifesto. It wasn't long, maybe 500 words. The argument was simple: academic research, most of it funded by taxpayers, was being locked up by publishers who charged $30, $40, sometimes $50 per article. Students couldn't afford it. The public couldn't access it. Researchers in poor countries were shut out entirely.</p>
+
+                        <p class="quote-text">Information is power. But like all power, there are those who want to keep it for themselves.</p>
+
+                        <p>The manifesto ended with a call to action. Those with access to these resources, he said, had a moral obligation to share them.</p>
+
+                        <p>The same year, Aaron joined a project to download court documents from PACER, the government's “public access” system that charged per page. He downloaded about 2.7 million documents (public records that should have been free) and released them. The FBI opened an investigation but in the end, no charges were filed; which the government was not happy about.</p>
+
+                        <p>In 2011, Aaron had started downloading academic articles from JSTOR through MIT's network. He connected a laptop in a network closet and ran a script to systematically download papers. He downloaded 4.8 million articles. JSTOR found out and contacted MIT. Aaron got arrested and returned the hard drive. JSTOR declined to press charges and reported no financial damages. MIT was uncomfortable but didn't pursue it either. The case should have ended there, but the Federal prosecutors had other plans.</p>
+
+                        <p> Later that year, Aaron helped organize the fight against SOPA, the Stop Online Piracy Act, a bill that would have let the government block entire websites over copyright claims without due process. It was censorship dressed up as copyright enforcement. In January 2012, Aaron coordinated a massive internet blackout. Wikipedia went dark. Google censored its logo. Reddit shut down. The protest worked. Congress shelved the bill within days. It was Aaron's biggest public victory.</p>
+
+                        <div style="text-align: center; margin: 20px 0;">
+                            <img src="https://wagingnonviolence.org/wp-content/uploads/2013/01/Screen-shot-2012-01-18-at-10.57.36-AM.png" alt="WIRED SOPA Protest" style="max-width: 100%; height: auto; border: 1px solid #ccc;">
+                            <div style="font-size: 10px; color: #666; margin-top: 5px;">Wired's homepage during the SOPA protest</div>
+                        </div>
+
+                        <p> But the JSTOR case hung over him. Federal prosecutors charged him under the Computer Fraud and Abuse Act, a law written in 1986, before the modern internet existed. The initial indictment had 4 felony counts. They superseded it with 13. The charges carried up to 35 years in prison and $1 million in fines. For downloading academic papers.</p>
+
+                        <p> The government wanted to "make an example of him". Assistant U.S. Attorney Stephen Heymann led the case and rejected multiple plea deals. He wanted Aaron to plead guilty to felonies. Aaron refused. The trial was set for April 2013.</p>
+
+                        <p> The pressure mounted. Legal fees climbed into millions. Aaron stopped sleeping. His friends noticed he wasn't himself. On January 11, 2013, two years after the arrest, Aaron hanged himself in his Brooklyn apartment. He was 26.</p>
+
+                        <p> After Aaron's death, transparency advocates filed FOIA requests for the government's case files. The documents showed what many suspected: prosecutors knew JSTOR didn't want to pursue charges and MIT was “neutral”. They proceeded anyway. Two years later, Congress introduced “Aaron's Law” to reform the Computer Fraud and Abuse Act. The same law is still used to prosecute security researchers and activists.</p>
+
+                        <p> Some things did change. JSTOR made parts of its archive publicly available. Universities adopted open access policies. The fight Aaron started didn't end with his death. More people joined it.</p>
+
+                        <p class="quote-text">Be curious. Read widely. Try new things. What people call intelligence just boils down to curiosity.</p>
+                        
+                        <p> Aaron Swartz <br> 1986 - 2013 </p>
+
+
+                        <p style="font-size: 10px; color: #666; margin-top: 20px;">
+                            <strong>Sources:</strong> 
+                            <a href="https://slate.com/technology/2013/02/aaron-swartz-he-wanted-to-save-the-world-why-couldnt-he-save-himself.html" target="_blank">Slate's profile of Aaron Swartz</a> | 
+                            <a href="https://www.youtube.com/watch?v=9vz06QO3UkQ" target="_blank">The Internet's Own Boy</a> | 
+                            <a href="https://channelbpodcast.com/archives/9117" target="_blank">ChannelB</a>
+                        </p>
+                    </div>
+
+                    <!-- Sidebar -->
+                    <div class="blog-sidebar">
+                        <div class="sidebar-module">
+                            <h3>RELATED STORIES</h3>
+                            <ul>
+                                <li>→ <a href="#">SOPA Protest: Internet Goes Dark</a></li>
+                                <li>→ <a href="#">The Fight for Open Access</a></li>
+                                <li>→ <a href="#">Reddit Co-Founder Dies at 26</a></li>
+                                <li>→ <a href="#">Digital Rights in the Modern Age</a></li>
+                            </ul>
+                        </div>
+
+                        <div class="sidebar-module">
+                            <h3>QUICK FACTS</h3>
+                            <ul>
+                                <li><strong>Born:</strong> Nov 8, 1986</li>
+                                <li><strong>Died:</strong> Jan 11, 2013</li>
+                                <li><strong>Age:</strong> 26 years</li>
+                                <li><strong>Known For:</strong> RSS, Reddit, Activism</li>
+                                <li><strong>Founded:</strong> Demand Progress (2008)</li>
+                            </ul>
+                        </div>
+
+                        <div class="ad-banner" style="height: 200px; line-height: 200px;">
+                            Your Advertisement Here
+                        </div>
+
+                        <div class="sidebar-module">
+                            <h3>INTERESTING LINKS</h3>
+                            <ul>
+                                <li>→ <a href="https://www.mahbod.me">Cool Website</a></li>
+                                <li>→ <a href="https://www.seti.org/research/seti-101/project-phoenix/arecibo/">Arecibo Observatory is Dead!</a></li>
+                                <li>→ <a href="http://www.aaronsw.com/">Aaron Swartz's Personal Website</a></li>
+                                <li>→ <a href="https://store.steampowered.com/app/813780/Age_of_Empires_II_Definitive_Edition/">The Game of the Century</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="blog-footer">
+                    <p><a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a> | <a href="#">Contact Us</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Magic Square Window Overlay -->
+    <div class="win98-browser-overlay" id="magicSquareOverlay" onclick="closeMagicSquareWindow(event)">
+        <div class="win98-browser" onclick="event.stopPropagation()">
+            <div class="win98-browser-header">
+                <div class="win98-browser-title">
+                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3E%3Cpath d='M2 2h12v12H2z'/%3E%3C/svg%3E" alt="Browser">
+                    <span>Magic Squares - Microsoft Internet Explorer</span>
+                </div>
+                <div class="win98-browser-close" onclick="closeMagicSquareWindow()">×</div>
+            </div>
+            <div class="win98-browser-toolbar">
+                <div class="win98-browser-addressbar">file:///magic_square.html</div>
+            </div>
+            <div class="win98-browser-content">
+                <iframe src="magic_square.html" style="width: 100%; height: 100%; border: none; background: #1a1024;"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start button toggle for taskbar -->
+    <input id="start-button-input" name="start-button-input" type="checkbox" />
+    <!-- Windows 98 style taskbar -->
+    <div id="start-bar">
+        <div id="start-button-items">
+            <label class="windows-box-shadow" for="start-button-input" id="start-button"></label>
+            <div id="items"></div>
+        </div>
+        <div class="windows-box-shadow" id="start-menu">
+            <div id="windows-start-menu-blue">Windows<span>98</span></div>
+            <ul>
+                <li><a href="https://www.linkedin.com/in/mahbodnr/" target="_blank"><label>
+                            <img alt="" src="/img/linkedin.png" style="width: 1.5rem;" />Linkedin
+                        </label></a></li>
+                <li><a href="https://github.com/mahbodnr" target="_blank"><label>
+                            <img alt="" src="/img/github.png" style="width: 1.5rem;" />GitHub
+                        </label></a></li>
+                <li class="line"><a href="https://scholar.google.com/citations?user=p7kqlIMAAAAJ&hl=en"
+                        target="_blank"><label>
+                            <img alt="" src="/img/scholar.png" style="width: 1.5rem;" />Google Scholar
+                        </label></a></li>
+                <li class="programs"><label><img alt="" src="/img/programs.png" style="width: 1.5rem;" />
+                        Progams</label>
+                    <ul class="windows-box-shadow">
+                        <li><a href="/latent-space/index.html"><label><img src="/img/latent_space.png" /> Latent
+                                    Space</label></a>
+                        </li>
+                    </ul>
+                </li>
+                <li class="line"><a href="/index.html"><label><img alt="" src="/img/text_editor.png"
+                                style="width: 1.5rem;" /> Home</label></a></li>
+            </ul>
+        </div>
+        <div id="time-options"></div>
+    </div>
+
+    <script src="/latent-space/scripts.js"></script>
+    <script>
+        const PUZZLE_ID = 2;
+
+        function initPage() {
+            initPuzzlePage(PUZZLE_ID);
+
+            // Update title display
+            const titleEl = document.getElementById('puzzle-title-display');
+            if (titleEl) {
+                titleEl.textContent = document.getElementById('puzzle-title')?.textContent || 'Puzzle #002';
+            }
+        }
+
+        // Initialize page - handle both cases: DOM ready or already loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initPage);
+        } else {
+            initPage();
+        }
+
+        // Open blog post window
+        function openBlogPost() {
+            const overlay = document.getElementById('blogPostOverlay');
+            if (overlay) {
+                overlay.classList.add('active');
+            }
+        }
+
+        // Close blog post window
+        function closeBlogPost(event) {
+            const overlay = document.getElementById('blogPostOverlay');
+            if (overlay && (!event || event.target === overlay)) {
+                overlay.classList.remove('active');
+            }
+        }
+
+        // Open magic square window
+        function openMagicSquareWindow() {
+            const overlay = document.getElementById('magicSquareOverlay');
+            if (overlay) {
+                overlay.classList.add('active');
+            }
+        }
+
+        // Close magic square window
+        function closeMagicSquareWindow(event) {
+            const overlay = document.getElementById('magicSquareOverlay');
+            if (overlay && (!event || event.target === overlay)) {
+                overlay.classList.remove('active');
+            }
+        }
+
+        // Close on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeBlogPost();
+                closeMagicSquareWindow();
+            }
+        });
+    </script>
+</body>
+
+</html>
