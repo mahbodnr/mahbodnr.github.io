@@ -322,6 +322,61 @@
             text-decoration: underline;
         }
 
+        .subscribe-module p {
+            margin: 0 0 10px 0;
+            font-size: 10px;
+            color: #555;
+            line-height: 1.4;
+        }
+
+        .subscribe-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .subscribe-tile {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            min-height: 72px;
+            width: 100%;
+            padding: 6px 5px;
+            font: bold 9px Tahoma, Verdana, sans-serif;
+            color: #0f4f8a;
+            text-decoration: none;
+            background: #fff;
+            border: none;
+            border-radius: 0;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+            cursor: pointer;
+        }
+
+        .subscribe-tile:hover {
+            color: #0a3f71;
+            text-decoration: none;
+        }
+
+        .subscribe-tile:focus-visible {
+            outline: 1px dotted #003f7f;
+            outline-offset: 1px;
+        }
+
+        .subscribe-icon {
+            width: 22px;
+            height: 22px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .subscribe-label {
+            color: inherit;
+            text-align: center;
+            line-height: 1.2;
+        }
+
         /* Footer */
         .blog-footer {
             background: #003366;
@@ -805,15 +860,19 @@
                             </ul>
                         </div>
 
-                        <div class="sidebar-module">
-                            <h3>QUICK FACTS</h3>
-                            <ul>
-                                <li><strong>Born:</strong> Nov 8, 1986</li>
-                                <li><strong>Died:</strong> Jan 11, 2013</li>
-                                <li><strong>Age:</strong> 26 years</li>
-                                <li><strong>Known For:</strong> RSS, Reddit, Activism</li>
-                                <li><strong>Founded:</strong> Demand Progress (2008)</li>
-                            </ul>
+                        <div class="sidebar-module subscribe-module">
+                            <h3>SUBSCRIBE</h3>
+                            <p>Get updates by inbox or RSS.</p>
+                            <div class="subscribe-actions">
+                                <button type="button" class="subscribe-tile" onclick="handleNewsletterSubscribe()">
+                                    <img class="subscribe-icon" src="/img/outlook_express-5.png" alt="Outlook">
+                                    <span class="subscribe-label">Newsletter</span>
+                                </button>
+                                <a class="subscribe-tile" href="feed.xml" target="_blank" rel="noopener noreferrer">
+                                    <img class="subscribe-icon" src="https://upload.wikimedia.org/wikipedia/en/4/43/Feed-icon.svg" alt="RSS">
+                                    <span class="subscribe-label">RSS Feed</span>
+                                </a>
+                            </div>
                         </div>
 
                         <div class="ad-banner" style="height: 200px; line-height: 200px;">
@@ -827,6 +886,7 @@
                                 <li>→ <a href="https://www.seti.org/research/seti-101/project-phoenix/arecibo/">Arecibo Observatory is Dead!</a></li>
                                 <li>→ <a href="http://www.aaronsw.com/">Aaron Swartz's Personal Website</a></li>
                                 <li>→ <a href="https://store.steampowered.com/app/813780/Age_of_Empires_II_Definitive_Edition/">The Game of the Century</a></li>
+                                <li>→ <a href="https://pages.mtu.edu/~shene/NSF-4/Tutorial/VIG/Vig-Intro.html">The Vigenère Cipher: Introduction</a></li>
                             </ul>
                         </div>
                     </div>
@@ -946,6 +1006,15 @@
             if (overlay && (!event || event.target === overlay)) {
                 overlay.classList.remove('active');
             }
+        }
+
+        async function handleNewsletterSubscribe() {
+            const user = await getCurrentUser();
+            if (user) {
+                return;
+            }
+
+            signInWithGoogle();
         }
 
         // Close on escape key

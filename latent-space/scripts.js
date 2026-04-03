@@ -1275,7 +1275,7 @@ async function loadPuzzleList() {
 
 // Puzzle Page
 async function initPuzzlePage(puzzleId) {
-    loadPuzzle(puzzleId);
+    await loadPuzzle(puzzleId);
     loadHints(puzzleId);
     loadPuzzleLeaderboard(puzzleId);
     updateAuthUI();
@@ -1314,12 +1314,15 @@ async function loadPuzzle(puzzleId) {
 
 async function loadHints(puzzleId) {
     const container = document.getElementById('hints-container');
-    if (!container) return;
-    
+
     // Clear any existing countdown timer interval
     if (window.nextHintTimerId) {
         clearInterval(window.nextHintTimerId);
         window.nextHintTimerId = null;
+    }
+
+    if (!window.currentPuzzle || window.currentPuzzle.id !== puzzleId) {
+        window.currentPuzzle = await fetchPuzzle(puzzleId);
     }
     
     const hints = await fetchHints(puzzleId);
@@ -1346,6 +1349,10 @@ async function loadHints(puzzleId) {
     if (scoreEl && window.currentPuzzle) {
         const currentPoints = Math.floor(window.currentPuzzle.base_points * scoreMultiplier);
         scoreEl.textContent = `${currentPoints} pts (${hints.length} hint${hints.length !== 1 ? 's' : ''} released)`;
+    }
+
+    if (!container) {
+        return;
     }
     
     if (hints.length === 0 && !upcomingHint) {
