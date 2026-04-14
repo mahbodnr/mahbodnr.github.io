@@ -694,6 +694,14 @@
                     </div>
                 </div>
 
+                <h2>💡 Hints</h2>
+                <div id="hints-container">
+                    <div class="loading">Loading hints...</div>
+                </div>
+                <p class="hint-notify-cta hide-when-auth">
+                    🔔 <a href="#" onclick="signInWithGoogle(); return false;" class="hint-notify-link">Notify me when a new hint releases</a>
+                </p>
+
                 <div id="solved-message" class="hidden"></div>
 
                 <h2>📤 Submit Your Answer</h2>
@@ -704,7 +712,8 @@
                                 <label for="answer-input">Your Answer:</label>
                                 <input type="text" id="answer-input" class="win-input inverse-windows-box-shadow"
                                     placeholder="Enter your answer..." autocomplete="off" required
-                                    style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();">
+                                    style="text-transform: uppercase;" onkeydown="if (event.key === ' ') { event.preventDefault(); }"
+                                    oninput="this.value = this.value.replace(/\s+/g, '').toUpperCase();">
                             </div>
                             <button type="submit" id="submit-btn"
                                 class="win-button windows-box-shadow primary submit-auth-btn">Submit</button>
@@ -974,6 +983,16 @@
             document.addEventListener('DOMContentLoaded', initPage);
         } else {
             initPage();
+        }
+
+        // Toggle individual hints
+        function toggleHint(index) {
+            const content = document.getElementById('hint-content-' + index);
+            const button = document.getElementById('hint-toggle-' + index);
+            if (content && button) {
+                const isHidden = content.classList.toggle('hidden');
+                button.textContent = isHidden ? '▶' : '▼';
+            }
         }
 
         // Open blog post window
