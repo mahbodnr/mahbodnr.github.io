@@ -110,6 +110,8 @@
             padding: 0;
             overflow-y: auto;
             flex: 1;
+            display: flex;
+            flex-direction: column;
             font-family: Verdana, Arial, sans-serif;
             font-size: 11px;
             user-select: text;
@@ -124,6 +126,7 @@
             color: white;
             padding: 15px 20px;
             border-bottom: 3px solid #ff6600;
+            width: 100%;
         }
 
         .blog-header h1 {
@@ -145,6 +148,7 @@
             border-bottom: 1px solid #999;
             padding: 5px 20px;
             font-size: 11px;
+            width: 100%;
         }
 
         .blog-nav a {
@@ -164,11 +168,13 @@
             display: flex;
             padding: 20px;
             gap: 20px;
+            width: 100%;
         }
 
         .blog-article {
             flex: 1;
             max-width: 900px;
+            min-width: 0;
         }
 
         .blog-article h1 {
@@ -379,6 +385,7 @@
             text-align: center;
             font-size: 10px;
             border-top: 3px solid #ff6600;
+            width: 100%;
         }
 
         .blog-footer a {
@@ -540,6 +547,66 @@
             background: #1a1024;
         }
 
+        @media (max-width: 900px) {
+            .main-window {
+                margin: 8px;
+                max-width: none;
+                max-height: calc(100vh - 4.75rem);
+            }
+
+            .window-header,
+            .window-footer {
+                width: 100%;
+            }
+
+            .window-content {
+                padding: 10px;
+            }
+
+            .blog-main {
+                flex-direction: column;
+                padding: 14px;
+                gap: 14px;
+            }
+
+            .blog-sidebar {
+                width: 100%;
+            }
+
+            .blog-nav {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px 12px;
+            }
+
+            .blog-nav a {
+                margin-right: 0;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .window-header .title {
+                font-size: 11px;
+                gap: 6px;
+            }
+
+            .header-buttons {
+                gap: 2px;
+            }
+
+            .header-buttons button {
+                width: 14px;
+                height: 12px;
+                font-size: 9px;
+            }
+
+            .window-footer {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+        }
+
     </style>
 </head>
 
@@ -589,7 +656,7 @@
             <div id="message-container" class="hidden"></div>
 
             <div class="content-inner">
-                <h1>🕯️  <span id="puzzle-title-display">Loading...</span></h1>
+                <h1>📃  <span id="puzzle-title-display">Loading...</span></h1>
                 <div class="release-info" style="margin-top: 4px; font-size: 11px; color: #666;">
                     Released: <span id="puzzle-release">—</span>
                 </div>
@@ -627,6 +694,14 @@
                     </div>
                 </div>
 
+                <h2>💡 Hints</h2>
+                <div id="hints-container">
+                    <div class="loading">Loading hints...</div>
+                </div>
+                <p class="hint-notify-cta hide-when-auth">
+                    🔔 <a href="#" onclick="signInWithGoogle(); return false;" class="hint-notify-link">Notify me when a new hint releases</a>
+                </p>
+
                 <div id="solved-message" class="hidden"></div>
 
                 <h2>📤 Submit Your Answer</h2>
@@ -637,7 +712,8 @@
                                 <label for="answer-input">Your Answer:</label>
                                 <input type="text" id="answer-input" class="win-input inverse-windows-box-shadow"
                                     placeholder="Enter your answer..." autocomplete="off" required
-                                    style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();">
+                                    style="text-transform: uppercase;" onkeydown="if (event.key === ' ') { event.preventDefault(); }"
+                                    oninput="this.value = this.value.replace(/\s+/g, '').toUpperCase();">
                             </div>
                             <button type="submit" id="submit-btn"
                                 class="win-button windows-box-shadow primary submit-auth-btn">Submit</button>
@@ -815,11 +891,11 @@
                         <div class="sidebar-module">
                             <h3>INTERESTING LINKS</h3>
                             <ul>
-                                <li>→ <a href="https://www.mahbod.me">Cool Website</a></li>
-                                <li>→ <a href="https://www.seti.org/research/seti-101/project-phoenix/arecibo/">Arecibo Observatory is Dead!</a></li>
-                                <li>→ <a href="http://www.aaronsw.com/">Aaron Swartz's Personal Website</a></li>
-                                <li>→ <a href="https://store.steampowered.com/app/813780/Age_of_Empires_II_Definitive_Edition/">The Game of the Century</a></li>
-                                <li>→ <a href="https://pages.mtu.edu/~shene/NSF-4/Tutorial/VIG/Vig-Intro.html">The Vigenère Cipher: Introduction</a></li>
+                                <li>→ <a href="https://dariotimes.com/" target="_blank" rel="noopener noreferrer">The Dario Times</a></li>
+                                <li>→ <a href="https://seti.org/research/seti-101/project-phoenix/arecibo/" target="_blank" rel="noopener noreferrer">Arecibo Observatory is Dead!</a></li>
+                                <li>→ <a href="http://aaronsw.com/" target="_blank" rel="noopener noreferrer">Aaron Swartz's Personal Website</a></li>
+                                <li>→ <a href="https://store.steampowered.com/app/813780/Age_of_Empires_II_Definitive_Edition/" target="_blank" rel="noopener noreferrer">The Game of the Century</a></li>
+                                <li>→ <a href="https://pages.mtu.edu/~shene/NSF-4/Tutorial/VIG/Vig-Intro.html" target="_blank" rel="noopener noreferrer">The Vigenère Cipher: Introduction</a></li>
                             </ul>
                         </div>
                     </div>
@@ -907,6 +983,16 @@
             document.addEventListener('DOMContentLoaded', initPage);
         } else {
             initPage();
+        }
+
+        // Toggle individual hints
+        function toggleHint(index) {
+            const content = document.getElementById('hint-content-' + index);
+            const button = document.getElementById('hint-toggle-' + index);
+            if (content && button) {
+                const isHidden = content.classList.toggle('hidden');
+                button.textContent = isHidden ? '▶' : '▼';
+            }
         }
 
         // Open blog post window
