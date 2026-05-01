@@ -985,6 +985,129 @@
             initPage();
         }
 
+        // Override loadHints for puzzle #002: available hints show help.pdf download instead of text
+        loadHints = async function(puzzleId) {
+            const container = document.getElementById('hints-container');
+
+            if (window.nextHintTimerId) {
+                clearInterval(window.nextHintTimerId);
+                window.nextHintTimerId = null;
+            }
+
+            if (!window.currentPuzzle || window.currentPuzzle.id !== puzzleId) {
+                window.currentPuzzle = await fetchPuzzle(puzzleId);
+            }
+
+            const hints = await fetchHints(puzzleId);
+            const totalHints = await fetchAllHintsCount(puzzleId);
+            const upcomingHint = await fetchUpcomingHint(puzzleId);
+
+            window.currentHints = hints;
+            window.currentPuzzleId = puzzleId;
+
+            // Update current score display
+            const scoreMultiplier = 1 / Math.pow(2, hints.length);
+            const scoreEl = document.getElementById('current-multiplier');
+            if (scoreEl && window.currentPuzzle) {
+                const currentPoints = Math.floor(window.currentPuzzle.base_points * scoreMultiplier);
+                scoreEl.textContent = `${currentPoints} pts (${hints.length} hint${hints.length !== 1 ? 's' : ''} released)`;
+            }
+
+            if (!container) return;
+
+            if (hints.length === 0 && !upcomingHint) {
+                container.innerHTML = '<p style="color: #666; font-style: italic;">No hints available for this puzzle yet.</p>';
+                return;
+            }
+
+            let html = '';
+
+            if (hints.length === 0) {
+                html += '<p style="color: #666; font-style: italic;">No hints released yet. Check back later!</p>';
+            } else {
+                hints.forEach((hint, index) => {
+                    html += `
+                        <div class="hint-card">
+                            <div class="hint-header" onclick="toggleHint(${index})">
+                                <button class="hint-toggle" id="hint-toggle-${index}">▶</button>
+                                <strong>Hint ${index + 1}</strong>
+                                <span class="hint-time">Released: ${formatDate(hint.release_time)}</span>
+                            </div>
+                            <div class="hint-content hidden" id="hint-content-${index}">
+                                <a class="download-file-link" href="/latent-space/puzzles/puzzle-002/help.pdf" download style="display:inline-flex; margin-top:8px;">
+                                    <strong>help.pdf</strong>
+                                    <span class="download-file-meta">PDF document</span>
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            if (upcomingHint) {
+                html += `
+                    <div class="hint-card hint-locked">
+                        <div class="hint-header">
+                            <button class="hint-toggle">🔒</button>
+                            <span id="next-hint-timer" class="hint-timer-inline" style="margin-left: 0;">Next hint in ...</span>
+                            <span class="hint-time">Available: ${formatDate(upcomingHint.release_time)}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (totalHints > hints.length + (upcomingHint ? 1 : 0)) {
+                const remaining = totalHints - hints.length - (upcomingHint ? 1 : 0);
+                html += `<p style="color: #666; font-size: 11px; margin-top: 8px;">+ ${remaining} more hint${remaining !== 1 ? 's' : ''} scheduled</p>`;
+            }
+
+            container.innerHTML = html;
+
+            if (upcomingHint) {
+                const timerEl = document.getElementById('next-hint-timer');
+                if (timerEl) {
+                    const releaseTime = new Date(upcomingHint.release_time).getTime();
+
+                    function formatRemaining(ms) {
+                        const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+                        const days = Math.floor(totalSeconds / 86400);
+                        const hours = Math.floor((totalSeconds % 86400) / 3600);
+                        const minutes = Math.floor((totalSeconds % 3600) / 60);
+                        const seconds = totalSeconds % 60;
+                        const parts = [];
+                        if (days > 0) parts.push(days + 'd');
+                        if (days > 0 || hours > 0) parts.push(String(hours).padStart(2, '0') + 'h');
+                        parts.push(String(minutes).padStart(2, '0') + 'm');
+                        parts.push(String(seconds).padStart(2, '0') + 's');
+                        return parts.join(' ');
+                    }
+
+                    function updateTimer() {
+                        const now = Date.now();
+                        const diff = releaseTime - now;
+                        if (diff <= 0) {
+                            timerEl.textContent = 'Next hint is unlocking...';
+                            clearInterval(window.nextHintTimerId);
+                            window.nextHintTimerId = null;
+                            setTimeout(() => loadHints(puzzleId), 2000);
+                            return;
+                        }
+                        timerEl.textContent = 'Next hint in ' + formatRemaining(diff);
+                    }
+
+                    updateTimer();
+                    window.nextHintTimerId = setInterval(() => {
+                        if (!document.body.contains(timerEl)) {
+                            clearInterval(window.nextHintTimerId);
+                            window.nextHintTimerId = null;
+                            return;
+                        }
+                        updateTimer();
+                    }, 1000);
+                }
+            }
+        };
+
         // Toggle individual hints
         function toggleHint(index) {
             const content = document.getElementById('hint-content-' + index);
