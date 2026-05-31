@@ -232,6 +232,80 @@ CREATE INDEX IF NOT EXISTS email_logs_sent_at_idx ON email_logs(sent_at);
 CREATE INDEX IF NOT EXISTS email_logs_notification_type_idx ON email_logs(notification_type);
 
 -- ============================================
+-- 6b. BESS CHAT CONVERSATIONS TABLE
+-- ============================================
+-- Stores full chat history between a user and the BESS assistant.
+CREATE TABLE IF NOT EXISTS bess_chat_conversations (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    conversation JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE bess_chat_conversations ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own BESS chat" ON bess_chat_conversations;
+CREATE POLICY "Users can view own BESS chat" ON bess_chat_conversations
+    FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own BESS chat" ON bess_chat_conversations;
+CREATE POLICY "Users can insert own BESS chat" ON bess_chat_conversations
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update own BESS chat" ON bess_chat_conversations;
+CREATE POLICY "Users can update own BESS chat" ON bess_chat_conversations
+    FOR UPDATE USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+-- ============================================
+-- 6c. BESS CHAT INTERACTIONS TABLE (IMMUTABLE)
+-- ============================================
+-- Stores one immutable log row per user interaction with BESS, including
+-- model telemetry and Helicone correlation metadata.
+CREATE TABLE IF NOT EXISTS bess_chat_interactions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    recipient_email TEXT NOT NULL,
+    chat_session_id TEXT NOT NULL,
+    client_request_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    user_message TEXT NOT NULL,
+    assistant_text TEXT,
+    events JSONB NOT NULL DEFAULT '[]'::jsonb,
+    tool_call_count INTEGER NOT NULL DEFAULT 0,
+    tool_result_count INTEGER NOT NULL DEFAULT 0,
+    model_call_count INTEGER NOT NULL DEFAULT 0,
+    model_latency_ms INTEGER NOT NULL DEFAULT 0,
+    total_duration_ms INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL, -- 'ok' or 'error'
+    error_message TEXT,
+    helicone_request_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE bess_chat_interactions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own BESS interactions" ON bess_chat_interactions;
+CREATE POLICY "Users can view own BESS interactions" ON bess_chat_interactions
+    FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Service role can insert BESS interactions" ON bess_chat_interactions;
+CREATE POLICY "Service role can insert BESS interactions" ON bess_chat_interactions
+    FOR INSERT TO service_role WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS bess_chat_interactions_user_id_idx
+    ON bess_chat_interactions(user_id);
+
+CREATE INDEX IF NOT EXISTS bess_chat_interactions_created_at_idx
+    ON bess_chat_interactions(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS bess_chat_interactions_session_idx
+    ON bess_chat_interactions(chat_session_id);
+
+CREATE INDEX IF NOT EXISTS bess_chat_interactions_status_idx
+    ON bess_chat_interactions(status);
+
+-- ============================================
 -- 7. LEADERBOARD VIEW
 -- ============================================
 CREATE OR REPLACE VIEW leaderboard_view
@@ -622,6 +696,8 @@ GRANT INSERT ON submissions TO authenticated;
 
 GRANT SELECT ON email_preferences TO authenticated;
 GRANT INSERT, UPDATE ON email_preferences TO authenticated;
+
+GRANT SELECT, INSERT, UPDATE ON bess_chat_conversations TO authenticated;
 
 -- Email logs: insert only via service role (edge function), no public access
 GRANT INSERT ON email_logs TO authenticated;

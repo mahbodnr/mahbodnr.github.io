@@ -121,6 +121,24 @@ async function signInWithGoogle(redirectUrl) {
     }
 }
 
+function getLoginNextDestination() {
+    const params = new URLSearchParams(window.location.search || '');
+    const rawNext = params.get('next');
+    if (!rawNext) {
+        return window.location.origin + '/latent-space/';
+    }
+
+    try {
+        const parsed = new URL(rawNext, window.location.origin);
+        if (parsed.origin !== window.location.origin) {
+            return window.location.origin + '/latent-space/';
+        }
+        return parsed.href;
+    } catch (e) {
+        return window.location.origin + '/latent-space/';
+    }
+}
+
 async function signOut() {
     if (!supabaseConfigured || !supabaseClient) return;
     
@@ -1750,9 +1768,18 @@ async function loadLeaderboard() {
 // Login Page
 async function initLoginPage() {
     const user = await getCurrentUser();
+    const nextDestination = getLoginNextDestination();
+
+    const googleBtn = document.getElementById('google-login-btn');
+    if (googleBtn) {
+        googleBtn.onclick = function () {
+            signInWithGoogle(nextDestination);
+        };
+    }
+
     if (user) {
-        // Already logged in, redirect to main page
-        window.location.href = '/latent-space/';
+        // Already logged in, redirect to requested page or main page.
+        window.location.href = nextDestination;
     }
 }
 

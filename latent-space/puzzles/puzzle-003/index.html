@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<!-- Google tag (gtag.js) -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=G-KYW12YQM6N"></script>
+	<script>
+	  window.dataLayer = window.dataLayer || [];
+	  function gtag(){dataLayer.push(arguments);}
+	  gtag('js', new Date());
+
+	  gtag('config', 'G-KYW12YQM6N');
+	</script>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Puzzle #003 | Latent Space</title>
+	<meta name="description" content="Puzzle #003 - The Hollow Hill Apiaries Golden Secret Competition">
+	<link rel="stylesheet" href="/css/style.css">
+	<link rel="stylesheet" href="/latent-space/styles.css">
+	<link rel="icon" href="/img/favicon.ico">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Lato:ital,wght@0,300;0,400;0,700;1,300;1,400&display=swap" rel="stylesheet">
+	<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+	<script src="https://www.google.com/recaptcha/api.js?render=6LdNOVUsAAAAAH_dUEx28ECJ1soJYvo8rI9BRJJD"></script>
+	<style>
+		:root {
+			--hh-amber: #bf751f;
+			--hh-amber-deep: #8f4f10;
+			--hh-bark: #3f2613;
+			--hh-leaf: #6f8b63;
+			--hh-cream: #f8efd9;
+			--hh-paper: #fff8ea;
+			--hh-line: #d7bf98;
+			--hh-shadow: 0 14px 28px rgba(63, 38, 19, 0.16);
+			--hh-ink: #4d3020;
+			--hh-accent: #a96a24;
+			--hh-accent-soft: #efe0c2;
+			--amber: #b5651d;
+			--amber-dark: #7a3e0e;
+			--amber-pale: #e8c07a;
+			--amber-light: #d4881f;
+		}
+
+		.window-content {
+			background: #c0c0c0;
+		}
+
+		.golden-main {
+			padding: 22px;
+			display: grid;
+			gap: 20px;
+			font-family: 'Lato', Georgia, serif;
+			color: var(--hh-ink);
+		}
+
+		.golden-outer-frame {
+			border: 1px solid #a9834a;
+			background: #c0c0c0;
+			padding: 10px;
+			box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.55), inset -1px -1px 0 rgba(86, 56, 23, 0.22);
+		}
+
+		.golden-inner-frame {
+			border: none;
+			background:
+				radial-gradient(circle at 14% 9%, rgba(255, 230, 177, 0.28), transparent 36%),
+				linear-gradient(180deg, #fbf1dd 0%, #efddbb 100%);
+			max-height: 68vh;
+			overflow-y: auto;
+			overflow-x: hidden;
+			padding: 16px;
+		}
+
+		.hero-banner {
+			border: 3px double #7b4c1c;
+			box-shadow: 4px 4px 0 rgba(86, 56, 23, 0.24);
+			background:
+				linear-gradient(135deg, rgba(255, 249, 236, 1) 0%, rgba(248, 231, 197, 0.95) 100%);
+			border-radius: 0;
+			padding: 20px;
+			position: relative;
+			overflow: hidden;
+		}
+
+		.hero-banner::before {
+			content: "";
+			position: absolute;
+			inset: 0;
+			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='78' height='68' viewBox='0 0 78 68'%3E%3Cg fill='none' stroke='%23ad6a22' stroke-opacity='0.23' stroke-width='1.2'%3E%3Cpath d='M19.5 1l18 10.5v21L19.5 43 1.5 32.5v-21z'/%3E%3Cpath d='M58.5 23l18 10.5v21L58.5 65 40.5 54.5v-21z'/%3E%3C/g%3E%3C/svg%3E");
+			background-size: 92px 80px;
+			opacity: 0.08;
+			pointer-events: none;
+		}
+
+		.hero-banner::after {
+			content: "";
+			position: absolute;
+			left: 20px;
+			right: 20px;
+			bottom: 14px;
+			height: 1px;
+			background: repeating-linear-gradient(90deg, transparent 0 8px, rgba(112, 71, 29, 0.45) 8px 12px);
+		}
+
+		.hero-content {
+			position: relative;
+			z-index: 1;
+			color: var(--hh-bark);
+		}
+
+		.hero-tag {
+			display: inline-block;
+			font: 700 10px Arial, Helvetica, sans-serif;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+			background: #9a1f1f;
+			border: 1px solid #5f0e0e;
+			color: #fff5e9;
+			padding: 4px 11px;
+			margin-bottom: 10px;
+			box-shadow: 2px 2px 0 rgba(63, 28, 12, 0.25);
+		}
+
+		.hero-banner h1 {
+			margin: 0;
+			font-size: 44px;
+			line-height: 0.99;
+			font-family: Georgia, "Times New Roman", serif;
+			font-weight: 700;
+			letter-spacing: 0.01em;
+			color: #4f2f14;
+			text-shadow: none;
+			text-transform: uppercase;
+		}
+
+		.hero-banner p {
+			margin: 12px 0 0;
+			max-width: 70ch;
+			color: #50321d;
+			line-height: 1.6;
+			font-size: 14px;
+			font-family: Georgia, "Times New Roman", serif;
+		}
+
+		.competition-grid {
+			display: grid;
+			grid-template-columns: 1fr;
+			gap: 12px;
+		}
+
+		.panel {
+			background: var(--hh-paper);
+			border: 2px solid #8c5925;
+			box-shadow: none;
+			padding: 16px 16px 16px 20px;
+			position: relative;
+		}
+
+		.panel::before {
+			content: "";
+			position: absolute;
+			left: 0;
+			top: 0;
+			bottom: 0;
+			width: 7px;
+			background: linear-gradient(180deg, #bb7d31 0%, #8f5317 100%);
+		}
+
+		.panel h2 {
+			margin: 0 0 10px;
+			font-size: 28px;
+			font-family: Georgia, "Times New Roman", serif;
+			font-weight: 600;
+			letter-spacing: 0.015em;
+			color: #4f2f14;
+			text-transform: uppercase;
+		}
+
+		.panel p {
+			margin: 0 0 10px;
+			color: #50331d;
+			line-height: 1.58;
+			font-size: 13px;
+		}
+
+		.announcement-points {
+			margin: 10px 0 0;
+			padding-left: 20px;
+			color: #4a2d19;
+			font-size: 12px;
+			line-height: 1.55;
+		}
+
+		.announcement-points li {
+			margin-bottom: 6px;
+		}
+
+		.cta-strip {
+			margin-top: 12px;
+			border: 2px dashed #925d29;
+			background: linear-gradient(180deg, #f7e7c8 0%, #efd4a8 100%);
+			padding: 12px 14px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+			flex-wrap: wrap;
+		}
+
+		.cta-strip p {
+			margin: 0;
+			color: #3e2717;
+			font-size: 12px;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: 0.03em;
+		}
+
+		.hollow-hill-btn {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			border: 2px solid #6a3d14;
+			border-right-color: #4b2a0f;
+			border-bottom-color: #4b2a0f;
+			background: linear-gradient(180deg, #d59647 0%, #b2702c 48%, #985a1a 100%);
+			color: #2f1808;
+			text-decoration: none;
+			padding: 9px 16px;
+			font: 700 12px "Trebuchet MS", Tahoma, Verdana, sans-serif;
+			letter-spacing: 0.05em;
+			text-transform: uppercase;
+			text-shadow: 0 1px 0 rgba(255, 238, 209, 0.45);
+			box-shadow: inset 0 1px 0 rgba(255, 231, 191, 0.65), 2px 2px 0 #5a3412;
+			border-radius: 2px;
+			white-space: nowrap;
+			position: relative;
+			overflow: hidden;
+			transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+		}
+
+		.hollow-hill-btn::before {
+			content: "";
+			position: absolute;
+			inset: 0;
+			background: linear-gradient(180deg, rgba(255, 245, 224, 0.35) 0%, rgba(255, 245, 224, 0) 55%);
+			pointer-events: none;
+		}
+
+		.hollow-hill-btn:hover,
+		.hollow-hill-btn:focus-visible {
+			background: linear-gradient(180deg, #dfa154 0%, #bf7b34 48%, #a86522 100%);
+			transform: translateY(-1px);
+			box-shadow: inset 0 1px 0 rgba(255, 238, 206, 0.7), 3px 3px 0 #5a3412;
+			outline: 1px dotted #4d2d10;
+			outline-offset: 1px;
+		}
+
+		.hollow-hill-btn:active {
+			transform: translateY(1px);
+			box-shadow: inset 0 1px 0 rgba(255, 221, 169, 0.45), 1px 1px 0 #5a3412;
+		}
+
+		.submission-block,
+		.leaderboard-block {
+			background: #fff;
+			border: 1px solid #d4b896;
+			border-radius: 6px;
+			padding: 5mm 5mm 4mm;
+			position: relative;
+			overflow: hidden;
+		}
+
+		.submission-block::before,
+		.leaderboard-block::before {
+			content: "";
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: 3px;
+			background: linear-gradient(90deg, var(--amber-dark), var(--amber-light));
+		}
+
+		.submission-block h2,
+		.leaderboard-block h2 {
+			margin: 2mm 0 3mm;
+			color: var(--amber-dark);
+			font-size: 16pt;
+			font-family: 'Playfair Display', Georgia, serif;
+			font-weight: 600;
+			text-transform: none;
+			line-height: 1.2;
+			padding-bottom: 2mm;
+			border-bottom: 1.5px solid #e8c07a;
+		}
+
+		.answer-help {
+			margin: 0 0 10px;
+			color: #5c3a22;
+			font-size: 8.5pt;
+			line-height: 1.6;
+		}
+
+		.submission-block label {
+			font-size: 8pt;
+			font-weight: 700;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			color: var(--amber-dark);
+			margin-bottom: 1mm;
+			display: inline-block;
+		}
+
+		.submission-block .form-row {
+			display: grid;
+			grid-template-columns: 1fr auto;
+			gap: 10px;
+			align-items: end;
+		}
+
+		.submission-block .form-group {
+			margin: 0;
+		}
+
+		#answer-input.win-input {
+			background: #fffaf0;
+			border: 1px solid #d4b896;
+			color: #2e1a0e;
+			box-shadow: inset 0 1px 2px rgba(59, 31, 14, 0.1);
+			font-size: 9pt;
+		}
+
+		#answer-input {
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+			font-weight: bold;
+		}
+
+		#submit-btn,
+		.login-submit-btn {
+			border: 1px solid var(--amber-dark);
+			background: linear-gradient(180deg, #eac98f 0%, #d6a45a 52%, #c48b3d 100%);
+			color: #3b1f0e;
+			text-transform: uppercase;
+			letter-spacing: 0.06em;
+			font-weight: 700;
+			padding: 8px 14px;
+		}
+
+		#submit-btn:hover,
+		.login-submit-btn:hover {
+			background: linear-gradient(180deg, #f0d5a5 0%, #deaf69 52%, #cc964b 100%);
+		}
+
+		#attempt-counter {
+			margin-top: 8px;
+			color: #8a6545;
+			font-size: 8pt;
+		}
+
+		.signin-callout {
+			margin-top: 8px;
+			font-size: 8pt;
+			color: #8a6545;
+		}
+
+		.signin-callout a {
+			color: var(--amber-dark);
+			font-weight: bold;
+		}
+
+		.leaderboard-block .leaderboard-container {
+			background: #fdf3e3;
+			border: 1px solid #d4b896;
+			border-radius: 4px;
+			padding: 3mm;
+		}
+
+		.leaderboard-block .loading {
+			font-size: 8.5pt;
+			color: #5c3a22;
+		}
+
+		.golden-secret {
+			background: var(--amber-dark);
+			border-radius: 5px;
+			padding: 8mm 10mm;
+			margin: 0;
+			text-align: center;
+			position: relative;
+			overflow: hidden;
+		}
+
+		.golden-secret::before {
+			content: "";
+			position: absolute;
+			inset: 0;
+			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='104'%3E%3Cpath d='M30 68L2 52V20L30 4l28 16v32L30 68zM30 104L2 88V68l28 16 28-16v20L30 104z' fill='none' stroke='%23ffffff' stroke-width='0.7' opacity='0.08'/%3E%3C/svg%3E");
+			pointer-events: none;
+		}
+
+		.golden-secret > * {
+			position: relative;
+			z-index: 1;
+		}
+
+		.gs-overline {
+			font-size: 7pt;
+			font-weight: 700;
+			letter-spacing: 0.3em;
+			text-transform: uppercase;
+			color: var(--amber-pale);
+			margin-bottom: 3mm;
+		}
+
+		.gs-title {
+			font-family: 'Playfair Display', Georgia, serif;
+			font-size: 26pt;
+			font-weight: 700;
+			font-style: italic;
+			color: #fff;
+			line-height: 1.1;
+			margin-bottom: 4mm;
+			text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+		}
+
+		.gs-divider {
+			width: 20mm;
+			height: 1px;
+			background: rgba(255, 255, 255, 0.3);
+			margin: 0 auto 4mm;
+		}
+
+		.gs-body {
+			font-size: 8.5pt;
+			color: rgba(255, 255, 255, 0.88);
+			line-height: 1.72;
+			max-width: 120mm;
+			margin: 0 auto 4mm;
+		}
+
+		.gs-prize {
+			font-family: 'Playfair Display', Georgia, serif;
+			font-size: 11pt;
+			font-style: italic;
+			color: var(--amber-pale);
+			margin-bottom: 4mm;
+		}
+
+		.gs-url {
+			display: inline-block;
+			font-family: 'Lato', sans-serif;
+			font-size: 8pt;
+			font-weight: 700;
+			letter-spacing: 0.1em;
+			color: var(--amber-dark);
+			background: #fff;
+			padding: 2mm 6mm;
+			border-radius: 20px;
+		}
+
+		.gs-footnote {
+			font-size: 7pt;
+			color: rgba(255, 255, 255, 0.45);
+			font-style: italic;
+			margin-top: 3mm;
+		}
+
+		@media (max-width: 600px) {
+			.golden-main {
+				padding: 12px;
+				gap: 14px;
+			}
+
+			.hero-banner h1 {
+				font-size: 32px;
+			}
+
+			.panel h2,
+			.submission-block h2,
+			.leaderboard-block h2 {
+				font-size: 22px;
+			}
+
+			.cta-strip p {
+				font-size: 11px;
+			}
+
+			.hollow-hill-btn {
+				width: 100%;
+				text-align: center;
+			}
+
+			.submission-block .form-row {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+</head>
+
+<body>
+	<div class="main-window windows-box-shadow">
+		<div class="window-header">
+			<div class="title">
+				<img src="/img/latent_space.png" alt="Latent Space">
+				<span id="puzzle-title">Puzzle #003</span> - Latent Space
+			</div>
+			<div class="header-buttons">
+				<button onclick="window.location.href='/latent-space/index.html'">_</button>
+				<button>□</button>
+				<button onclick="window.location.href='/latent-space/index.html'">X</button>
+			</div>
+		</div>
+
+		<div class="menu-bar">
+			<span>File</span>
+			<span>Edit</span>
+			<span>View</span>
+			<span>Help</span>
+		</div>
+
+		<div class="window-content">
+			<div class="nav-bar">
+				<a href="/latent-space/index.html"><button class="win-button windows-box-shadow">← Back to Puzzles</button></a>
+				<a href="/latent-space/leaderboard.html"><button class="win-button windows-box-shadow">🏆 Leaderboard</button></a>
+				<div class="auth-buttons">
+					<button class="win-button windows-box-shadow" onclick="signInWithGoogle()">🔑 Sign in to Submit</button>
+				</div>
+				<div class="user-info-display hidden">
+					<img class="user-avatar user-avatar-clickable" onclick="showEditAvatarDialog()" title="Click to change picture"
+						src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23808080'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E"
+						alt="Avatar">
+					<span class="user-name user-name-clickable" onclick="showEditNameDialog()" title="Click to change name">User</span>
+					<button class="win-button windows-box-shadow" onclick="signOut()">Logout</button>
+				</div>
+			</div>
+
+			<div id="message-container" class="hidden"></div>
+
+			<div class="golden-outer-frame">
+				<div class="golden-inner-frame">
+					<div class="golden-main">
+							<div class="golden-secret">
+								<div class="gs-overline">A Standing Offer · Since 2019</div>
+								<div class="gs-title">The Golden Secret</div>
+								<div class="gs-divider"></div>
+								<p class="gs-body">For fifty years, something in our Heritage Reserve has given it a taste unlike any other honey in the world. Beekeepers, food scientists, and chefs have all tried to identify it. Nobody has succeeded.</p>
+								<p class="gs-body">We are so confident in this that we have made a standing offer: name the ingredient that gives Heritage Reserve its distinctive finish, and we will send you a lifetime supply of Hollow Hill honey — free of charge, every year, for as long as we keep bees.</p>
+								<div class="gs-prize">"No tricks. No catches. Just honey."</div>
+								<a class="gs-url" href="/latent-space/puzzles/puzzle-003/hollow_hill_apiaries/" target="_blank" rel="noopener noreferrer">Visit Hollow Hill Apiaries</a>
+								<div class="gs-footnote">Submit your answer online. One entry per person. The decision of the Holloway family is final.</div>
+							</div>
+
+						<div id="solved-message" class="hidden"></div>
+
+						<section class="submission-block" aria-labelledby="submission-title">
+							<h2 id="submission-title">Submit Your Golden Guess</h2>
+							<div id="submission-form" class="submission-form">
+								<form onsubmit="submitAnswer(event, 3); return false;">
+									<div class="form-row">
+										<div class="form-group">
+											<label for="answer-input">Your Answer:</label>
+											<input
+												type="text"
+												id="answer-input"
+												class="win-input inverse-windows-box-shadow"
+												placeholder="EXAMPLEANSWER"
+												autocomplete="off"
+												required
+												pattern="[A-Z0-9]+"
+												title="Use uppercase letters and numbers only, with no spaces."
+												oninput="this.value = this.value.toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9]/g, '');">
+										</div>
+										<button type="submit" id="submit-btn" class="win-button windows-box-shadow primary submit-auth-btn">Submit</button>
+										<button type="button" class="win-button windows-box-shadow primary login-submit-btn hidden" onclick="signInWithGoogle()">🔒 Login to submit</button>
+									</div>
+									<div id="attempt-counter"></div>
+									<p class="signin-callout hide-when-auth">Sign in to submit your guess and appear on the board.</p>
+								</form>
+							</div>
+						</section>
+
+						<section class="leaderboard-block" aria-labelledby="leaderboard-title">
+							<h2 id="leaderboard-title">Fastest Solves</h2>
+							<div id="puzzle-leaderboard" class="leaderboard-container">
+								<div class="loading">Loading leaderboard...</div>
+							</div>
+						</section>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="window-footer">
+			<span class="footer-section">Puzzle #003</span>
+			<span class="footer-section">Golden Secret Competition</span>
+		</div>
+	</div>
+
+	<input id="start-button-input" name="start-button-input" type="checkbox" />
+	<div id="start-bar">
+		<div id="start-button-items">
+			<label class="windows-box-shadow" for="start-button-input" id="start-button"></label>
+			<div id="items"></div>
+		</div>
+		<div class="windows-box-shadow" id="start-menu">
+			<div id="windows-start-menu-blue">Windows<span>98</span></div>
+			<ul>
+				<li><a href="https://www.linkedin.com/in/mahbodnr/" target="_blank"><label>
+							<img alt="" src="/img/linkedin.png" style="width: 1.5rem;" />Linkedin
+						</label></a></li>
+				<li><a href="https://github.com/mahbodnr" target="_blank"><label>
+							<img alt="" src="/img/github.png" style="width: 1.5rem;" />GitHub
+						</label></a></li>
+				<li><a href="https://buymeacoffee.com/mahbod.me" target="_blank" rel="noopener noreferrer"><label>
+							<img alt="" src="/img/buymeacoffeeicon.png" style="width: 1.5rem;" />Buy Me a Coffee
+						</label></a></li>
+				<li class="line"><a href="https://scholar.google.com/citations?user=p7kqlIMAAAAJ&hl=en" target="_blank"><label>
+							<img alt="" src="/img/scholar.png" style="width: 1.5rem;" />Google Scholar
+						</label></a></li>
+				<li class="programs"><label><img alt="" src="/img/programs.png" style="width: 1.5rem;" />
+						Progams</label>
+					<ul class="windows-box-shadow">
+						<li><a href="/latent-space/index.html"><label><img src="/img/latent_space.png" /> Latent Space</label></a></li>
+					</ul>
+				</li>
+				<li class="line"><a href="/index.html"><label><img alt="" src="/img/text_editor.png" style="width: 1.5rem;" /> Home</label></a></li>
+			</ul>
+		</div>
+		<div id="time-options"></div>
+	</div>
+
+	<script src="/latent-space/scripts.js"></script>
+	<script>
+		const PUZZLE_ID = 3;
+
+		async function initPage() {
+			await updateAuthUI();
+			await checkExistingSubmission(PUZZLE_ID);
+			await updateAttemptCounter(PUZZLE_ID);
+			await loadPuzzleLeaderboard(PUZZLE_ID);
+		}
+
+		if (document.readyState === 'loading') {
+			document.addEventListener('DOMContentLoaded', initPage);
+		} else {
+			initPage();
+		}
+	</script>
+</body>
+
+</html>

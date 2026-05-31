@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Hollow Hill Apiaries favicon">
+  <rect width="64" height="64" rx="12" fill="#f9e8c8" />
+  <g fill="none" stroke="#7b4518" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <polygon points="32,9 46,17 46,33 32,41 18,33 18,17" />
+    <polygon points="32,25 46,33 46,49 32,57 18,49 18,33" />
+  </g>
+</svg>

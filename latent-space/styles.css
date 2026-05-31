@@ -18,6 +18,26 @@ body {
     min-height: 100vh;
 }
 
+/* Keep the Start menu blue banner aligned with dynamic menu height in Latent Space */
+#windows-start-menu-blue {
+    top: 0;
+    bottom: 0;
+    width: 2rem;
+    padding: 0.75rem 0.25rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    transform-origin: center;
+}
+
+/* Latent Space has one extra Start menu item, so align Programs flyout with its row */
+#start-bar .programs > ul {
+    top: 16.5rem;
+}
+
 /* Selection behavior: only puzzle content is selectable */
 .main-window,
 .main-window * {
