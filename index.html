@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KYW12YQM6N"></script>
@@ -25,6 +27,8 @@
     <link rel="stylesheet" href="./css/style.css">
     <link rel="icon" href="./img/favicon.ico">
 </head>
+
+<body>
 
 <form id="windows">
     <!-- Login and Shutdown -->
@@ -119,8 +123,7 @@
                     <a href="https://policies.google.com/terms"
                         style="color: #0066cc; text-decoration: underline;">Terms of Service</a> apply.
                 </p>
-                <h1><wbr></h1>
-                <h1><wbr></h1>
+                <h1 style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">Mahbod Nouri - Personal Website</h1>
             </div>
         </div>
         <div class="window help windows-box-shadow">
@@ -624,10 +627,8 @@
     </div>
 </form>
 
-<!-- Drag and drop windows -->
-<script src="./scripts/drag.js"></script>
-<!-- Maximize windows -->
-<script src="./scripts/maximize.js"></script>
+<!-- Window behavior -->
+<script src="./scripts/windows.js"></script>
 <!-- Read projects -->
 <script src="./scripts/read_projects.js"></script>
 <script>
@@ -646,3 +647,5 @@
         setInterval(updateClock, 30000);
     })();
 </script>
+</body>
+</html>
