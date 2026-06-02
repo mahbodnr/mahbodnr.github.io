@@ -1014,7 +1014,7 @@ async function getUserSubmission(puzzleId) {
         const token = currentSession?.access_token || SUPABASE_ANON_KEY;
         
         const response = await fetch(
-            SUPABASE_URL + '/rest/v1/submissions?select=*&puzzle_id=eq.' + puzzleId + '&user_id=eq.' + user.id + '&is_correct=eq.true&limit=1',
+            SUPABASE_URL + '/rest/v1/submissions?select=id,score,submitted_at&puzzle_id=eq.' + puzzleId + '&user_id=eq.' + user.id + '&is_correct=eq.true&limit=1',
             {
                 headers: {
                     'apikey': SUPABASE_ANON_KEY,
