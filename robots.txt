@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+
+# Private app pages
+Disallow: /latent-space/login.html
+Disallow: /latent-space/preferences.html
+
+# Error pages
+Disallow: /401.html
+Disallow: /403.html
+Disallow: /404.html
+Disallow: /500.html
+
+# Puzzle sub-pages (not canonical entry points)
+Disallow: /latent-space/puzzles/puzzle-002/crossword.html
+Disallow: /latent-space/puzzles/puzzle-002/magic_square.html
+Disallow: /latent-space/puzzles/puzzle-002/reddit/
+
+Sitemap: https://mahbod.me/sitemap.xml

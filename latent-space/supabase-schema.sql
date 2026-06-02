@@ -220,11 +220,11 @@ CREATE TABLE IF NOT EXISTS email_logs (
 -- Enable RLS
 ALTER TABLE email_logs ENABLE ROW LEVEL SECURITY;
 
--- Only allow service role to insert (edge function uses service role)
--- No public read access for privacy
+-- email_logs is written exclusively by edge functions running as service_role.
+-- service_role bypasses RLS entirely, so no INSERT policy is needed here.
+-- Removing the permissive WITH CHECK (true) policy prevents any anon/authenticated
+-- client from inserting fake log entries.
 DROP POLICY IF EXISTS "Service role can insert email logs" ON email_logs;
-CREATE POLICY "Service role can insert email logs" ON email_logs
-    FOR INSERT WITH CHECK (true);
 
 -- Create indexes for querying logs
 CREATE INDEX IF NOT EXISTS email_logs_user_id_idx ON email_logs(user_id);
@@ -680,18 +680,28 @@ CREATE POLICY "Users can delete their own avatars" ON storage.objects
 
 -- ============================================
 -- 11. GRANT PERMISSIONS
--- ============================================
--- Grant table permissions
-GRANT SELECT ON users TO anon, authenticated;
+-- Column-level security for users: restrict email from all client roles.
+-- email is only needed server-side by SECURITY DEFINER functions (service_role).
+-- Clients get the authenticated user's own email from the Supabase Auth session (JWT).
+GRANT SELECT (id, username, avatar_url, created_at) ON users TO anon;
+GRANT SELECT (id, username, avatar_url, created_at) ON users TO authenticated;
 GRANT INSERT, UPDATE ON users TO authenticated;
 
-GRANT SELECT ON puzzles TO anon, authenticated;
+-- Column-level security for puzzles: restrict answer_hash and internal email content.
+-- answer_hash is only accessed server-side inside check_answer() SECURITY DEFINER.
+-- congrat_email_subject/html are internal templates never needed by clients.
+GRANT SELECT (id, title, description, release_time, base_points, created_at) ON puzzles TO anon;
+GRANT SELECT (id, title, description, release_time, base_points, created_at) ON puzzles TO authenticated;
 
 GRANT SELECT ON hints TO anon, authenticated;
 
 GRANT SELECT, INSERT ON superhint_reads TO authenticated;
 
-GRANT SELECT ON submissions TO anon, authenticated;
+-- Column-level security for submissions: restrict answer_text and answer_hash.
+-- These are stored for server-side audit only. Exposing them via the
+-- "Anyone can view correct submissions" policy would reveal puzzle solutions.
+GRANT SELECT (id, user_id, puzzle_id, is_correct, score, submitted_at) ON submissions TO anon;
+GRANT SELECT (id, user_id, puzzle_id, is_correct, score, submitted_at) ON submissions TO authenticated;
 GRANT INSERT ON submissions TO authenticated;
 
 GRANT SELECT ON email_preferences TO authenticated;
@@ -699,8 +709,8 @@ GRANT INSERT, UPDATE ON email_preferences TO authenticated;
 
 GRANT SELECT, INSERT, UPDATE ON bess_chat_conversations TO authenticated;
 
--- Email logs: insert only via service role (edge function), no public access
-GRANT INSERT ON email_logs TO authenticated;
+-- Email logs: no client access. Edge functions use service_role which bypasses RLS entirely.
+-- GRANT INSERT ON email_logs is intentionally omitted to block clients from writing fake log entries.
 
 -- Grant view permissions
 GRANT SELECT ON leaderboard_view TO anon, authenticated;

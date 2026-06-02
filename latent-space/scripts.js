@@ -565,7 +565,7 @@ async function fetchPuzzles() {
 
 async function fetchPuzzle(puzzleId) {
     try {
-        const response = await fetch(SUPABASE_URL + '/rest/v1/puzzles?select=*&id=eq.' + puzzleId, {
+        const response = await fetch(SUPABASE_URL + '/rest/v1/puzzles?select=id,title,description,release_time,base_points&id=eq.' + puzzleId, {
             headers: {
                 'apikey': SUPABASE_ANON_KEY,
                 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
