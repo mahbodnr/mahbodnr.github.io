@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KYW12YQM6N"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-KYW12YQM6N');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="index,follow">
+    <link rel="canonical" href="https://mahbod.me/latent-space/puzzles/puzzle-004/">
+    <title>Puzzle #004 | Latent Space</title>
+    <meta name="description" content="Puzzle #004 - Latent Space challenge">
+    <!-- Open Graph Meta Tags: -->
+    <meta property="og:title" content="Puzzle #004 | Latent Space">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://mahbod.me/latent-space/puzzles/puzzle-004/">
+    <meta property="og:image" content="https://mahbod.me/img/favicon.ico">
+    <meta property="og:description" content="Puzzle #004 - Latent Space challenge">
+    <!-- Twitter Card: -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Puzzle #004 | Latent Space">
+    <meta name="twitter:description" content="Puzzle #004 - Latent Space challenge">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/latent-space/styles.css">
+    <link rel="icon" href="/img/favicon.ico">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://www.google.com/recaptcha/api.js?render=6LdNOVUsAAAAAH_dUEx28ECJ1soJYvo8rI9BRJJD"></script>
+</head>
+
+<body>
+    <div class="main-window windows-box-shadow">
+        <div class="window-header">
+            <div class="title">
+                <img src="/img/latent_space.png" alt="Latent Space">
+                <span id="puzzle-title">Puzzle #004</span> - Latent Space
+            </div>
+            <div class="header-buttons">
+                <button onclick="window.location.href='/latent-space/index.html'">_</button>
+                <button>□</button>
+                <button onclick="window.location.href='/latent-space/index.html'">X</button>
+            </div>
+        </div>
+
+        <div class="menu-bar">
+            <span>File</span>
+            <span>Edit</span>
+            <span>View</span>
+            <span>Help</span>
+        </div>
+
+        <div class="window-content">
+            <!-- Navigation Bar -->
+            <div class="nav-bar">
+                <a href="/latent-space/index.html"><button class="win-button windows-box-shadow">← Back to
+                        Puzzles</button></a>
+                <a href="/latent-space/leaderboard.html"><button class="win-button windows-box-shadow">🏆
+                        Leaderboard</button></a>
+                <div class="auth-buttons">
+                    <button class="win-button windows-box-shadow" onclick="signInWithGoogle()">🔑 Sign in to
+                        Submit</button>
+                </div>
+                <div class="user-info-display hidden">
+                    <img class="user-avatar user-avatar-clickable" onclick="showEditAvatarDialog()"
+                        title="Click to change picture"
+                        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23808080'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E"
+                        alt="Avatar">
+                    <span class="user-name user-name-clickable" onclick="showEditNameDialog()"
+                        title="Click to change name">User</span>
+                    <button class="win-button windows-box-shadow" onclick="signOut()">Logout</button>
+                </div>
+            </div>
+
+            <div id="message-container" class="hidden"></div>
+
+            <div class="content-inner">
+                <h1>🔢  <span id="puzzle-title-display">Loading...</span></h1>
+                <div class="release-info" style="margin-top: 4px; font-size: 11px; color: #666;">
+                    Released: <span id="puzzle-release">—</span>
+                </div>
+                
+                <div class="info-bar">
+                    <div class="info-item">
+                        <strong>Base Points:</strong> <span id="puzzle-points">---</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Current Points:</strong> <span id="current-multiplier">Loading...</span>
+                    </div>
+                </div>
+
+
+                <div class="puzzle-description" id="puzzle-description">
+                    <div class="loading">Loading puzzle...</div>
+                </div>
+
+                <h2>💡 Hints</h2>
+                <div id="hints-container">
+                    <div class="loading">Loading hints...</div>
+                </div>
+                <p class="hint-notify-cta hide-when-auth">
+                    🔔 <a href="#" onclick="signInWithGoogle(); return false;" class="hint-notify-link">Notify me when a new hint releases</a>
+                </p>
+
+                <div id="solved-message" class="hidden"></div>
+
+                <h2>📤 Submit Your Answer</h2>
+                <div id="submission-form" class="submission-form">
+                    <form onsubmit="submitAnswer(event, 4); return false;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="answer-input">Your Answer:</label>
+                                <input type="text" id="answer-input" class="win-input inverse-windows-box-shadow"
+                                    placeholder="Enter your answer..." autocomplete="off" required
+                                    style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();">
+                            </div>
+                            <button type="submit" id="submit-btn"
+                                class="win-button windows-box-shadow primary submit-auth-btn">Submit</button>
+                            <button type="button" class="win-button windows-box-shadow primary login-submit-btn hidden"
+                                onclick="signInWithGoogle()">🔒 Login to submit</button>
+                        </div>
+                        <div id="attempt-counter" style="margin-top: 8px; color: #666;"></div>
+                    </form>
+                </div>
+
+
+                <div style="height: 16px;"></div>
+
+                <h2>🏁 Fastest Solves</h2>
+                <div id="puzzle-leaderboard" class="leaderboard-container">
+                    <div class="loading">Loading leaderboard...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="window-footer">
+            <span class="footer-section">Puzzle #004</span>
+            <span class="footer-section">Good luck!</span>
+        </div>
+    </div>
+
+    <!-- Start button toggle for taskbar -->
+    <input id="start-button-input" name="start-button-input" type="checkbox" />
+    <!-- Windows 98 style taskbar -->
+    <div id="start-bar">
+        <div id="start-button-items">
+            <label class="windows-box-shadow" for="start-button-input" id="start-button"></label>
+            <div id="items"></div>
+        </div>
+        <div class="windows-box-shadow" id="start-menu">
+            <div id="windows-start-menu-blue">Windows<span>98</span></div>
+            <ul>
+                <li><a href="https://www.linkedin.com/in/mahbodnr/" target="_blank"><label>
+                            <img alt="" src="/img/linkedin.png" style="width: 1.5rem;" />Linkedin
+                        </label></a></li>
+                <li><a href="https://github.com/mahbodnr" target="_blank"><label>
+                            <img alt="" src="/img/github.png" style="width: 1.5rem;" />GitHub
+                        </label></a></li>
+                <li><a href="https://buymeacoffee.com/mahbod.me" target="_blank" rel="noopener noreferrer"><label>
+                            <img alt="" src="/img/buymeacoffeeicon.png" style="width: 1.5rem;" />Buy Me a Coffee
+                        </label></a></li>
+                <li class="line"><a href="https://scholar.google.com/citations?user=p7kqlIMAAAAJ&hl=en"
+                        target="_blank"><label>
+                            <img alt="" src="/img/scholar.png" style="width: 1.5rem;" />Google Scholar
+                        </label></a></li>
+                <li class="programs"><label><img alt="" src="/img/programs.png" style="width: 1.5rem;" />
+                        Progams</label>
+                    <ul class="windows-box-shadow">
+                        <li><a href="/latent-space/index.html"><label><img src="/img/latent_space.png" /> Latent
+                                    Space</label></a>
+                        </li>
+                    </ul>
+                </li>
+                <li class="line"><a href="/index.html"><label><img alt="" src="/img/text_editor.png"
+                                style="width: 1.5rem;" /> Home</label></a></li>
+            </ul>
+        </div>
+        <div id="time-options"></div>
+    </div>
+
+    <script src="/latent-space/scripts.js"></script>
+    <script>
+        const PUZZLE_ID = 4;
+
+        function initPage() {
+            initPuzzlePage(PUZZLE_ID);
+
+            // Update title display
+            const titleEl = document.getElementById('puzzle-title-display');
+            if (titleEl) {
+                titleEl.textContent = document.getElementById('puzzle-title')?.textContent || 'Puzzle #004';
+            }
+        }
+
+        // Initialize page - handle both cases: DOM ready or already loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initPage);
+        } else {
+            initPage();
+        }
+
+        // Toggle individual hints
+        function toggleHint(index) {
+            const content = document.getElementById('hint-content-' + index);
+            const button = document.getElementById('hint-toggle-' + index);
+            if (content && button) {
+                const isHidden = content.classList.toggle('hidden');
+                button.textContent = isHidden ? '▶' : '▼';
+            }
+        }
+    </script>
+</body>
+
+</html>
