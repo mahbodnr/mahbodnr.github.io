@@ -8,6 +8,10 @@ let supabaseConfigured = false;
 let currentSession = null;
 let authInitialized = false;
 let authInitPromise = null;
+const GUEST_SOLVES_STORAGE_KEY = 'latent-space-guest-solves-v1';
+const GUEST_SOLVES_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+let guestSyncInFlight = null;
+let guestSyncDoneForUserId = null;
 
 try {
     if (typeof window.supabase === 'undefined') {
@@ -37,9 +41,14 @@ try {
             if (event === 'SIGNED_IN' && session && typeof ensureUserExists === 'function') {
                 try {
                     await ensureUserExists(session.user);
+                    await syncCachedCorrectAnswers(true);
                 } catch (e) {
                     console.error('Error ensuring user exists:', e);
                 }
+            }
+
+            if (event === 'SIGNED_OUT') {
+                guestSyncDoneForUserId = null;
             }
             
             if (authInitialized && typeof updateAuthUI === 'function') {
@@ -100,6 +109,17 @@ async function signInWithGoogle(redirectUrl) {
         showMessage('Authentication not configured. Please contact the site administrator.', 'error');
         return;
     }
+
+    // When called from regular pages, route through the login screen so users can choose email/password or Google.
+    if (!redirectUrl && !window.location.pathname.endsWith('/latent-space/login.html')) {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.delete('vscode-livepreview');
+        let nextPath = currentUrl.pathname;
+        if (currentUrl.search) nextPath += currentUrl.search;
+        if (currentUrl.hash) nextPath += currentUrl.hash;
+        window.location.href = '/latent-space/login.html?next=' + encodeURIComponent(nextPath);
+        return;
+    }
     
     const redirectTo = redirectUrl || (window.location.origin + '/latent-space/');
     
@@ -118,6 +138,73 @@ async function signInWithGoogle(redirectUrl) {
     } catch (e) {
         console.error('Error in signInWithGoogle:', e);
         showMessage('Error signing in. Please try again.', 'error');
+    }
+}
+
+async function signInWithEmailPassword(email, password) {
+    if (!supabaseConfigured || !supabaseClient) {
+        return { success: false, error: 'Authentication not configured. Please contact the site administrator.' };
+    }
+
+    try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: email.trim(),
+            password
+        });
+
+        if (error) {
+            return { success: false, error: error.message || 'Could not sign in.' };
+        }
+
+        if (data?.user) {
+            await ensureUserExists(data.user);
+            await syncCachedCorrectAnswers(true);
+        }
+
+        return { success: true };
+    } catch (e) {
+        console.error('Error in signInWithEmailPassword:', e);
+        return { success: false, error: 'Error signing in. Please try again.' };
+    }
+}
+
+async function signUpWithEmailPassword(email, password, displayName) {
+    if (!supabaseConfigured || !supabaseClient) {
+        return { success: false, error: 'Authentication not configured. Please contact the site administrator.' };
+    }
+
+    const cleanEmail = email.trim();
+    const cleanDisplayName = (displayName || '').trim();
+
+    try {
+        const { data, error } = await supabaseClient.auth.signUp({
+            email: cleanEmail,
+            password,
+            options: {
+                data: {
+                    full_name: cleanDisplayName || cleanEmail.split('@')[0]
+                }
+            }
+        });
+
+        if (error) {
+            return { success: false, error: error.message || 'Could not create account.' };
+        }
+
+        if (data?.user && data?.session) {
+            await ensureUserExists(data.user);
+            await syncCachedCorrectAnswers(true);
+            return { success: true, signedIn: true };
+        }
+
+        return {
+            success: true,
+            signedIn: false,
+            message: 'Account created. Check your inbox if email verification is enabled for this project.'
+        };
+    } catch (e) {
+        console.error('Error in signUpWithEmailPassword:', e);
+        return { success: false, error: 'Error creating account. Please try again.' };
     }
 }
 
@@ -144,6 +231,7 @@ async function signOut() {
     
     try {
         await supabaseClient.auth.signOut();
+        guestSyncDoneForUserId = null;
     } catch (e) {
         console.error('Error in signOut:', e);
     }
@@ -518,10 +606,10 @@ async function updateAuthUI() {
         hideWhenAuth.forEach(el => el.classList.remove('hidden'));
 
         submitButtons.forEach(btn => {
-            btn.classList.add('hidden');
-            btn.disabled = true;
+            btn.classList.remove('hidden');
+            btn.disabled = false;
         });
-        loginSubmitButtons.forEach(btn => btn.classList.remove('hidden'));
+        loginSubmitButtons.forEach(btn => btn.classList.add('hidden'));
     }
 }
 
@@ -962,42 +1050,208 @@ async function executeRecaptchaV3() {
 
 // ============== Submissions ==============
 
-async function checkAnswer(puzzleId, answer) {
-    const user = await getCurrentUser();
-    if (!user) {
-        showMessage('Please log in to submit answers.', 'error');
-        return null;
+function loadGuestSolveCache() {
+    try {
+        const raw = window.localStorage.getItem(GUEST_SOLVES_STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.solves)) return [];
+
+        const now = Date.now();
+        return parsed.solves.filter(item => {
+            if (!item || typeof item !== 'object') return false;
+            if (typeof item.puzzle_id !== 'number' || !item.answer_text || !item.answer_hash) return false;
+            if (!item.cached_at) return false;
+            const age = now - new Date(item.cached_at).getTime();
+            return Number.isFinite(age) && age >= 0 && age <= GUEST_SOLVES_MAX_AGE_MS;
+        });
+    } catch (e) {
+        return [];
     }
-    
+}
+
+function saveGuestSolveCache(solves) {
+    try {
+        window.localStorage.setItem(
+            GUEST_SOLVES_STORAGE_KEY,
+            JSON.stringify({
+                version: 1,
+                solves
+            })
+        );
+    } catch (e) {
+        console.error('Error saving guest solve cache:', e);
+    }
+}
+
+function cacheGuestCorrectSolve(puzzleId, answerText, answerHash) {
+    const existing = loadGuestSolveCache();
+    const filtered = existing.filter(item => item.puzzle_id !== puzzleId);
+    filtered.push({
+        puzzle_id: puzzleId,
+        answer_text: answerText,
+        answer_hash: answerHash,
+        cached_at: new Date().toISOString()
+    });
+    saveGuestSolveCache(filtered);
+}
+
+function clearGuestSolveCacheByPuzzleIds(puzzleIds) {
+    if (!Array.isArray(puzzleIds) || puzzleIds.length === 0) return;
+    const target = new Set(puzzleIds);
+    const existing = loadGuestSolveCache();
+    const remaining = existing.filter(item => !target.has(item.puzzle_id));
+    saveGuestSolveCache(remaining);
+}
+
+function getGuestCachedSolveCount() {
+    return loadGuestSolveCache().length;
+}
+
+async function runAuthenticatedAnswerCheck(puzzleId, userId, answerText, answerHash) {
+    const token = currentSession?.access_token || SUPABASE_ANON_KEY;
+    const response = await fetch(SUPABASE_URL + '/rest/v1/rpc/check_answer', {
+        method: 'POST',
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            p_puzzle_id: puzzleId,
+            p_user_id: userId,
+            p_answer_text: answerText,
+            p_answer_hash: answerHash
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error('Authenticated answer check failed with status ' + response.status);
+    }
+
+    return await response.json();
+}
+
+async function runGuestAnswerCheck(puzzleId, answerHash) {
+    const response = await fetch(SUPABASE_URL + '/rest/v1/rpc/check_answer_guest', {
+        method: 'POST',
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            p_puzzle_id: puzzleId,
+            p_answer_hash: answerHash
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error('Guest answer check failed with status ' + response.status);
+    }
+
+    return await response.json();
+}
+
+async function syncCachedCorrectAnswers(showUiMessage = false) {
+    if (guestSyncInFlight) return await guestSyncInFlight;
+
+    guestSyncInFlight = (async () => {
+        const user = await getCurrentUser();
+        if (!user) {
+            return { synced: 0, failed: 0, total: 0, skipped: true };
+        }
+
+        if (guestSyncDoneForUserId === user.id) {
+            return { synced: 0, failed: 0, total: 0, skipped: true };
+        }
+
+        const cachedSolves = loadGuestSolveCache();
+        if (cachedSolves.length === 0) {
+            guestSyncDoneForUserId = user.id;
+            return { synced: 0, failed: 0, total: 0, skipped: true };
+        }
+
+        const syncedPuzzleIds = [];
+        let failed = 0;
+
+        for (const solve of cachedSolves) {
+            try {
+                const result = await runAuthenticatedAnswerCheck(
+                    solve.puzzle_id,
+                    user.id,
+                    solve.answer_text,
+                    solve.answer_hash
+                );
+
+                if (result?.correct || result?.error === 'Already solved') {
+                    syncedPuzzleIds.push(solve.puzzle_id);
+                } else {
+                    failed += 1;
+                }
+            } catch (e) {
+                console.error('Error syncing cached solve:', e);
+                failed += 1;
+            }
+        }
+
+        if (syncedPuzzleIds.length > 0) {
+            clearGuestSolveCacheByPuzzleIds(syncedPuzzleIds);
+        }
+
+        guestSyncDoneForUserId = user.id;
+
+        const summary = {
+            total: cachedSolves.length,
+            synced: syncedPuzzleIds.length,
+            failed
+        };
+
+        if (showUiMessage && summary.total > 0) {
+            if (summary.synced > 0 && summary.failed === 0) {
+                showMessage(`Synced ${summary.synced} cached solve${summary.synced !== 1 ? 's' : ''} to your account.`, 'success');
+            } else if (summary.synced > 0 && summary.failed > 0) {
+                showMessage(`Synced ${summary.synced} cached solve${summary.synced !== 1 ? 's' : ''}. ${summary.failed} failed and will retry later.`, 'info');
+            } else if (summary.failed > 0) {
+                showMessage(`Could not sync ${summary.failed} cached solve${summary.failed !== 1 ? 's' : ''} right now.`, 'error');
+            }
+        }
+
+        return summary;
+    })();
+
+    try {
+        return await guestSyncInFlight;
+    } finally {
+        guestSyncInFlight = null;
+    }
+}
+
+async function checkAnswer(puzzleId, answer) {
     const normalizedAnswer = answer.toLowerCase().trim();
     const answerHash = await hashString(normalizedAnswer);
+    const user = await getCurrentUser();
     
     try {
-        const token = currentSession?.access_token || SUPABASE_ANON_KEY;
-        
-        const response = await fetch(SUPABASE_URL + '/rest/v1/rpc/check_answer', {
-            method: 'POST',
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                p_puzzle_id: puzzleId,
-                p_user_id: user.id,
-                p_answer_text: normalizedAnswer,
-                p_answer_hash: answerHash
-            })
-        });
-        
-        if (!response.ok) {
-            console.error('Error checking answer:', response.status);
-            showMessage('Error submitting answer. Please try again.', 'error');
-            return null;
+        if (user) {
+            return await runAuthenticatedAnswerCheck(puzzleId, user.id, normalizedAnswer, answerHash);
         }
-        
-        const data = await response.json();
-        return data;
+
+        const guestResult = await runGuestAnswerCheck(puzzleId, answerHash);
+        if (guestResult?.correct) {
+            cacheGuestCorrectSolve(puzzleId, normalizedAnswer, answerHash);
+            return {
+                correct: true,
+                guest_cached: true,
+                hints_used: guestResult?.hints_used
+            };
+        }
+
+        return {
+            correct: false,
+            guest_cached: false,
+            error: guestResult?.error || null
+        };
     } catch (e) {
         console.error('Error checking answer:', e);
         showMessage('Error submitting answer. Please try again.', 'error');
@@ -1208,6 +1462,7 @@ function getStatusBadgeClass(status) {
 async function initIndexPage() {
     loadPuzzleList();
     updateAuthUI();
+    await syncCachedCorrectAnswers(true);
 }
 
 async function loadPuzzleList() {
@@ -1297,6 +1552,7 @@ async function initPuzzlePage(puzzleId) {
     loadHints(puzzleId);
     loadPuzzleLeaderboard(puzzleId);
     updateAuthUI();
+    await syncCachedCorrectAnswers(true);
     checkExistingSubmission(puzzleId);
     updateAttemptCounter(puzzleId);
     setInterval(() => loadHints(puzzleId), 60000);
@@ -1665,15 +1921,29 @@ async function submitAnswer(event, puzzleId) {
     submitBtn.textContent = 'Submit';
     
     if (result === null) return;
+
+    const user = await getCurrentUser();
     
     if (result.correct) {
         // Reset rate limit on success
         rateLimitState.attempts = [];
         rateLimitState.captchaRequired = false;
-        const attemptCount = await getUserAttemptCount(puzzleId);
-        showMessage(`🎉 Correct! You earned ${result.score} points! (Total attempts: ${attemptCount})`, 'success');
-        await checkExistingSubmission(puzzleId);
+
+        if (user) {
+            const attemptCount = await getUserAttemptCount(puzzleId);
+            showMessage(`🎉 Correct! You earned ${result.score} points! (Total attempts: ${attemptCount})`, 'success');
+            await checkExistingSubmission(puzzleId);
+        } else {
+            const pending = getGuestCachedSolveCount();
+            showMessage(`🎉 Correct! Saved in this browser. Sign in later to sync${pending > 1 ? ` (${pending} pending solves)` : ''}.`, 'success');
+        }
     } else {
+        if (result.error && result.error !== 'Already solved') {
+            showMessage(result.error, 'error');
+            input.value = '';
+            return;
+        }
+
         // Record failed attempt for rate limiting
         recordAttempt();
         // Update attempt counter
@@ -1688,6 +1958,7 @@ async function submitAnswer(event, puzzleId) {
 async function initLeaderboardPage() {
     loadLeaderboard();
     updateAuthUI();
+    await syncCachedCorrectAnswers(true);
 }
 
 async function loadLeaderboard() {
@@ -1769,6 +2040,23 @@ async function loadLeaderboard() {
 async function initLoginPage() {
     const user = await getCurrentUser();
     const nextDestination = getLoginNextDestination();
+    const pendingSync = getGuestCachedSolveCount();
+    const authForm = document.getElementById('email-auth-form');
+    const authModeInput = document.getElementById('auth-mode');
+    const modeTitle = document.getElementById('auth-mode-title');
+    const submitBtn = document.getElementById('email-auth-submit');
+    const displayNameField = document.getElementById('display-name-group');
+    const switchModeBtn = document.getElementById('switch-auth-mode-btn');
+
+    function applyAuthMode() {
+        if (!authModeInput || !modeTitle || !submitBtn || !displayNameField || !switchModeBtn) return;
+        const mode = authModeInput.value === 'signup' ? 'signup' : 'signin';
+        const isSignup = mode === 'signup';
+        modeTitle.textContent = isSignup ? 'Create Account' : 'Sign In with Email';
+        submitBtn.textContent = isSignup ? 'Create account' : 'Sign in';
+        displayNameField.classList.toggle('hidden', !isSignup);
+        switchModeBtn.textContent = isSignup ? 'Already have an account? Sign in' : 'Need an account? Sign up';
+    }
 
     const googleBtn = document.getElementById('google-login-btn');
     if (googleBtn) {
@@ -1776,6 +2064,70 @@ async function initLoginPage() {
             signInWithGoogle(nextDestination);
         };
     }
+
+    if (switchModeBtn && authModeInput) {
+        switchModeBtn.onclick = function () {
+            authModeInput.value = authModeInput.value === 'signup' ? 'signin' : 'signup';
+            applyAuthMode();
+        };
+    }
+
+    if (authForm) {
+        authForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(authForm);
+            const email = String(formData.get('email') || '').trim();
+            const password = String(formData.get('password') || '');
+            const displayName = String(formData.get('display_name') || '').trim();
+            const mode = authModeInput?.value === 'signup' ? 'signup' : 'signin';
+
+            if (!email || !password) {
+                showMessage('Please enter both email and password.', 'error');
+                return;
+            }
+
+            const submitButton = authForm.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = mode === 'signup' ? 'Creating account...' : 'Signing in...';
+            }
+
+            let result;
+            if (mode === 'signup') {
+                result = await signUpWithEmailPassword(email, password, displayName);
+            } else {
+                result = await signInWithEmailPassword(email, password);
+            }
+
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = mode === 'signup' ? 'Create account' : 'Sign in';
+            }
+
+            if (!result?.success) {
+                showMessage(result?.error || 'Authentication failed. Please try again.', 'error');
+                return;
+            }
+
+            if (result.message) {
+                showMessage(result.message, 'info');
+            }
+
+            if (mode === 'signup' && !result.signedIn) {
+                authModeInput.value = 'signin';
+                applyAuthMode();
+                return;
+            }
+
+            if (pendingSync > 0) {
+                showMessage(`Signed in. ${pendingSync} cached solve${pendingSync !== 1 ? 's were' : ' was'} synced to your account.`, 'success');
+            }
+
+            window.location.href = nextDestination;
+        });
+    }
+
+    applyAuthMode();
 
     if (user) {
         // Already logged in, redirect to requested page or main page.

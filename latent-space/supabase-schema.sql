@@ -280,6 +280,9 @@ ORDER BY total_points DESC, last_correct_submission_at ASC;
 -- Drop existing function if it exists
 DROP FUNCTION IF EXISTS check_answer(p_puzzle_id INTEGER, p_user_id UUID, p_answer_text TEXT, p_answer_hash TEXT);
 
+-- Drop existing guest-check function if it exists
+DROP FUNCTION IF EXISTS check_answer_guest(p_puzzle_id INTEGER, p_answer_hash TEXT);
+
 CREATE OR REPLACE FUNCTION check_answer(
     p_puzzle_id INTEGER,
     p_user_id UUID,
@@ -346,6 +349,44 @@ BEGIN
     RETURN json_build_object(
         'correct', v_is_correct,
         'score', v_score,
+        'hints_used', v_hints_count
+    );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION check_answer_guest(
+    p_puzzle_id INTEGER,
+    p_answer_hash TEXT
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_puzzle puzzles%ROWTYPE;
+    v_hints_count INTEGER;
+    v_is_correct BOOLEAN;
+BEGIN
+    SELECT * INTO v_puzzle FROM puzzles WHERE id = p_puzzle_id;
+
+    IF v_puzzle IS NULL THEN
+        RETURN json_build_object('error', 'Puzzle not found', 'correct', false);
+    END IF;
+
+    IF v_puzzle.release_time > NOW() THEN
+        RETURN json_build_object('error', 'Puzzle not yet available', 'correct', false);
+    END IF;
+
+    v_is_correct := (p_answer_hash = v_puzzle.answer_hash);
+
+    SELECT COUNT(*) INTO v_hints_count
+    FROM hints
+    WHERE puzzle_id = p_puzzle_id
+    AND release_time <= NOW();
+
+    RETURN json_build_object(
+        'correct', v_is_correct,
         'hints_used', v_hints_count
     );
 END;
@@ -672,6 +713,7 @@ GRANT SELECT ON leaderboard_view TO anon, authenticated;
 
 -- Grant function execution permissions
 GRANT EXECUTE ON FUNCTION check_answer(INTEGER, UUID, TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION check_answer_guest(INTEGER, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION get_puzzles_list TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION update_user_avatar(UUID, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION ensure_user_exists(UUID, TEXT, TEXT, TEXT) TO authenticated;
