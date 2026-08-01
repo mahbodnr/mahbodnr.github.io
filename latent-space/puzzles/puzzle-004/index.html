@@ -109,24 +109,32 @@
 
                 <div id="solved-message" class="hidden"></div>
 
-                <h2>📤 Submit Your Answer</h2>
-                <div id="submission-form" class="submission-form">
-                    <form onsubmit="submitAnswer(event, 4); return false;">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="answer-input">Your Answer:</label>
-                                <input type="text" id="answer-input" class="win-input inverse-windows-box-shadow"
-                                    placeholder="Enter your answer..." autocomplete="off" required
-                                    style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();">
+                <section class="submission-block" aria-labelledby="submission-title">
+                    <h2 id="submission-title">Submit Your Golden Guess</h2>
+                    <div id="submission-form" class="submission-form">
+                        <form onsubmit="submitAnswer(event, 4); return false;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="answer-input">Your Answer:</label>
+                                    <input
+                                        type="text"
+                                        id="answer-input"
+                                        class="win-input inverse-windows-box-shadow"
+                                        placeholder="EXAMPLEANSWER"
+                                        autocomplete="off"
+                                        required
+                                        pattern="[A-Z0-9]+"
+                                        title="Use uppercase letters and numbers only, with no spaces."
+                                        oninput="this.value = this.value.toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9]/g, '');">
+                                </div>
+                                <button type="submit" id="submit-btn" class="win-button windows-box-shadow primary submit-auth-btn">Submit</button>
+                                <button type="button" class="win-button windows-box-shadow primary login-submit-btn hidden" onclick="signInWithGoogle()">🔒 Login to submit</button>
                             </div>
-                            <button type="submit" id="submit-btn"
-                                class="win-button windows-box-shadow primary submit-auth-btn">Submit</button>
-                            <button type="button" class="win-button windows-box-shadow primary login-submit-btn hidden"
-                                onclick="signInWithGoogle()">🔒 Login to submit</button>
-                        </div>
-                        <div id="attempt-counter" style="margin-top: 8px; color: #666;"></div>
-                    </form>
-                </div>
+                            <div id="attempt-counter"></div>
+                            <p class="signin-callout hide-when-auth">Sign in to submit your guess and appear on the board.</p>
+                        </form>
+                    </div>
+                </section>
 
 
                 <div style="height: 16px;"></div>
