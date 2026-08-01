@@ -110,7 +110,7 @@ async function signInWithGoogle(redirectUrl) {
         return;
     }
 
-    // When called from regular pages, route through the login screen so users can choose email/password or Google.
+    // When called from regular pages, route through the login screen so users can sign in with Google.
     if (!redirectUrl && !window.location.pathname.endsWith('/latent-space/login.html')) {
         const currentUrl = new URL(window.location.href);
         currentUrl.searchParams.delete('vscode-livepreview');
@@ -138,73 +138,6 @@ async function signInWithGoogle(redirectUrl) {
     } catch (e) {
         console.error('Error in signInWithGoogle:', e);
         showMessage('Error signing in. Please try again.', 'error');
-    }
-}
-
-async function signInWithEmailPassword(email, password) {
-    if (!supabaseConfigured || !supabaseClient) {
-        return { success: false, error: 'Authentication not configured. Please contact the site administrator.' };
-    }
-
-    try {
-        const { data, error } = await supabaseClient.auth.signInWithPassword({
-            email: email.trim(),
-            password
-        });
-
-        if (error) {
-            return { success: false, error: error.message || 'Could not sign in.' };
-        }
-
-        if (data?.user) {
-            await ensureUserExists(data.user);
-            await syncCachedCorrectAnswers(true);
-        }
-
-        return { success: true };
-    } catch (e) {
-        console.error('Error in signInWithEmailPassword:', e);
-        return { success: false, error: 'Error signing in. Please try again.' };
-    }
-}
-
-async function signUpWithEmailPassword(email, password, displayName) {
-    if (!supabaseConfigured || !supabaseClient) {
-        return { success: false, error: 'Authentication not configured. Please contact the site administrator.' };
-    }
-
-    const cleanEmail = email.trim();
-    const cleanDisplayName = (displayName || '').trim();
-
-    try {
-        const { data, error } = await supabaseClient.auth.signUp({
-            email: cleanEmail,
-            password,
-            options: {
-                data: {
-                    full_name: cleanDisplayName || cleanEmail.split('@')[0]
-                }
-            }
-        });
-
-        if (error) {
-            return { success: false, error: error.message || 'Could not create account.' };
-        }
-
-        if (data?.user && data?.session) {
-            await ensureUserExists(data.user);
-            await syncCachedCorrectAnswers(true);
-            return { success: true, signedIn: true };
-        }
-
-        return {
-            success: true,
-            signedIn: false,
-            message: 'Account created. Check your inbox if email verification is enabled for this project.'
-        };
-    } catch (e) {
-        console.error('Error in signUpWithEmailPassword:', e);
-        return { success: false, error: 'Error creating account. Please try again.' };
     }
 }
 
@@ -2041,22 +1974,6 @@ async function initLoginPage() {
     const user = await getCurrentUser();
     const nextDestination = getLoginNextDestination();
     const pendingSync = getGuestCachedSolveCount();
-    const authForm = document.getElementById('email-auth-form');
-    const authModeInput = document.getElementById('auth-mode');
-    const modeTitle = document.getElementById('auth-mode-title');
-    const submitBtn = document.getElementById('email-auth-submit');
-    const displayNameField = document.getElementById('display-name-group');
-    const switchModeBtn = document.getElementById('switch-auth-mode-btn');
-
-    function applyAuthMode() {
-        if (!authModeInput || !modeTitle || !submitBtn || !displayNameField || !switchModeBtn) return;
-        const mode = authModeInput.value === 'signup' ? 'signup' : 'signin';
-        const isSignup = mode === 'signup';
-        modeTitle.textContent = isSignup ? 'Create Account' : 'Sign In with Email';
-        submitBtn.textContent = isSignup ? 'Create account' : 'Sign in';
-        displayNameField.classList.toggle('hidden', !isSignup);
-        switchModeBtn.textContent = isSignup ? 'Already have an account? Sign in' : 'Need an account? Sign up';
-    }
 
     const googleBtn = document.getElementById('google-login-btn');
     if (googleBtn) {
@@ -2064,70 +1981,6 @@ async function initLoginPage() {
             signInWithGoogle(nextDestination);
         };
     }
-
-    if (switchModeBtn && authModeInput) {
-        switchModeBtn.onclick = function () {
-            authModeInput.value = authModeInput.value === 'signup' ? 'signin' : 'signup';
-            applyAuthMode();
-        };
-    }
-
-    if (authForm) {
-        authForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const formData = new FormData(authForm);
-            const email = String(formData.get('email') || '').trim();
-            const password = String(formData.get('password') || '');
-            const displayName = String(formData.get('display_name') || '').trim();
-            const mode = authModeInput?.value === 'signup' ? 'signup' : 'signin';
-
-            if (!email || !password) {
-                showMessage('Please enter both email and password.', 'error');
-                return;
-            }
-
-            const submitButton = authForm.querySelector('button[type="submit"]');
-            if (submitButton) {
-                submitButton.disabled = true;
-                submitButton.textContent = mode === 'signup' ? 'Creating account...' : 'Signing in...';
-            }
-
-            let result;
-            if (mode === 'signup') {
-                result = await signUpWithEmailPassword(email, password, displayName);
-            } else {
-                result = await signInWithEmailPassword(email, password);
-            }
-
-            if (submitButton) {
-                submitButton.disabled = false;
-                submitButton.textContent = mode === 'signup' ? 'Create account' : 'Sign in';
-            }
-
-            if (!result?.success) {
-                showMessage(result?.error || 'Authentication failed. Please try again.', 'error');
-                return;
-            }
-
-            if (result.message) {
-                showMessage(result.message, 'info');
-            }
-
-            if (mode === 'signup' && !result.signedIn) {
-                authModeInput.value = 'signin';
-                applyAuthMode();
-                return;
-            }
-
-            if (pendingSync > 0) {
-                showMessage(`Signed in. ${pendingSync} cached solve${pendingSync !== 1 ? 's were' : ' was'} synced to your account.`, 'success');
-            }
-
-            window.location.href = nextDestination;
-        });
-    }
-
-    applyAuthMode();
 
     if (user) {
         // Already logged in, redirect to requested page or main page.

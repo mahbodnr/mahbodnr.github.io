@@ -50,32 +50,6 @@
                     
                     <h1>🔐 Login</h1>
                     
-                    <p>Sign in to sync guest solves, track puzzle progress, earn points, and compete on the leaderboard.</p>
-
-                    <input type="hidden" id="auth-mode" value="signin">
-
-                    <div class="email-auth-panel windows-box-shadow">
-                        <h2 id="auth-mode-title">Sign In with Email</h2>
-                        <form id="email-auth-form" class="email-auth-form">
-                            <div id="display-name-group" class="form-group hidden">
-                                <label for="display-name-input">Display Name (optional):</label>
-                                <input id="display-name-input" name="display_name" type="text" class="win-input inverse-windows-box-shadow" maxlength="50" autocomplete="name">
-                            </div>
-                            <div class="form-group">
-                                <label for="email-input">Email:</label>
-                                <input id="email-input" name="email" type="email" class="win-input inverse-windows-box-shadow" required autocomplete="email">
-                            </div>
-                            <div class="form-group">
-                                <label for="password-input">Password:</label>
-                                <input id="password-input" name="password" type="password" class="win-input inverse-windows-box-shadow" required minlength="6" autocomplete="current-password">
-                            </div>
-                            <button id="email-auth-submit" type="submit" class="win-button windows-box-shadow primary auth-submit-btn">Sign in</button>
-                        </form>
-                        <button id="switch-auth-mode-btn" type="button" class="win-button windows-box-shadow auth-switch-btn">Need an account? Sign up</button>
-                    </div>
-
-                    <div class="auth-divider"><span>or</span></div>
-
                     <div class="auth-buttons login-auth-buttons">
                         <button id="google-login-btn" class="google-btn windows-box-shadow" type="button">
                             <svg width="20" height="20" viewBox="0 0 48 48">
@@ -87,6 +61,10 @@
                             Continue with Google
                         </button>
                     </div>
+
+                    <p style="margin-top: 16px; font-size: 12px; color: #444;">
+                        Sign in with Google to sync guest solves, track puzzle progress, and appear on the leaderboard.
+                    </p>
                     
                     <div class="user-info-display hidden" style="flex-direction: column; align-items: center; gap: 12px;">
                         <p>✓ You are already logged in!</p>
@@ -96,13 +74,7 @@
                         <button class="win-button windows-box-shadow" onclick="signOut()">Logout</button>
                     </div>
                     
-                    <hr style="margin: 24px 0; border: 1px inset;">
-                    
-                    <p style="font-size: 11px; color: #666;">
-                        By signing in, you agree to have fun solving puzzles.
-                        Your email and profile name are stored to track puzzle progress and leaderboard entries.
-                    </p>
-                    
+  
                     <div style="margin-top: 24px;">
                         <a href="index.html"><button class="win-button windows-box-shadow">← Back to Puzzles</button></a>
                     </div>

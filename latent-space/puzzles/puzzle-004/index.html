@@ -63,8 +63,7 @@
                 <a href="/latent-space/leaderboard.html"><button class="win-button windows-box-shadow">🏆
                         Leaderboard</button></a>
                 <div class="auth-buttons">
-                    <button class="win-button windows-box-shadow" onclick="signInWithGoogle()">🔑 Sign in to
-                        Sync & Track</button>
+                    <button class="win-button windows-box-shadow" onclick="signInWithGoogle()">🔑 Sign in k</button>
                 </div>
                 <div class="user-info-display hidden">
                     <img class="user-avatar user-avatar-clickable" onclick="showEditAvatarDialog()"
@@ -104,7 +103,7 @@
                     <div class="loading">Loading hints...</div>
                 </div>
                 <p class="hint-notify-cta hide-when-auth">
-                    🔔 <a href="#" onclick="signInWithGoogle(); return false;" class="hint-notify-link">Sign in to sync solves and get new hint notifications</a>
+                    🔔 <a href="#" onclick="signInWithGoogle(); return false;" class="hint-notify-link">Sign in to join the leaderboard and get puzzle notifications</a>
                 </p>
 
                 <div id="solved-message" class="hidden"></div>
@@ -128,10 +127,10 @@
                                         oninput="this.value = this.value.toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9]/g, '');">
                                 </div>
                                 <button type="submit" id="submit-btn" class="win-button windows-box-shadow primary submit-auth-btn">Submit</button>
-                                <button type="button" class="win-button windows-box-shadow primary login-submit-btn hidden" onclick="signInWithGoogle()">🔒 Sign in to sync this solve</button>
+                                <button type="button" class="win-button windows-box-shadow primary login-submit-btn hidden" onclick="signInWithGoogle()">🔒 Sign in</button>
                             </div>
                             <div id="attempt-counter"></div>
-                            <p class="signin-callout hide-when-auth">You can submit as a guest. Sign in any time to sync correct solves and appear on the board.</p>
+                            <p class="signin-callout hide-when-auth">You can submit as a guest. Sign in any time to join the leaderboard and get puzzle notifications.</p>
                         </form>
                     </div>
                 </section>
