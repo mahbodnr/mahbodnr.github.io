@@ -483,6 +483,88 @@ a:hover {
     flex: 1;
 }
 
+/* Correct answer dialog (Windows 98 style) */
+.correct-answer-dialog .correct-answer-content {
+    min-width: 460px;
+    max-width: 620px;
+}
+
+.correct-answer-header {
+    background: linear-gradient(90deg, #000b7c, #377cc6);
+}
+
+.correct-answer-body {
+    padding: 20px;
+}
+
+.correct-answer-message-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.correct-answer-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid #000080;
+    background: radial-gradient(circle at 30% 30%, #ffffff 0%, #d8e6ff 60%, #bfd4ff 100%);
+    color: #002d8f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Arial', sans-serif;
+    font-size: 24px;
+    font-weight: bold;
+    flex-shrink: 0;
+    margin-top: 1px;
+    line-height: 1;
+}
+
+.correct-answer-message-block {
+    flex: 1;
+}
+
+.correct-answer-message {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.4;
+    font-weight: bold;
+    color: #001a66;
+}
+
+.correct-answer-detail {
+    margin: 8px 0 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #222;
+    flex: 1;
+}
+
+.correct-answer-buttons {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.correct-answer-buttons .win-button {
+    min-width: 170px;
+    padding: 6px 14px;
+}
+
+@media (max-width: 768px) {
+    .correct-answer-dialog .correct-answer-content {
+        min-width: 0;
+        width: calc(100vw - 28px);
+        max-width: 520px;
+    }
+
+    .correct-answer-buttons .win-button {
+        min-width: 140px;
+    }
+}
+
 /* Form Groups */
 .form-group {
     margin-bottom: 12px;

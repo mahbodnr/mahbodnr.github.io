@@ -1353,6 +1353,72 @@ function showMessage(message, type = 'info') {
     }, 5000);
 }
 
+function showCorrectAnswerDialog(options) {
+    const {
+        message,
+        detail,
+        requireSignIn = false
+    } = options || {};
+
+    if (!message) return;
+
+    const existingDialog = document.querySelector('.correct-answer-dialog');
+    if (existingDialog) {
+        existingDialog.remove();
+    }
+
+    const secondaryButtonLabel = requireSignIn ? 'Sign in' : 'Go to Leaderboard';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'correct-answer-dialog edit-name-dialog';
+    dialog.innerHTML = `
+        <div class="correct-answer-content edit-name-content windows-box-shadow">
+            <div class="correct-answer-header edit-name-header">
+                <span>Congratulations</span>
+                <button class="close-btn" id="correct-answer-close" aria-label="Close">x</button>
+            </div>
+            <div class="correct-answer-body edit-name-body">
+                <div class="correct-answer-message-container">
+                    <div class="correct-answer-icon" aria-hidden="true">✓</div>
+                    <div class="correct-answer-message-block">
+                        <p class="correct-answer-message">${escapeHtml(message)}</p>
+                        ${detail ? `<p class="correct-answer-detail">${escapeHtml(detail)}</p>` : ''}
+                    </div>
+                </div>
+                <div class="correct-answer-buttons edit-name-buttons">
+                    <button class="win-button windows-box-shadow" id="correct-answer-coffee">Buy me a Coffee</button>
+                    <button class="win-button windows-box-shadow primary" id="correct-answer-secondary">${secondaryButtonLabel}</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(dialog);
+
+    const close = () => {
+        if (dialog.parentNode) {
+            dialog.remove();
+        }
+    };
+
+    dialog.querySelector('#correct-answer-close').addEventListener('click', close);
+    dialog.querySelector('#correct-answer-coffee').addEventListener('click', () => {
+        window.open('https://buymeacoffee.com/mahbod.me', '_blank', 'noopener,noreferrer');
+    });
+    dialog.querySelector('#correct-answer-secondary').addEventListener('click', () => {
+        if (requireSignIn) {
+            signInWithGoogle(window.location.href);
+            return;
+        }
+        window.location.href = '/latent-space/leaderboard.html';
+    });
+    dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) close();
+    });
+    dialog.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') close();
+    });
+}
+
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -1864,11 +1930,20 @@ async function submitAnswer(event, puzzleId) {
 
         if (user) {
             const attemptCount = await getUserAttemptCount(puzzleId);
-            showMessage(`🎉 Correct! You earned ${result.score} points! (Total attempts: ${attemptCount})`, 'success');
+            showCorrectAnswerDialog({
+                message: `Correct! You earned ${result.score} points.`,
+                detail: `Total attempts: ${attemptCount}.`,
+                requireSignIn: false
+            });
             await checkExistingSubmission(puzzleId);
         } else {
             const pending = getGuestCachedSolveCount();
-            showMessage(`🎉 Correct! Saved in this browser. Sign in later to sync${pending > 1 ? ` (${pending} pending solves)` : ''}.`, 'success');
+            const pendingDetail = pending > 1 ? ` You currently have ${pending} pending solves in this browser.` : '';
+            showCorrectAnswerDialog({
+                message: 'Correct answer! Nice solve.',
+                detail: `Sign in to add your points to the leaderboard.${pendingDetail}`,
+                requireSignIn: true
+            });
         }
     } else {
         if (result.error && result.error !== 'Already solved') {
