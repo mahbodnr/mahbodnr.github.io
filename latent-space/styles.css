@@ -723,6 +723,20 @@ a:hover {
     overflow-x: auto;
 }
 
+.puzzle-image-frame {
+    margin: 0 0 16px;
+    text-align: center;
+}
+
+.puzzle-image-frame img.puzzle-image {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+    cursor: zoom-in;
+    image-rendering: -webkit-optimize-contrast;
+}
+
 /* Submission Form */
 .submission-form {
     background: #c0c0c0;
