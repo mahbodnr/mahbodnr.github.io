@@ -508,6 +508,32 @@
 			.submission-block .form-row {
 				grid-template-columns: 1fr;
 			}
+
+			.leaderboard-block {
+				margin-inline: -12px;
+				padding: 10px;
+			}
+
+			.leaderboard-block .leaderboard-container {
+				padding: 0;
+				border: 0;
+				background: transparent;
+			}
+		}
+
+		@media (max-width: 540px) {
+			.leaderboard-block .fastest-rank-column {
+				width: 34px;
+			}
+
+			.leaderboard-block .fastest-points-column {
+				width: 66px;
+			}
+
+			.leaderboard-block .leaderboard-avatar,
+			.leaderboard-block .leaderboard-avatar-placeholder {
+				display: none;
+			}
 		}
 	</style>
 </head>

@@ -1201,7 +1201,7 @@ async function getUserSubmission(puzzleId) {
         const token = currentSession?.access_token || SUPABASE_ANON_KEY;
         
         const response = await fetch(
-            SUPABASE_URL + '/rest/v1/submissions?select=id,score,submitted_at&puzzle_id=eq.' + puzzleId + '&user_id=eq.' + user.id + '&is_correct=eq.true&limit=1',
+            SUPABASE_URL + '/rest/v1/submissions?select=id,score,submitted_at,is_first_solver,bonus_points&puzzle_id=eq.' + puzzleId + '&user_id=eq.' + user.id + '&is_correct=eq.true&limit=1',
             {
                 headers: {
                     'apikey': SUPABASE_ANON_KEY,
@@ -1339,6 +1339,30 @@ async function hashString(str) {
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function firstSolverBadge(submission, compact = false, tooltipId = 'first-solve-bonus') {
+    if (!submission.is_first_solver) return '';
+
+    const bonus = Number(submission.bonus_points);
+    const bonusLabel = Number.isFinite(bonus) && bonus > 0
+        ? `+${bonus.toLocaleString('en-US')} ${bonus === 1 ? 'pt' : 'pts'}`
+        : '+50%';
+    const description = `First solve: 50% bonus${Number.isFinite(bonus) && bonus > 0 ? `, ${bonus} extra ${bonus === 1 ? 'point' : 'points'}` : ''}. Included in total points.`;
+
+    if (compact) {
+        const tooltipText = `+${Number.isFinite(bonus) ? bonus.toLocaleString('en-US') : '—'} extra points (%50)`;
+        return `<span class="bonus-indicator">
+            <button type="button" class="bonus-sign" aria-label="First solver: ${tooltipText}" aria-describedby="${tooltipId}"><span aria-hidden="true">🥇</span></button>
+            <span id="${tooltipId}" class="bonus-tooltip" role="tooltip">${tooltipText}</span>
+        </span>`;
+    }
+
+    return `<span class="first-solver-badge" aria-label="${description}" title="${description}">
+        <span class="first-solver-badge-title"><span aria-hidden="true">★</span> First solve</span>
+        <span class="first-solver-badge-points">${bonusLabel}</span>
+        <span class="first-solver-badge-rate">50% bonus</span>
+    </span>`;
 }
 
 function showMessage(message, type = 'info') {
@@ -1617,6 +1641,8 @@ async function loadHints(puzzleId) {
     }
     
     // Update current score display
+    const pointsEl = document.getElementById('puzzle-points');
+    if (pointsEl) pointsEl.title = 'First solver earns an extra 50% of the points available when they solve.';
     const scoreMultiplier = 1 / Math.pow(2, hints.length);
     const scoreEl = document.getElementById('current-multiplier');
     if (scoreEl && window.currentPuzzle) {
@@ -1750,7 +1776,7 @@ async function fetchPuzzleLeaderboard(puzzleId) {
     try {
         // Fetch submissions via direct REST API
         const subResponse = await fetch(
-            SUPABASE_URL + '/rest/v1/submissions?select=user_id,submitted_at&puzzle_id=eq.' + puzzleId + '&is_correct=eq.true&order=submitted_at.asc&limit=10',
+            SUPABASE_URL + '/rest/v1/submissions?select=user_id,score,submitted_at,is_first_solver,bonus_points&puzzle_id=eq.' + puzzleId + '&is_correct=eq.true&order=submitted_at.asc,id.asc&limit=10',
             {
                 headers: {
                     'apikey': SUPABASE_ANON_KEY,
@@ -1817,17 +1843,21 @@ async function loadPuzzleLeaderboard(puzzleId) {
     try {
         const entries = await fetchPuzzleLeaderboard(puzzleId);
         if (!entries.length) {
-            container.innerHTML = '<p style="color: #666; font-style: italic;">No correct submissions yet.</p>';
+            container.innerHTML = '<div class="fastest-empty"><span class="fastest-empty-icon" aria-hidden="true">★</span><strong>The first spot is still open.</strong><p>Solve this puzzle to join the table. The first solver earns a 50% bonus.</p></div>';
             return;
         }
 
         let html = `
-            <table class="win-table leaderboard-table">
+            <div class="fastest-panel">
+            <div class="fastest-toolbar"><span>Ranked by solve time</span><span class="fastest-count">Top ${entries.length}</span></div>
+            <table class="fastest-table">
+                <caption class="visually-hidden">Fastest correct solves, ordered by submission time. Points include any first-solve bonus.</caption>
                 <thead>
                     <tr>
-                        <th style="width: 60px;">Rank</th>
-                        <th>Player</th>
-                        <th style="width: 160px;">Solved On</th>
+                        <th scope="col" class="fastest-rank-column">Rank</th>
+                        <th scope="col">Solver</th>
+                        <th scope="col" class="fastest-points-column">Points</th>
+                        <th scope="col" class="fastest-date-column">Solved on</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1837,22 +1867,29 @@ async function loadPuzzleLeaderboard(puzzleId) {
             const rank = index + 1;
             const username = entry?.users?.username || 'Anonymous';
             const avatarUrl = entry?.users?.avatar_url || '';
-            const solvedDate = entry.submitted_at ? formatDate(entry.submitted_at) : '—';
+            const solvedAt = new Date(entry.submitted_at);
+            const validDate = entry.submitted_at && Number.isFinite(solvedAt.getTime());
+            const solvedDate = validDate ? solvedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+            const solvedTime = validDate ? solvedAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
+            const dateHtml = `<span class="fastest-date">${escapeHtml(solvedDate)}</span><span class="fastest-time">${escapeHtml(solvedTime)}</span>`;
+            const score = Number(entry.score);
+            const scoreLabel = entry.score != null && Number.isFinite(score) ? score.toLocaleString('en-US') : '—';
             
             const avatarHtml = avatarUrl 
                 ? `<img src="${escapeHtml(avatarUrl)}" alt="" class="leaderboard-avatar">`
-                : `<span class="leaderboard-avatar-placeholder">👤</span>`;
+                : `<span class="leaderboard-avatar-placeholder" aria-hidden="true">${escapeHtml(Array.from(username.trim())[0]?.toUpperCase() || '?')}</span>`;
             
             html += `
-                <tr>
-                    <td class="rank-cell">${rank}</td>
-                    <td><div class="player-cell">${avatarHtml}<span>${escapeHtml(username)}</span></div></td>
-                    <td>${escapeHtml(solvedDate)}</td>
+                <tr class="${entry.is_first_solver ? 'fastest-first-solver' : ''}">
+                    <td class="fastest-rank-cell"><span class="fastest-rank fastest-rank-${rank <= 3 ? rank : 'other'}">${rank}</span></td>
+                    <td><div class="fastest-player">${avatarHtml}<div class="fastest-player-details"><span class="fastest-name-line"><span class="fastest-name">${escapeHtml(username)}</span>${firstSolverBadge(entry, true, `solve-bonus-${puzzleId}-${rank}`)}</span><span class="fastest-mobile-date">${dateHtml}</span></div></div></td>
+                    <td class="fastest-points-cell"><div class="fastest-score"><strong>${scoreLabel}</strong><span class="fastest-score-unit">pts</span></div></td>
+                    <td class="fastest-date-column">${dateHtml}</td>
                 </tr>
             `;
         });
 
-        html += '</tbody></table>';
+        html += '</tbody></table><div class="fastest-footnote"><span aria-hidden="true">★</span><span>First solve earns a <strong>50% bonus</strong>, included in total points.</span></div></div>';
         container.innerHTML = html;
     } catch (e) {
         console.error('Error loading puzzle leaderboard:', e);
@@ -1878,6 +1915,7 @@ async function checkExistingSubmission(puzzleId) {
             <div class="message-box message-success">
                 <h3>✓ Puzzle Solved!</h3>
                 <p>You solved this puzzle and earned <strong>${submission.score} points</strong>!</p>
+                ${firstSolverBadge(submission)}
                 <p>Total attempts: <strong>${attemptCount}</strong></p>
                 <p>Submitted on: ${formatDate(submission.submitted_at)}</p>
             </div>
@@ -1932,10 +1970,11 @@ async function submitAnswer(event, puzzleId) {
             const attemptCount = await getUserAttemptCount(puzzleId);
             showCorrectAnswerDialog({
                 message: `Correct! You earned ${result.score} points.`,
-                detail: `Total attempts: ${attemptCount}.`,
+                detail: `${result.is_first_solver ? `First solve! Includes +50% bonus (+${result.bonus_points} points). ` : ''}Total attempts: ${attemptCount}.`,
                 requireSignIn: false
             });
             await checkExistingSubmission(puzzleId);
+            await loadPuzzleLeaderboard(puzzleId);
         } else {
             const pending = getGuestCachedSolveCount();
             const pendingDetail = pending > 1 ? ` You currently have ${pending} pending solves in this browser.` : '';
