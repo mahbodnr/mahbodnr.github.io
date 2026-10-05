@@ -12,6 +12,7 @@ const GUEST_SOLVES_STORAGE_KEY = 'latent-space-guest-solves-v1';
 const GUEST_SOLVES_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 let guestSyncInFlight = null;
 let guestSyncDoneForUserId = null;
+let leaderboardLoadId = 0;
 
 try {
     if (typeof window.supabase === 'undefined') {
@@ -57,6 +58,10 @@ try {
                 } catch (e) {
                     console.error('Error in auth state handler:', e);
                 }
+            }
+
+            if (authInitialized && ['SIGNED_IN', 'SIGNED_OUT', 'USER_UPDATED'].includes(event) && document.getElementById('leaderboard-container')) {
+                loadLeaderboard();
             }
         });
         
@@ -1277,7 +1282,7 @@ async function updateAttemptCounter(puzzleId) {
 async function fetchLeaderboard() {
     try {
         // Use direct fetch since Supabase client has issues
-        const response = await fetch(SUPABASE_URL + '/rest/v1/leaderboard_view?select=*&order=total_points.desc,last_correct_submission_at.asc&limit=100', {
+        const response = await fetch(SUPABASE_URL + '/rest/v1/leaderboard_view?select=*&order=total_points.desc,last_correct_submission_at.asc.nullslast,user_id.asc&limit=10', {
             headers: {
                 'apikey': SUPABASE_ANON_KEY,
                 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
@@ -1285,16 +1290,45 @@ async function fetchLeaderboard() {
         });
         
         if (!response.ok) {
-            console.error('Error fetching leaderboard:', response.status);
-            return [];
+            throw new Error('Could not load leaderboard. Please try refreshing.');
         }
         
         const data = await response.json();
         return data || [];
     } catch (e) {
         console.error('Error fetching leaderboard:', e);
-        return [];
+        throw e;
     }
+}
+
+async function fetchLeaderboardPosition(userId) {
+    const headers = {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+    };
+    const params = new URLSearchParams({ select: '*', user_id: `eq.${userId}`, limit: '1' });
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard_view?${params}`, { headers });
+    if (!response.ok) throw new Error('Could not load your position. Please try refreshing.');
+    const [entry] = await response.json();
+    if (!entry) return null;
+
+    // Match the table's order, including the user ID for otherwise identical ties.
+    const points = entry.total_points;
+    const solvedAt = entry.last_correct_submission_at;
+    const earlierSolve = solvedAt ? `last_correct_submission_at.lt.${solvedAt}` : 'last_correct_submission_at.not.is.null';
+    const sameSolve = solvedAt ? `last_correct_submission_at.eq.${solvedAt}` : 'last_correct_submission_at.is.null';
+    const ahead = new URLSearchParams({
+        select: 'user_id',
+        or: `(total_points.gt.${points},and(total_points.eq.${points},${earlierSolve}),and(total_points.eq.${points},${sameSolve},user_id.lt.${entry.user_id}))`
+    });
+    const countResponse = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard_view?${ahead}`, {
+        method: 'HEAD',
+        headers: { ...headers, 'Prefer': 'count=exact' }
+    });
+    if (!countResponse.ok) throw new Error('Could not load your rank. Please try refreshing.');
+    const count = countResponse.headers.get('content-range')?.match(/\/(\d+)$/);
+    if (!count) throw new Error('Could not load your rank. Please try refreshing.');
+    return { ...entry, rank: Number(count[1]) + 1 };
 }
 
 async function calculateLeaderboard() {
@@ -2003,15 +2037,50 @@ async function submitAnswer(event, puzzleId) {
 
 // Leaderboard Page
 async function initLeaderboardPage() {
-    loadLeaderboard();
     updateAuthUI();
     await syncCachedCorrectAnswers(true);
+    await loadLeaderboard();
+}
+
+function renderOverallLeaderboardTable(entries, currentUserId, caption) {
+    return `<table class="fastest-table overall-table">
+        <caption class="visually-hidden">${caption}</caption>
+        <thead><tr>
+            <th scope="col" class="fastest-rank-column">Rank</th>
+            <th scope="col">Player</th>
+            <th scope="col" class="fastest-points-column">Points</th>
+            <th scope="col" class="overall-solved-column">Solved</th>
+        </tr></thead>
+        <tbody>${entries.map(entry => {
+            const isCurrentUser = entry.user_id === currentUserId;
+            const username = entry.username || 'Anonymous';
+            const rank = entry.rank;
+            const avatar = entry.avatar_url
+                ? `<img src="${escapeHtml(entry.avatar_url)}" alt="" class="leaderboard-avatar">`
+                : `<span class="leaderboard-avatar-placeholder" aria-hidden="true">${escapeHtml(Array.from(username.trim())[0]?.toUpperCase() || '?')}</span>`;
+            const medal = rank >= 1 && rank <= 3
+                ? `<span class="overall-medal" role="img" aria-label="${rank === 1 ? 'First' : rank === 2 ? 'Second' : 'Third'} place">${['🥇', '🥈', '🥉'][rank - 1]}</span>`
+                : '';
+            const points = Number(entry.total_points) || 0;
+            const solved = entry.puzzles_solved == null ? '—' : (Number(entry.puzzles_solved) || 0).toLocaleString('en-US');
+            return `<tr class="${rank === 1 ? 'fastest-first-solver' : ''} ${isCurrentUser ? 'is-current-user' : ''}"${isCurrentUser ? ' aria-current="true"' : ''}>
+                <td class="fastest-rank-cell"><span class="fastest-rank fastest-rank-${rank >= 1 && rank <= 3 ? rank : 'other'}">${rank ?? '—'}</span></td>
+                <td><div class="fastest-player">${avatar}<div class="fastest-player-details"><span class="fastest-name-line"><span class="fastest-name">${escapeHtml(username)}</span>${medal}${isCurrentUser ? '<span class="leaderboard-you">You</span>' : ''}</span></div></div></td>
+                <td class="fastest-points-cell"><div class="fastest-score"><strong>${points.toLocaleString('en-US')}</strong><span class="fastest-score-unit">pts</span></div></td>
+                <td class="overall-solved-column">${solved}</td>
+            </tr>`;
+        }).join('')}</tbody>
+    </table>`;
 }
 
 async function loadLeaderboard() {
     const container = document.getElementById('leaderboard-container');
     if (!container) return;
     
+    const loadId = ++leaderboardLoadId;
+    const refreshButton = document.getElementById('leaderboard-refresh');
+    if (refreshButton) refreshButton.disabled = true;
+    container.setAttribute('aria-busy', 'true');
     container.innerHTML = '<div class="loading">Loading leaderboard...</div>';
     
     // Check if Supabase is configured
@@ -2023,56 +2092,57 @@ async function loadLeaderboard() {
                 <small>Administrator: Please update the Supabase anon key in scripts.js and run the database schema.</small>
             </div>
         `;
+        container.setAttribute('aria-busy', 'false');
+        if (refreshButton) refreshButton.disabled = false;
         return;
     }
     
     try {
-        const leaderboard = await fetchLeaderboard();
-        
-        if (leaderboard.length === 0) {
-            container.innerHTML = '<p>No entries yet. Be the first to solve a puzzle!</p>';
-            return;
+        const [leaderboard, user] = await Promise.all([fetchLeaderboard(), getCurrentUser()]);
+        const topTen = leaderboard.slice(0, 10).map((entry, index) => ({ ...entry, rank: index + 1 }));
+        const isInTopTen = user && topTen.some(entry => entry.user_id === user.id);
+        let ownEntry = null;
+        let ownError = '';
+        if (user && !isInTopTen) {
+            try {
+                ownEntry = await fetchLeaderboardPosition(user.id);
+                if (!ownEntry) {
+                    const profile = await fetchUserProfile(user.id);
+                    ownEntry = {
+                        user_id: user.id,
+                        username: profile?.username || user.user_metadata?.full_name || 'You',
+                        avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url,
+                        total_points: 0,
+                        puzzles_solved: null,
+                        rank: null
+                    };
+                }
+            } catch (e) {
+                ownError = e.message || 'Could not load your position. Please try refreshing.';
+            }
         }
-        
-        let html = `
-            <table class="win-table leaderboard-table">
-                <thead>
-                    <tr>
-                        <th style="width: 60px;">Rank</th>
-                        <th>Player</th>
-                        <th style="width: 100px;">Points</th>
-                        <th style="width: 80px;">Solved</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-        
-        leaderboard.forEach((entry, index) => {
-            const rank = index + 1;
-            let rankClass = '';
-            let rankIcon = rank;
-            
-            if (rank === 1) { rankClass = 'rank-gold'; rankIcon = '🥇'; }
-            else if (rank === 2) { rankClass = 'rank-silver'; rankIcon = '🥈'; }
-            else if (rank === 3) { rankClass = 'rank-bronze'; rankIcon = '🥉'; }
-            
-            const avatarHtml = entry.avatar_url 
-                ? `<img src="${escapeHtml(entry.avatar_url)}" alt="" class="leaderboard-avatar">`
-                : `<span class="leaderboard-avatar-placeholder">👤</span>`;
-            
-            html += `
-                <tr class="${rankClass}">
-                    <td class="rank-cell">${rankIcon}</td>
-                    <td><div class="player-cell">${avatarHtml}<span>${escapeHtml(entry.username || 'Anonymous')}</span></div></td>
-                    <td class="points-cell"><strong>${entry.total_points.toLocaleString()}</strong></td>
-                    <td class="solved-cell">${entry.puzzles_solved}</td>
-                </tr>
-            `;
-        });
-        
-        html += '</tbody></table>';
+        if (loadId !== leaderboardLoadId) return;
+
+        let html = topTen.length
+            ? `<div class="fastest-panel overall-top-ten">
+                <div class="fastest-toolbar"><strong>Top 10 solvers</strong><span class="fastest-count">${topTen.length} players</span></div>
+                ${renderOverallLeaderboardTable(topTen, user?.id, 'Top ten puzzle solvers, ranked by total points.')}
+                <div class="fastest-footnote">Tied points are ranked by the earliest last solve.</div>
+            </div>`
+            : '<div class="fastest-empty"><span class="fastest-empty-icon" aria-hidden="true">🏆</span><strong>The leaderboard is waiting for its first solver.</strong><p>Solve a puzzle to earn points and join the rankings.</p></div>';
+
+        if (ownEntry || ownError) {
+            html += `<section class="overall-own-position" aria-labelledby="own-position-title">
+                <div class="fastest-panel">
+                    <div class="fastest-toolbar"><strong id="own-position-title">Your position</strong><span class="fastest-count">${ownEntry?.rank ? '#' + ownEntry.rank : ownError ? 'Unavailable' : 'Unranked'}</span></div>
+                    ${ownError ? `<p class="overall-position-message" role="status">${escapeHtml(ownError)}</p>` : renderOverallLeaderboardTable([ownEntry], user.id, 'Your position in the full leaderboard.')}
+                    ${ownEntry?.rank === null ? '<div class="fastest-footnote">Earn points from a puzzle to join the rankings.</div>' : ''}
+                </div>
+            </section>`;
+        }
         container.innerHTML = html;
     } catch (e) {
+        if (loadId !== leaderboardLoadId) return;
         console.error('Error loading leaderboard:', e);
         container.innerHTML = `
             <div class="message-box message-error">
@@ -2080,6 +2150,11 @@ async function loadLeaderboard() {
                 ${escapeHtml(e.message || 'Unknown error')}
             </div>
         `;
+    } finally {
+        if (loadId === leaderboardLoadId) {
+            container.setAttribute('aria-busy', 'false');
+            if (refreshButton) refreshButton.disabled = false;
+        }
     }
 }
 

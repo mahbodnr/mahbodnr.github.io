@@ -72,10 +72,10 @@
             <div class="content-inner">
                 <h1>🏆 Leaderboard</h1>
                 
-                <p>The top puzzle solvers, ranked by total points earned.</p>
+                <p>The top ten puzzle solvers, ranked by total points earned.</p>
                 
                 <div style="text-align: right; margin-bottom: 12px;">
-                    <button class="win-button windows-box-shadow" onclick="loadLeaderboard()">🔄 Refresh</button>
+                    <button id="leaderboard-refresh" class="win-button windows-box-shadow" onclick="loadLeaderboard()">🔄 Refresh</button>
                 </div>
                 
                 <div id="leaderboard-container" class="leaderboard-container">
@@ -86,8 +86,8 @@
         </div>
         
         <div class="window-footer">
-            <span class="footer-section">Top 100 players</span>
-            <span class="footer-section">Updated in real-time</span>
+            <span class="footer-section">Top 10 players</span>
+            <span class="footer-section">Refresh for latest standings</span>
         </div>
     </div>
 
