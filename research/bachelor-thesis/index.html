@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KYW12YQM6N"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'G-KYW12YQM6N');
+    </script>
+    <title>Bachelor's Thesis | Mahbod Nouri</title>
+    <meta name="description" content="Segmenting lungs and COVID-19 infections in CT scans with UNet, UNet++ and deep supervision. Bachelor's thesis of Mahbod Nouri, University of Tehran, 2020.">
+    <meta name="author" content="Mahbod Nouri">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="canonical" href="https://mahbod.me/research/bachelor-thesis/">
+    <link rel="stylesheet" href="../../css/article.css">
+    <link rel="icon" href="../../img/favicon.ico">
+</head>
+
+<body class="article-page">
+    <div class="article-window">
+        <div class="article-titlebar">
+            <span>Bachelor's Thesis</span>
+            <a class="article-close" href="../../#my-research" title="Close">X</a>
+        </div>
+        <nav class="article-menu">
+            <a href="../../#my-research">&larr; My Research</a>
+            <a href="https://mahbod.me/">Home</a>
+        </nav>
+        <main class="article-content">
+            <h1>Automatic Disease Diagnosis and Localization of Abnormalities from CT Scans</h1>
+            <p class="article-meta">
+                B.Sc. Thesis, Mechanical Engineering &middot; University of Tehran &middot; September 2020
+                &middot; Supervisor: Dr. Morad Karimpour
+            </p>
+
+            <p class="article-tldr">
+                In the summer of 2020, in the middle of the COVID-19 pandemic, I trained three
+                fully convolutional networks (UNet, UNet++, and UNet++ with deep supervision)
+                to outline the lungs and COVID-19 infections in chest CT scans.
+                The best run of each reached about 87% IoU on held-out slices.
+            </p>
+
+            <h2>Why</h2>
+            <p>
+                CT scans are one of the most informative tools for diagnosing everything from fractures to
+                tumors, but reading them is slow, and subtle contrast differences are easy to miss.
+                For COVID-19, chest CTs show characteristic patterns such as ground-glass opacities,
+                crazy-paving, and consolidation, and how much of the lung they cover says a lot about how
+                severe the disease is. That ratio is hard to estimate by eye from a stack of 2D slices.
+            </p>
+            <p>
+                A segmentation model can propose the infected regions so that a radiologist only has to
+                accept or correct them. Once the regions are confirmed, quantities like the infected
+                fraction of the lung come for free.
+            </p>
+
+            <h2>Data</h2>
+            <p>
+                I combined two public datasets
+                (<a href="https://medicalsegmentation.com/covid19/">MedSeg</a> and
+                <a href="https://www.kaggle.com/andrewmvd/covid19-ct-scans">COVID-19 CT scans on Kaggle</a>)
+                with CT volumes of 29 COVID-19 patients, each annotated with lung and infection masks.
+                The scans came from different scanners and in different shapes and orientations, so most of
+                the work went into preprocessing:
+            </p>
+            <ul>
+                <li>slicing each 3D volume into 2D images,</li>
+                <li>dropping slices that do not contain any lung,</li>
+                <li>aligning all images to the same orientation, and</li>
+                <li>resizing everything to a common resolution.</li>
+            </ul>
+            <p>
+                This left 2,126 slices, split 80/20 into training and validation. I also trained
+                every model a second time with augmentation (zoom, rotation, and shear), which grew the
+                training set by 2.5 to 3.5 times.
+            </p>
+            <figure>
+                <img src="../../img/research/bsc/input-samples.jpg" alt="Three CT slices from different sources with different contrast and framing">
+                <figcaption>Slices from different sources look quite different, which is why preprocessing mattered.</figcaption>
+            </figure>
+
+            <h2>Models</h2>
+            <ul>
+                <li>
+                    <strong>UNet</strong>: the classic encoder-decoder, where skip connections pass encoder
+                    features at each depth directly to the decoder.
+                </li>
+                <li>
+                    <strong>UNet++</strong>: replaces the plain skip connections with nested, densely connected
+                    convolution blocks, shrinking the semantic gap between encoder and decoder features.
+                </li>
+                <li>
+                    <strong>UNet++ with deep supervision</strong>: adds an output to every block on the top row,
+                    so the network acts like an ensemble of four nested UNets of different depths. It is trained
+                    with a combined binary cross-entropy and Dice loss.
+                </li>
+            </ul>
+            <p>
+                All models were trained with Adam for up to 150 epochs, with early stopping.
+            </p>
+
+            <h2>Results</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Validation IoU</th>
+                        <th>UNet</th>
+                        <th>UNet++</th>
+                        <th>Deep Supervision</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Without augmentation</td>
+                        <td class="best">87.31%</td>
+                        <td>87.22%</td>
+                        <td>87.25%</td>
+                    </tr>
+                    <tr>
+                        <td>With augmentation</td>
+                        <td>85.64%</td>
+                        <td>86.73%</td>
+                        <td class="best">87.34%</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>
+                The three architectures ended up within a fraction of a percent of each other.
+                Augmentation actually hurt the plain UNet, while the deep-supervision model was the only one
+                that improved with it and gave the best overall score.
+            </p>
+            <figure>
+                <img src="../../img/research/bsc/lung-segmentation.jpg" alt="Three validation CT slices with the predicted lung mask overlaid and their IoU scores">
+                <figcaption>Predicted lung masks on validation slices (deep supervision, with augmentation).</figcaption>
+            </figure>
+            <p>
+                Infections are much smaller and fuzzier targets than lungs. The model usually finds the
+                lesion, but in these examples it tends to underestimate its extent.
+            </p>
+            <figure class="narrow">
+                <img src="../../img/research/bsc/infection-segmentation.jpg" alt="Predicted and expert-annotated COVID-19 infection regions side by side for two CT slices">
+                <figcaption>COVID-19 infection: model prediction (left) vs. expert annotation (right).</figcaption>
+            </figure>
+
+            <h2>What I would do next</h2>
+            <ul>
+                <li>Use 3D convolutions, or sequence models such as LSTMs across slices, instead of treating each slice independently.</li>
+                <li>Add a classifier that decides whether a scan shows COVID-19 at all.</li>
+                <li>Apply the same pipeline to other findings such as fractures or vessel ruptures.</li>
+            </ul>
+
+            <p><a class="article-back" href="../../#my-research">&larr; Back to My Research</a></p>
+        </main>
+    </div>
+</body>
+</html>

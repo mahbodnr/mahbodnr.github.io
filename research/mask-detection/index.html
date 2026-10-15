@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KYW12YQM6N"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'G-KYW12YQM6N');
+    </script>
+    <title>Mask Detection | Mahbod Nouri</title>
+    <meta name="description" content="A real-time face mask detector that tells correctly worn, incorrectly worn, and missing masks apart, built with MTCNN and a fine-tuned InceptionResnetV1.">
+    <meta name="author" content="Mahbod Nouri">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="canonical" href="https://mahbod.me/research/mask-detection/">
+    <link rel="stylesheet" href="../../css/article.css">
+    <link rel="icon" href="../../img/favicon.ico">
+</head>
+
+<body class="article-page">
+    <div class="article-window">
+        <div class="article-titlebar">
+            <span>Mask Detection</span>
+            <a class="article-close" href="../../#my-research" title="Close">X</a>
+        </div>
+        <nav class="article-menu">
+            <a href="../../#my-research">&larr; My Research</a>
+            <a href="https://mahbod.me/">Home</a>
+        </nav>
+        <main class="article-content">
+            <h1>Mask Detection</h1>
+            <p class="article-meta">Side project &middot; 2021 &middot; PyTorch, facenet-pytorch, OpenCV</p>
+
+            <p class="article-tldr">
+                A model that finds every face in an image or video and labels it as
+                <strong>correctly masked</strong>, <strong>incorrectly masked</strong> (for example, nose out),
+                or <strong>unmasked</strong>, fast enough to run on a live webcam stream.
+            </p>
+
+            <h2>How it works</h2>
+            <p>Detection is done in two stages:</p>
+            <ul>
+                <li>
+                    <strong>Find the faces.</strong> An MTCNN face detector locates every face in the frame and
+                    crops it to 128&times;128 pixels.
+                </li>
+                <li>
+                    <strong>Classify each face.</strong> An InceptionResnetV1, pretrained for face recognition on
+                    VGGFace2, is fine-tuned to sort each crop into one of the three classes.
+                    Its box is then drawn in green, orange, or red.
+                </li>
+            </ul>
+            <p>
+                Starting from a network that already knows what faces look like made the classifier converge in
+                just a few epochs.
+            </p>
+
+            <h2>Data and training</h2>
+            <p>
+                Masks that are worn wrongly are hard to find in real photos, so I used
+                <a href="https://github.com/cabani/MaskedFace-Net">MaskedFace-Net</a>, which has faces with
+                realistic, synthetically added masks that are either correctly or incorrectly worn. Together with
+                unmasked faces, this gave about 17,500 images split almost evenly between the three classes, with
+                80% used for training and 20% for validation.
+            </p>
+            <p>
+                To make the model less dependent on the clean, centered dataset images, I augmented the training
+                data with small rotations, horizontal flips, and random changes to color, contrast, and brightness.
+                The network was trained with Adam for 10 epochs, and I kept the checkpoint with the lowest validation loss.
+            </p>
+            <p>
+                On a separate test set, it reached <strong>99.9% accuracy</strong>.
+            </p>
+            <figure>
+                <img src="../../img/research/mask/test-predictions.jpg" alt="Five test faces with predicted labels: two incorrectly masked, two correctly masked, one unmasked">
+                <figcaption>Predictions on test images.</figcaption>
+            </figure>
+
+            <h2>In the wild</h2>
+            <p>
+                The same pipeline works on photos, on videos (processed frame by frame), and on a live webcam
+                stream inside Colab, where the boxes are drawn as a transparent overlay on the video feed.
+            </p>
+            <figure>
+                <img src="../../img/research/mask-detection-cover.jpg" alt="A crowded street with each face boxed and labeled by mask status">
+                <figcaption>A crowded street: 15 faces detected and classified in a single pass.</figcaption>
+            </figure>
+            <p>
+                Real scenes are much harder than the test set. The synthetic masks in the training data all look
+                alike, while real faces are small, turned away, or hidden behind hands and other people. Those are
+                exactly the cases where the model makes most of its mistakes, so the 99.9% should be read as an
+                upper bound.
+            </p>
+
+            <figure>
+                <div class="article-video">
+                    <iframe src="https://www.youtube-nocookie.com/embed/-2E6uhZXVtM" title="Mask detection demo"
+                        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"></iframe>
+                </div>
+                <figcaption>Testing the model on real-time video.</figcaption>
+            </figure>
+
+            <p><a class="article-back" href="../../#my-research">&larr; Back to My Research</a></p>
+        </main>
+    </div>
+</body>
+</html>

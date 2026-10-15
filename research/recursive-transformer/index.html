@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KYW12YQM6N"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'G-KYW12YQM6N');
+    </script>
+    <title>Recursive Vision Transformers | Mahbod Nouri</title>
+    <meta name="description" content="A recursive, weight-tied Vision Transformer that keeps refining its representation until it converges to a fixed point, instead of running a fixed number of layers.">
+    <meta name="author" content="Mahbod Nouri">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="canonical" href="https://mahbod.me/research/recursive-transformer/">
+    <link rel="stylesheet" href="../../css/article.css">
+    <link rel="icon" href="../../img/favicon.ico">
+</head>
+
+<body class="article-page">
+    <div class="article-window">
+        <div class="article-titlebar">
+            <span>Recursive Vision Transformers</span>
+            <a class="article-close" href="../../#my-research" title="Close">X</a>
+        </div>
+        <nav class="article-menu">
+            <a href="../../#my-research">&larr; My Research</a>
+            <a href="https://mahbod.me/">Home</a>
+        </nav>
+        <main class="article-content">
+            <h1>Recursive Vision Transformers</h1>
+            <p class="article-meta">Research project &middot; University of Bremen &middot; 2024</p>
+
+            <p class="article-tldr">
+                What if a Vision Transformer had just <strong>one</strong> block, applied over and over until its
+                representation stops changing? I tried to turn a weight-tied ViT into a model that converges to a
+                fixed point, so that its depth becomes something it computes rather than something we fix in advance.
+            </p>
+
+            <figure>
+                <img src="../../img/research/recursive-vit.svg" alt="Diagram: image patches are embedded, passed repeatedly through one shared ViT block with the input injected at every step, and the fixed point is classified">
+                <figcaption>One shared block, iterated until the token state settles.</figcaption>
+            </figure>
+
+            <h2>The idea</h2>
+            <p>
+                A standard ViT stacks a dozen or so blocks, each with its own weights. A recursive ViT, like the
+                Universal Transformer, reuses the <strong>same block</strong> at every step. This gives you as much
+                depth as you like without adding parameters, and it raises a natural question: if we can run the
+                block as many times as we want, can we run it until the answer stops changing?
+            </p>
+
+            <h2>The problem</h2>
+            <p>
+                Simply sharing weights is not enough. A recursive model trained for, say, 12 iterations works well at
+                12, but if you let it run longer, its internal state drifts and its predictions start to change.
+                More computation does not automatically mean better answers, and the number of iterations quietly
+                becomes another hyperparameter.
+            </p>
+            <p>What we actually want is for the iteration to converge to a fixed point:</p>
+            <div class="article-formula">
+                z<sub>t+1</sub> = F<sub>&theta;</sub>(z<sub>t</sub>, x) &nbsp;&rarr;&nbsp; z* = F<sub>&theta;</sub>(z*, x)
+            </div>
+            <p>
+                That is also the assumption behind <strong>Deep Equilibrium Models (DEQs)</strong>. If a real
+                equilibrium exists, you can find it with a root solver instead of naive unrolling, and train
+                with implicit differentiation instead of storing every intermediate step, which can save a lot of
+                memory. But all of this only holds if the model actually converges.
+            </p>
+
+            <h2>What I tried</h2>
+            <p>On Tiny ImageNet (200 classes), I explored several ways to make the iteration stable:</p>
+            <ul>
+                <li><strong>Input injection:</strong> feeding the image embedding into every step, so that the fixed point stays tied to the input.</li>
+                <li><strong>Normalizing the state:</strong> z-standardization and nGPT-inspired normalization to keep the representation from growing or collapsing.</li>
+                <li><strong>Stochastic depth:</strong> training with a varying number of iterations, so the model cannot overfit to a single depth.</li>
+                <li><strong>Trajectory loss:</strong> supervising the intermediate states and not just the last one, so that every step along the way is useful.</li>
+                <li><strong>Extra non-recurrent blocks:</strong> adding a regular ViT before or after the recursive core.</li>
+            </ul>
+            <p>
+                With these changes, the model finally reached a fixed point: instead of drifting, its state settled
+                as the iterations went on.
+            </p>
+
+            <h2>A glimpse of the results</h2>
+            <p>
+                Here is one comparison between a regular ViT and my recursive model (called <em>Transit</em> in the
+                plots). For the ViT, the x-axis is the number of blocks; for Transit, it is the number of times the
+                single shared block is applied.
+            </p>
+            <div class="article-figure-row">
+                <figure>
+                    <img src="../../img/research/recursive/accuracy-vs-depth.png" alt="Validation accuracy versus depth or iterations: Transit matches or beats ViT at every depth, peaking around 0.51 at 12 iterations">
+                    <figcaption>Validation accuracy vs. depth (ViT) or iterations (Transit).</figcaption>
+                </figure>
+                <figure>
+                    <img src="../../img/research/recursive/accuracy-vs-parameters.png" alt="Validation accuracy versus number of parameters: Transit stays at about 0.65 million parameters while ViT grows to over 8 million">
+                    <figcaption>The same runs, plotted against the number of parameters.</figcaption>
+                </figure>
+            </div>
+            <p>
+                With the same amount of computation, Transit is as accurate as the ViT or slightly more so, peaking at
+                about 51% at 12 iterations compared with 49% for a 12-block ViT. It does this with roughly
+                0.65M parameters, against more than 5M for the ViT. A variant that iterates 3 distinct blocks 4 times
+                each (<em>d:3, i:4</em>) did best overall, at about 52% with around 1.5M parameters.
+            </p>
+
+            <h2>What comes next</h2>
+            <ul>
+                <li>Replace plain iteration with proper fixed-point solvers in the forward pass, and implicit differentiation in the backward pass.</li>
+                <li>Look inside: how do the attention maps evolve over iterations, and how do they compare to a regular ViT?</li>
+                <li>Scale up beyond Tiny ImageNet, with careful accuracy, compute, and parameter comparisons.</li>
+                <li>Explore Koopman-style dynamics. What if we could optimize directly for the 1000th step?</li>
+            </ul>
+
+            <p><a class="article-back" href="../../#my-research">&larr; Back to My Research</a></p>
+        </main>
+    </div>
+</body>
+</html>
