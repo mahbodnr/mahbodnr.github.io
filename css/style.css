@@ -1213,24 +1213,33 @@ textarea:focus {
     /* margin-top: -1.25rem; */
 }
 
+/* My Research window */
+.research-page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding-bottom: 3rem;
+    font-family: "Open Sans", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #111;
+}
+
 .research-intro {
-    font-family: "Open Sans", "Source Sans Pro", "MS Sans Serif", Arial, sans-serif;
-    line-height: 1.6;
-    margin-bottom: 2rem;
-    padding: 1rem 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    line-height: 1.7;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: #ffffe1;
+    border: 1px solid #808080;
 }
 
 .research-intro p {
-    font-family: "Open Sans", "Helvetica Neue", Helvetica;
     font-weight: 300;
-    line-height: 1.6;
-    color: #515151;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #333;
     margin: 0;
 }
 
 .research-intro a {
-    color: #0000FF;
+    color: #0000ff;
     text-decoration: underline;
 }
 
@@ -1238,71 +1247,134 @@ textarea:focus {
     color: #0000cc;
 }
 
-.research {
-    font-family: "Open Sans", "Source Sans Pro";
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-    margin: 1rem 0;
-    padding: 0.5rem 0;
-    max-width: 900px;
+.research-section {
+    margin-bottom: 2rem;
 }
 
-#research .research {
-    flex-direction: row;
+/* Section heading with an etched Win98-style rule */
+.research-section > h2 {
+    color: #000080;
+    font-size: 1.2rem;
+    margin: 0 0 0.25rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid #808080;
+    box-shadow: 0 1px 0 #dfdfdf;
 }
 
-.research img {
-    width: 25%;
+.research-item {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 1.25rem;
+    align-items: start;
+    padding: 1.25rem 0;
+    border-bottom: 1px solid #e6e6e6;
+}
+
+.research-item:last-child {
+    border-bottom: none;
+}
+
+.research-item.no-image {
+    grid-template-columns: 1fr;
+    padding: 0.9rem 0;
+}
+
+/* Sunken frame around thumbnails */
+.research-thumb {
+    padding: 3px;
+    background: #fff;
+    border: 2px solid;
+    border-color: #808080 #dfdfdf #dfdfdf #808080;
+    box-shadow: inset 1px 1px 0 #000;
+}
+
+.research-thumb img {
+    display: block;
+    width: 100%;
     height: auto;
-    margin-right: 20px;
-}
-
-.research h2 {
-    font-size: 16px;
-    margin-bottom: 10px;
-}
-
-.research p {
-    font-family: "Open Sans", "Helvetica Neue", Helvetica;
-    font-weight: 300;
-    line-height: 23px;
-    color: #515151;
-    margin-bottom: 25px;
 }
 
 .research-text {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.4rem;
+    min-width: 0;
 }
 
-.research .date {
+.research-text h3 {
     font-size: 16px;
-    line-height: 0;
-    opacity: 1;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #000;
     margin: 0;
-    color: black;
-    /* font-weight: bold; */
 }
 
-.research a {
-    color: #0000FF;
+.research-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 13px;
+    color: #666;
+}
+
+/* Small raised Win98-style labels */
+.research-tag {
+    font-family: "MS Sans Serif", "Microsoft Sans Serif", Arial, sans-serif;
+    font-size: 11px;
+    line-height: 1;
+    padding: 3px 6px;
+    color: #000;
+    background: #c0c0c0;
+    border: 1px solid;
+    border-color: #fff #808080 #808080 #fff;
+    white-space: nowrap;
+}
+
+.research-tag.accent {
+    color: #fff;
+    background: #000080;
+    border-color: #000080;
+}
+
+.research-tag.review {
+    background: #ffffe1;
+    border-color: #000;
+}
+
+.research-text p {
+    font-weight: 300;
+    font-size: 14px;
+    line-height: 1.65;
+    color: #444;
+    margin: 0;
+}
+
+.research-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.35rem;
+}
+
+/* Links styled as Win98 push buttons */
+.research-links a {
+    font-family: "MS Sans Serif", "Microsoft Sans Serif", Arial, sans-serif;
+    font-size: 12px;
+    color: #000;
     text-decoration: none;
-    font-weight: bold;
+    padding: 4px 12px;
+    background: #c0c0c0;
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf;
 }
 
-hr {
-    display: block;
-    border-style: inset;
-    border-width: 0.2px;
-    margin: 1.5rem;
-    align-self: stretch;
-    text-align: center;
-    width: 70%;
-    margin-left: 15%;
-    border-color: rgba(0, 0, 0, 0.1);
+.research-links a:hover {
+    text-decoration: underline;
+}
+
+.research-links a:active {
+    box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px #808080;
+    padding: 5px 11px 3px 13px;
 }
 
 @media (max-width: 960px) {
@@ -1362,22 +1434,14 @@ hr {
         padding: 0.1rem 0.15rem;
     }
 
-    .research {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
     /* Make research items stack vertically on mobile (text under images) */
-    #research .research {
-        flex-direction: column;
-        align-items: flex-start;
+    .research-item {
+        grid-template-columns: 1fr;
+        gap: 0.85rem;
     }
 
-    .research img {
-        width: 100%;
+    .research-thumb {
         max-width: 420px;
-        margin-right: 0;
-        margin-bottom: 1rem;
     }
 
     /* Ensure maximized windows fit perfectly on mobile */

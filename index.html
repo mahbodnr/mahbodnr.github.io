@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="utf-8">
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KYW12YQM6N"></script>
     <script>
@@ -576,7 +577,7 @@
                 <div class="item">Help</div>
             </div>
             <div class="content white-scroll">
-                <div class="research">
+                <div class="research-page">
                     <div class="research-intro">
                         <p>
                             In recent years, I have been mainly working on spiking neural networks and biologically
@@ -647,6 +648,13 @@
 <script src="./scripts/windows.js"></script>
 <!-- Read projects -->
 <script src="./scripts/read_projects.js"></script>
+<script>
+    // Open the My Research window when arriving via /#my-research (e.g. from a "Read more" page)
+    if (location.hash === '#my-research') {
+        document.getElementById('windows-notepad-input').checked = true;
+        document.getElementById('windows-notepad-input-on-top').checked = true;
+    }
+</script>
 <script>
     (function () {
         var timeDisplay = document.getElementById('time-options');

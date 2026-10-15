@@ -1,0 +1,267 @@
+/* Standalone "Read more" pages, styled as a Win98 window on the desktop */
+body.article-page {
+    background: #008080;
+    margin: 0;
+    padding: 2rem 1rem;
+    font-family: "MS Sans Serif", "Microsoft Sans Serif", Arial, sans-serif;
+}
+
+.article-window {
+    max-width: 900px;
+    margin: 0 auto;
+    background: #c0c0c0;
+    padding: 3px;
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #dfdfdf, inset -2px -2px #808080, inset 2px 2px #fff;
+}
+
+.article-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(90deg, #000b7c, #1084d0);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 3px 3px 6px;
+}
+
+.article-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 14px;
+    background: #c0c0c0;
+    color: #000;
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+}
+
+.article-menu {
+    display: flex;
+    gap: 1rem;
+    font-size: 12px;
+    padding: 4px 6px;
+    border-bottom: 1px solid #808080;
+    box-shadow: 0 1px 0 #fff;
+}
+
+.article-menu a {
+    color: #000;
+    text-decoration: none;
+}
+
+.article-menu a:hover {
+    text-decoration: underline;
+}
+
+.article-content {
+    background: #fff;
+    margin-top: 3px;
+    padding: 2rem 2.25rem 3rem;
+    box-shadow: inset 1px 1px #808080, inset -1px -1px #dfdfdf;
+    font-family: "Open Sans", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #222;
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+.article-content > * {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.article-content h1 {
+    color: #000080;
+    font-size: 1.5rem;
+    line-height: 1.3;
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+}
+
+.article-content h2 {
+    color: #000080;
+    font-size: 1.15rem;
+    margin-top: 2rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid #808080;
+    box-shadow: 0 1px 0 #dfdfdf;
+}
+
+.article-meta {
+    color: #666;
+    font-size: 13px;
+    margin-bottom: 1.25rem;
+}
+
+.article-tldr,
+.article-formula {
+    box-sizing: border-box;
+}
+
+.article-tldr {
+    background: #ffffe1;
+    border: 1px solid #808080;
+    padding: 0.75rem 1rem;
+}
+
+.article-formula {
+    text-align: center;
+    font-family: Cambria, Georgia, "Times New Roman", serif;
+    font-size: 1.2rem;
+    padding: 0.6rem 1rem;
+    background: #f4f4f4;
+    border: 1px solid #c0c0c0;
+    overflow-x: auto;
+}
+
+.article-content p,
+.article-content li {
+    font-weight: 300;
+    color: #333;
+}
+
+.article-content strong {
+    font-weight: 600;
+    color: #111;
+}
+
+.article-content ul {
+    padding-left: 1.25rem;
+}
+
+.article-content a {
+    color: #0000ff;
+}
+
+/* Sunken Win98 frame around figures */
+.article-content figure {
+    margin: 1.5rem auto;
+}
+
+.article-content figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+    padding: 3px;
+    box-sizing: border-box;
+    border: 2px solid;
+    border-color: #808080 #dfdfdf #dfdfdf #808080;
+    box-shadow: inset 1px 1px 0 #000;
+}
+
+.article-content figure.narrow img {
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+.article-video {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    padding: 3px;
+    border: 2px solid;
+    border-color: #808080 #dfdfdf #dfdfdf #808080;
+    box-shadow: inset 1px 1px 0 #000;
+    background: #000;
+    box-sizing: border-box;
+}
+
+.article-video iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.article-figure-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.article-figure-row figure {
+    margin: 1rem 0;
+}
+
+@media (max-width: 640px) {
+    .article-figure-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.article-content figcaption {
+    font-size: 13px;
+    color: #666;
+    text-align: center;
+    margin-top: 0.5rem;
+}
+
+.article-content table {
+    border-collapse: collapse;
+    font-size: 14px;
+    margin: 1rem auto;
+}
+
+.article-content th,
+.article-content td {
+    border: 1px solid #c0c0c0;
+    padding: 0.4rem 0.9rem;
+    text-align: center;
+}
+
+.article-content th {
+    background: #c0c0c0;
+    font-family: "MS Sans Serif", "Microsoft Sans Serif", Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    box-shadow: inset -1px -1px #808080, inset 1px 1px #fff;
+}
+
+.article-content td.best {
+    font-weight: 600;
+}
+
+.article-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.article-back,
+.article-links a {
+    display: inline-block;
+    font-family: "MS Sans Serif", "Microsoft Sans Serif", Arial, sans-serif;
+    font-size: 12px;
+    color: #000 !important;
+    text-decoration: none;
+    padding: 4px 12px;
+    background: #c0c0c0;
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+}
+
+.article-back {
+    margin-top: 2rem;
+}
+
+@media (max-width: 640px) {
+    body.article-page {
+        padding: 0;
+    }
+
+    .article-content {
+        padding: 1.25rem 1rem 2rem;
+    }
+
+    .article-content table {
+        font-size: 13px;
+    }
+
+    .article-content th,
+    .article-content td {
+        padding: 0.35rem 0.5rem;
+    }
+}
