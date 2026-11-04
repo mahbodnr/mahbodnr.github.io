@@ -181,6 +181,7 @@ function pickFromDiscard(id){
   } else S.phase = 'swapPlace';
 }
 function placeSwap(id){
+  if (S.phase !== 'swapPlace' || !S.swapCard) return;
   const i = S.hand.findIndex(c => c.id === id); if (i < 0) return;
   const out = S.hand[i]; S.discard.push(out); S.hand[i] = S.swapCard;
   toast(`${cardSpan(S.swapCard)} in, ${cardSpan(out)} out.`);
@@ -197,6 +198,7 @@ function releasePower(idx){
   else settle();
 }
 function trimCard(id){
+  if (S.phase !== 'trim') return;
   const i = S.hand.findIndex(c => c.id === id); if (i < 0) return;
   const out = S.hand.splice(i, 1)[0]; S.discard.push(out); S.debt += S.bet; S.stats.discards++;
   toast(`Discarded ${cardSpan(out)}`); sfx('debt'); ui.armed = null;
@@ -236,6 +238,11 @@ function cashOut(force){
   S.throwaway.push(...S.hand, ...S.powerups.map(p => p.card), ...S.discard);
   S.hand = []; S.powerups = []; S.discard = []; S.pending = null;
   S.stats.cashouts++;
+  // the biggest multiplier this run, with the hand that made it (shown on the leaderboard)
+  if (ev.mult > (S.stats.bestMult || 0)){
+    S.stats.bestMult = ev.mult;
+    S.bestHand = { cards:res.hand.map(c => [c.rank, c.suit]), labels:ev.combos.map(c => c.label), mult:ev.mult, bet:res.bet, hand:res.handNo, level:lvl() };
+  }
   coinChange(payout, 'payout'); coinChange(-S.debt, 'debt');
   res.ledger = Object.assign({}, S.handLedger || { bet:-res.bet, payout, debt:-res.debt });
   S.runLedger = S.runLedger || {};
@@ -257,4 +264,30 @@ function cashOut(force){
   if (ev.mult >= 10){ ui.celebrate = true; buzz([25, 40, 25, 40, 60]); } else if (res.net > 0) buzz(30);
   reportProgress();
   ui.say = `Cashed out. ${res.net >= 0 ? 'Gained' : 'Lost'} ${fmt(Math.abs(res.net))} coins. You now have ${fmt(S.coins)}.`;
+}
+
+/* ================= moves =================
+   Every move the player makes goes through act(). It is recorded in S.log so the whole run can be replayed
+   from its seed (the website's server does this to verify leaderboard scores), then applied. The functions
+   it calls check the phase themselves, so a replayed log can only ever make legal moves. */
+function act(type, arg){
+  if (!S || S.phase === 'over') return;
+  if (Array.isArray(S.log)) S.log.push(arg === undefined ? [type] : [type, arg]);
+  switch (type){
+    case 'deal':    S.betInput = Math.floor(Number(arg)) || 1; deal(); break;
+    case 'throw':   throwAway(); break;
+    case 'swap':    swapWithCenter(arg); break;
+    case 'discard': discardPending(); break;
+    case 'next':    drawNext(); break;
+    case 'power':   usePower(); break;
+    case 'swap10':  startSwap(); break;
+    case 'cancel10':cancelSwap(); break;
+    case 'pick':    pickFromDiscard(arg); break;
+    case 'place':   placeSwap(arg); break;
+    case 'release': if (Number.isInteger(arg)) releasePower(arg); break;
+    case 'trim':    trimCard(arg); break;
+    case 'cash':    cashOut(!!arg); break;
+    case 'nextSet': if (S.phase === 'result'){ ui.modal = null; newSet(); } break;
+    case 'level':   reshuffle(); break;
+  }
 }

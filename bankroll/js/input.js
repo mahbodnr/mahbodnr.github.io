@@ -4,12 +4,10 @@
 /* ================= input ================= */
 function onHandPick(id){
   // swapping with the center card (or placing a 10-swap card) is a single tap; only paid discards ask twice
-  if (S.phase === 'decide'){ swapWithCenter(id); render(); return; }
-  if (S.phase === 'swapPlace'){ placeSwap(id); render(); return; }
+  if (S.phase === 'decide'){ act('swap', id); render(); return; }
+  if (S.phase === 'swapPlace'){ act('place', id); render(); return; }
   if (ui.armed !== id){ ui.armed = id; render(); return; }
-  if (S.phase === 'decide') swapWithCenter(id);
-  else if (S.phase === 'trim') trimCard(id);
-  else if (S.phase === 'swapPlace') placeSwap(id);
+  if (S.phase === 'trim') act('trim', id);
   render();
 }
 
@@ -45,8 +43,8 @@ function endDrag(e, cancel){
   if (drag.src) drag.src.classList.remove('dragging');
   const st = document.querySelector('#pit .stage'); if (st) st.classList.remove('droppable');
   if (!cancel && overPit(e)){
-    if (S.phase === 'decide') swapWithCenter(id);
-    else if (S.phase === 'swapPlace') placeSwap(id);
+    if (S.phase === 'decide') act('swap', id);
+    else if (S.phase === 'swapPlace') act('place', id);
     render();
   }
 }
@@ -128,53 +126,53 @@ document.addEventListener('click', e => {
   if (ui.dragEnded && Date.now() - ui.dragEnded < 400) return;
   const t = e.target.closest('[data-act]');
   if (!t){ if (ui.armed){ ui.armed = null; render(); } return; }
-  const act = t.dataset.act;
-  if (act === 'scrimClose'){ if (e.target === t){ ui.modal = null; render(); } return; }
+  const action = t.dataset.act;
+  if (action === 'scrimClose'){ if (e.target === t){ ui.modal = null; render(); } return; }
   const id = t.dataset.id;
-  switch (act){
+  switch (action){
     case 'help': ui.modal = 'help'; break;
     case 'close': ui.modal = null; break;
     case 'restart':
-      if (S.phase === 'over' || (S.phase === 'bet' && S.stats.sets === 0)) { newGame(); break; }
+      if (S.phase === 'over' || (S.phase === 'bet' && S.stats.sets === 0)) { beginRun(); break; }
       ui.modal = 'restart'; break;
-    case 'restartNow': newGame(); break;
+    case 'restartNow': beginRun(); break;
     case 'history': ui.modal = 'history'; break;
     case 'settings': ui.modal = 'settings'; break;
     case 'histTab': ui.histTab = t.dataset.v; if (t.dataset.v === 'board' && LB.backend && LB.backend.refresh) LB.backend.refresh(); break;
     case 'openBoard': ui.histTab = 'board'; ui.modal = 'history'; if (LB.backend && LB.backend.refresh) LB.backend.refresh(); break;
     case 'lbPeriod': LB.period = t.dataset.v; break;
+    case 'lbSeeded': LB.seeded = !LB.seeded; if (LB.backend && LB.backend.refresh) LB.backend.refresh(); break;
     case 'lbSignIn': if (LB.backend && LB.backend.signIn) LB.backend.signIn(); return;
     case 'setPref': setPref(t.dataset.k, t.dataset.v); break;
     case 'preset': setBet(+t.dataset.v); return;
-    case 'bustConfirm': cashOut(true); break;
+    case 'bustConfirm': act('cash', 1); break;
     case 'tutorialNext': nextTutorial(); break;
     case 'tutorialSkip': endTutorial(); break;
     case 'replayTutorial': startTutorial(); ui.modal = null; break;
-    case 'replaySeed': newGame(S.seed); break;
+    case 'replaySeed': beginRun(S.seed); break;
     case 'sortRank': prefs.sort = 'rank'; store(PREF_KEY, prefs); break;
     case 'sortSuit': prefs.sort = 'suit'; store(PREF_KEY, prefs); break;
     case 'betKey': if (e.detail === 0) stepBet(+t.dataset.hold); return; // keyboard; pointer presses are handled on pointerdown
-    case 'throw': throwAway(); break;
-    case 'deal': deal(); break;
-    case 'add': addPending(); break;
-    case 'discard': discardPending(); break;
-    case 'power': usePower(); break;
-    case 'swap': startSwap(); break;
-    case 'cancelSwap': cancelSwap(); break;
+    case 'throw': act('throw'); break;
+    case 'deal': act('deal', S.betInput); break;
+    case 'discard': act('discard'); break;
+    case 'power': act('power'); break;
+    case 'swap': act('swap10'); break;
+    case 'cancelSwap': act('cancel10'); break;
     case 'openPick': ui.modal = 'pick'; break;
-    case 'pickDiscard': pickFromDiscard(id); break;
+    case 'pickDiscard': act('pick', id); break;
     case 'viewOut': ui.modal = 'tracker'; break;
     case 'viewDiscard': if (S.phase === 'swapPick') ui.modal = 'pick'; else ui.modal = 'view'; break;
     case 'handPick': onHandPick(id); return;
-    case 'bestSwap': if (S.phase === 'decide'){ if (t.dataset.mode === 'add') addPending(); else swapWithCenter(id); } break;
-    case 'release': { const i = S.powerups.map(x => x.type).lastIndexOf(t.dataset.type); if (i >= 0) releasePower(i); break; }
+    case 'bestSwap': act('swap', id); break;
+    case 'release': { const i = S.powerups.map(x => x.type).lastIndexOf(t.dataset.type); if (i >= 0) act('release', i); break; }
     case 'next':
       if (S.deck.length && S.coins < upkeep()){ ui.upkeepFx = true; break; }   // can't pay upkeep: explain instead of dealing
-      drawNext(); break;
-    case 'cash': cashOut(); break;
-    case 'nextSet': ui.modal = null; newSet(); break;
+      act('next'); break;
+    case 'cash': act('cash'); break;
+    case 'nextSet': act('nextSet'); break;
     case 'openReshuffle': ui.modal = 'reshuffle'; break;
-    case 'reshuffle': reshuffle(); break;
+    case 'reshuffle': act('level'); break;
     default: return;
   }
   render();
@@ -253,5 +251,5 @@ document.addEventListener('submit', e => {
   e.preventDefault();
   const seed = cleanSeed($('seedInput').value);
   if (!seed){ const m = $('seedMsg'); if (m){ m.textContent = 'A seed has 4 to 8 letters or digits, like ABCD-1234.'; m.classList.add('err'); } return; }
-  newGame(seed); render();
+  beginRun(seed);
 });

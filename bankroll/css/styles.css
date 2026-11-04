@@ -679,7 +679,31 @@ html.four-color .card.s-C{color:var(--c4c)}
 .card.pk-deco .ace-orn{width:calc(var(--cw)*.8);height:calc(var(--cw)*.8)}
 
 /* leaderboard period toggle + sign-in */
-.lbper{margin:0 0 6px}
+.lbbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin:0 0 6px}
+.lbper{margin:0}
+.lbseed{display:inline-flex;align-items:center;gap:9px;border:0;background:transparent;color:var(--text);font:inherit;font-size:13px;font-weight:700;padding:4px 2px;min-height:36px;cursor:pointer}
+.lbseed .switch{display:inline-block;width:40px;height:24px}
+.lbseed .switch i{width:16px;height:16px}
+.lbseed[aria-checked="true"] .switch{background:rgba(147,231,168,.25);border-color:var(--gain)}
+.lbseed[aria-checked="true"] .switch i{transform:translateX(16px);background:var(--gain)}
+.lbseed:focus-visible{outline:2px solid var(--brass-hi);outline-offset:2px;border-radius:8px}
+.bname .bn{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.seedtag{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 6px;flex:none}
+.lbh{margin:18px 0 8px}
+.tophand{border:1px solid var(--brass-dim);border-radius:14px;padding:12px 12px 10px;background:linear-gradient(180deg,rgba(217,171,76,.13),rgba(217,171,76,.03))}
+.tophand.me{border-color:var(--brass)}
+.th-head{display:flex;align-items:center;gap:12px;min-width:0}
+.th-mult{font-family:var(--f-display);font-weight:400;font-size:30px;line-height:1;color:var(--brass-hi);flex:none}
+.th-mult small{font-family:var(--f-ui);font-size:.62em;font-weight:700;margin-right:1px;vertical-align:.12em}
+.th-head .bname{font-size:14.5px}
+.th-cards{--cw:clamp(42px,11.5vw,54px);gap:5px;margin:10px 0 6px}
+.th-labels{margin:0;text-align:center;font-size:13px;font-weight:700;color:var(--muted)}
+.th-labels span{color:var(--brass)}
+.hboard{margin-top:8px}
+.hboard .brow{grid-template-columns:28px minmax(0,1fr) 56px minmax(0,1.1fr)}
+.hboard .hm{font-weight:800;color:var(--brass-hi)}
+.hboard .hlab{color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:420px){ .hboard .brow{grid-template-columns:22px minmax(0,1fr) 52px} .hboard .hlab{display:none} }
 .lbsub{margin:0 0 10px}
 .lbsign{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:12px;border-radius:12px;border:1px dashed var(--brass-dim);font-size:13.5px;font-weight:600}
 

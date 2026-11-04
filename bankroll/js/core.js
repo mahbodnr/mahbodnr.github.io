@@ -48,9 +48,12 @@ function rand(){ // mulberry32, state kept in the save so a reload continues the
 function newGame(seed){
   S = { v:SAVE_VERSION, seed: cleanSeed(seed) || newSeed(), history:[], runLedger:{}, uid:1, coins:START_COINS, debt:0, bet:0, betInput:1, deck:[], throwaway:[], discard:[], hand:[], faceDown:[],
         powerups:[], jokerSeen:[], pending:null, swapTen:null, swapCard:null, phase:'bet', result:null, over:null,
-        level:1, stats:{ sets:0, cashouts:0, bestPayout:0, peak:START_COINS, shuffles:1, discards:0, biggestWin:0, biggestLoss:0 } };
+        level:1, stats:{ sets:0, cashouts:0, bestPayout:0, peak:START_COINS, shuffles:1, discards:0, biggestWin:0, biggestLoss:0, bestMult:0 }, bestHand:null };
   S.rng = seedState(S.seed);
   S.runId = S.seed + '-' + Date.now().toString(36);   // identifies this run on the leaderboard
+  S.seedChosen = !!cleanSeed(seed);                   // the player picked this seed (a "seeded" run)
+  S.official = null;                                  // set when the website's server issued this run
+  S.log = [];                                         // every move, so the run can be replayed and verified
   S.deck = makeDeck();
   ui.seen.clear(); ui.armed = null; ui.modal = null; ui.prev = null;
   newSet();
@@ -71,6 +74,8 @@ function migrate(s){
   if (!s.runId) s.runId = s.seed + '-' + Date.now().toString(36);
   s.history = Array.isArray(s.history) ? s.history : [];
   s.runLedger = s.runLedger || {};
+  if (!Array.isArray(s.log)) s.log = null;            // runs from before move logging can't be verified
+  s.stats.bestMult = s.stats.bestMult || 0;
   s.v = SAVE_VERSION;
   return s;
 }
