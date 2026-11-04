@@ -1,0 +1,255 @@
+/* Bankroll · game flow: dealing, swaps, power-ups, cash-out, levels */
+'use strict';
+
+/* ================= flow ================= */
+function newSet(){
+  S.handLedger = null;
+  S.bet = 0; S.debt = 0; S.hand = []; S.powerups = []; S.pending = null; S.jokerSeen = []; S.faceDown = [];
+  S.swapTen = null; S.swapCard = null; S.result = null; S.pendingCharged = false; S.swapRefund = false; ui.armed = null;
+  if (S.coins < 1) return gameOver('You have no coins left to bet.');
+  if (S.deck.length < 5) return deckOut();
+  for (let i = 0; i < 5; i++) S.hand.push(S.deck.pop());
+  S.faceDown = [S.hand[3].id, S.hand[4].id];
+  S.jokerSeen = S.hand.slice(0, 3).filter(isJoker).map(c => c.id);
+  S.betInput = Math.max(1, Math.min(S.betInput || 1, S.coins));
+  S.phase = 'bet';
+  sfx('deal');
+}
+
+function deckOut(){
+  S.throwaway.push(...S.deck); S.deck = [];
+  const price = levelPrice(lvl());
+  if (S.coins >= price){ S.phase = 'reshuffle'; ui.modal = 'reshuffle'; sfx('win'); }
+  else gameOver(`You finished level ${lvl()}, but reaching level ${lvl() + 1} costs ${fmt(price)} coins and you have ${fmt(S.coins)}.`);
+}
+
+function reshuffle(){
+  const price = levelPrice(lvl());
+  if (S.phase !== 'reshuffle' || S.coins < price) return;
+  coinChange(-price, 'level price'); S.throwaway = []; S.discard = [];
+  S.level = lvl() + 1; S.deck = makeDeck(); S.stats.shuffles = S.level;
+  ui.levelUp = true; ui.shuffleFx = true; buzz([30, 40, 30]); sfx('shuffle');
+  ui.say = `Level ${S.level}. The deck has been reshuffled.`;
+  applyPrefs(); // a new level can unlock card packs and felts
+  reportProgress();
+  ui.modal = null; sfx('coin'); newSet();
+}
+
+function gameOver(reason, extra){
+  S.phase = 'over'; S.over = { reason, ...(extra || {}) }; ui.modal = 'over';
+  // save the best record across runs
+  const st = S.stats, rec = Object.assign({ level:0, biggestWin:0, biggestLoss:0, peak:0, bestPayout:0, hands:0, runs:0 }, prefs.record || {});
+  const run = { level:lvl(), biggestWin:st.biggestWin || 0, biggestLoss:st.biggestLoss || 0, peak:st.peak, bestPayout:st.bestPayout, hands:st.cashouts };
+  const isNew = {};
+  ['level','biggestWin','biggestLoss','peak','bestPayout','hands'].forEach(k => { if (run[k] > rec[k] && run[k] > 0){ if (k !== 'biggestLoss') isNew[k] = true; rec[k] = run[k]; } });
+  rec.runs = (rec.runs || 0) + 1;
+  prefs.record = rec; store(PREF_KEY, prefs);
+  S.over.run = run; S.over.isNew = isNew; S.over.firstRun = rec.runs === 1;
+  sfx('lose');
+  ui.say = `Run over at level ${run.level}. ${reason}`;
+  reportProgress(true);
+}
+
+function throwAway(){
+  if (S.phase !== 'bet') return;
+  const thrown = S.hand.slice();
+  S.throwaway.push(...thrown); S.hand = [];
+  toast('Thrown away: ' + thrown.map(cardSpan).join(' '));
+  sfx('swish');
+  newSet();
+}
+
+function deal(){
+  if (S.phase !== 'bet') return;
+  const bet = Math.max(1, Math.min(S.betInput, S.coins));
+  S.handStart = S.coins; S.handLedger = {};
+  S.bet = bet; S.lastBet = bet; coinChange(-bet, 'bet');
+  S.faceDown.forEach(id => ui.flips.add(id)); S.faceDown = [];
+  S.hand.forEach(c => { if (isJoker(c) && !S.jokerSeen.includes(c.id)) S.jokerSeen.push(c.id); });
+  S.stats.sets++; S.phase = 'idle';
+  sfx('coin');
+  drawNext();
+}
+
+// waive: upkeep already covered this deal (a 5 bought this turn)
+// Deals until a card lands in the center: Jokers and cards that fill an open seat go straight
+// to the hand, and dealing carries on. waive: upkeep already covered for the first card (a power-up just bought)
+function drawNext(waive, why){
+  if (S.phase !== 'idle') return;
+  let first = true;
+  ui.armed = null;
+  while (S.deck.length){
+    const up = Math.max(0, upkeep() - (first ? (waive || 0) : 0));
+    if (S.coins < up) break;
+    coinChange(-up, 'upkeep');
+    const c = S.deck.pop();
+    ui.seen.add(c.id);
+    if (isJoker(c)){
+      if (!S.jokerSeen.includes(c.id)) S.jokerSeen.push(c.id);
+      S.hand.push(c); ui.flies.push({ id:c.id, kind:'newJoker' }); sfx('power');
+    } else if (S.hand.length < capacity()){
+      S.hand.push(c); sfx('place');
+      const kind = (first && why) || (S.hand.some(x => isJoker(x) && x.id !== c.id) ? 'joker' : 'five');
+      ui.flies.push({ id:c.id, kind });
+    } else {
+      // with a full hand, the new card counts as a discard the moment it is dealt
+      S.pending = c; S.dealtId = c.id; S.phase = 'decide'; sfx('deal');
+      S.pendingCharged = true; S.debt += S.bet; S.stats.discards++;
+      ui.dealFx = c.id;
+      buzz(8);
+      ui.say = `New card in the center: ${cardName(c)}. Debt is now ${fmt(S.debt)}.`;
+      return;
+    }
+    first = false;
+  }
+}
+// after any action: keep a card in the center whenever the deck and upkeep allow
+function settle(){
+  if (S.phase === 'trim' && S.hand.length > capacity()) return;
+  if (S.pending){ S.phase = 'decide'; return; }
+  S.phase = 'idle';
+  if (canDraw()) drawNext();
+}
+
+function coinChange(d, label, cat){
+  if (!d) return;
+  S.coins += d;
+  if (S.handLedger){ const k = cat || label; S.handLedger[k] = (S.handLedger[k] || 0) + d; }
+  (ui.coinEv = ui.coinEv || []).push({ d, label });
+}
+function canDraw(){ return S.deck.length > 0 && S.coins >= upkeep(); }
+
+
+function discardPending(){
+  if (S.phase !== 'decide') return;
+  const c = S.pending; S.discard.push(c); S.pending = null;
+  if (!S.pendingCharged){ S.debt += S.bet; S.stats.discards++; }
+  S.pendingCharged = false; S.phase = 'idle'; ui.armed = null;
+  sfx('swish');
+  settle();
+}
+
+// power-ups and the 10-swap belong to the freshly dealt card only
+const offerIsDealt = () => !!S.pending && S.pending.id === S.dealtId;
+function swapWithCenter(id){
+  if (S.phase !== 'decide' || !S.pending) return;
+  const i = S.hand.findIndex(c => c.id === id); if (i < 0) return;
+  const handEl = document.querySelector(`#hand [data-cid="${id}"]`), stageEl = document.querySelector('#pit .stage .card');
+  ui.swapFx = { inId:S.pending.id, outId:id,
+    fromStage: stageEl && stageEl.getBoundingClientRect(), fromHand: handEl && handEl.getBoundingClientRect() };
+  const out = S.hand[i]; S.hand[i] = S.pending; S.pending = out; ui.armed = null;
+  ui.seen.add(out.id);
+  sfx('place');
+  ui.say = `Swapped ${cardName(S.hand[i])} into your hand. ${cardName(out)} is in the center. Multiplier ×${fmt(evaluate(S.hand, S.powerups).mult)}.`;
+}
+function usePower(){
+  if (S.phase !== 'decide' || !offerIsDealt()) return;
+  const p = POWER[S.pending.rank]; if (!p || S.coins < p.cost) return;
+  if (p.type === '2' && S.powerups.some(x => x.type === '2')) return; // Two-tone doesn't stack
+  if (S.pendingCharged){ S.debt -= S.bet; S.stats.discards--; } S.pendingCharged = false;
+  coinChange(-p.cost, 'power-up'); S.powerups.push({ card:S.pending, type:p.type }); S.pending = null; S.phase = 'idle'; ui.armed = null;
+  sfx('power');
+  ui.say = `${p.name} active.`;
+  // buying a power-up deals the next card right away; the purchase price covers that power-up's upkeep for this card
+  drawNext(p.cost, p.type === '5' ? 'five' : null);
+}
+
+function startSwap(){
+  if (S.phase !== 'decide' || !offerIsDealt() || S.pending.rank !== 10 || S.coins < SWAP_COST || !S.discard.length) return;
+  S.swapRefund = S.pendingCharged;
+  if (S.pendingCharged){ S.debt -= S.bet; S.stats.discards--; } S.pendingCharged = false;
+  coinChange(-SWAP_COST, '10 swap'); S.swapTen = S.pending; S.pending = null; S.discard.push(S.swapTen);
+  S.phase = 'swapPick'; ui.modal = 'pick'; ui.armed = null; sfx('coin');
+}
+function cancelSwap(){
+  if (S.phase === 'swapPlace'){ S.discard.push(S.swapCard); S.swapCard = null; S.phase = 'swapPick'; ui.modal = 'pick'; ui.armed = null; return; }
+  if (S.phase !== 'swapPick') return;
+  S.discard = S.discard.filter(c => c.id !== S.swapTen.id);
+  S.pending = S.swapTen; S.swapTen = null; coinChange(SWAP_COST, 'refund', '10 swap'); S.phase = 'decide'; ui.modal = null;
+  if (S.swapRefund){ S.debt += S.bet; S.stats.discards++; S.pendingCharged = true; } S.swapRefund = false;
+}
+function pickFromDiscard(id){
+  if (S.phase !== 'swapPick' || id === S.swapTen.id) return;
+  const i = S.discard.findIndex(c => c.id === id); if (i < 0) return;
+  S.swapCard = S.discard.splice(i, 1)[0]; ui.modal = null;
+  if (S.hand.length < capacity()){
+    S.hand.push(S.swapCard); toast(`${cardSpan(S.swapCard)} taken from the discard pile.`);
+    S.swapCard = null; S.swapTen = null; S.phase = 'idle'; sfx('place');
+    settle();
+  } else S.phase = 'swapPlace';
+}
+function placeSwap(id){
+  const i = S.hand.findIndex(c => c.id === id); if (i < 0) return;
+  const out = S.hand[i]; S.discard.push(out); S.hand[i] = S.swapCard;
+  toast(`${cardSpan(S.swapCard)} in, ${cardSpan(out)} out.`);
+  S.swapCard = null; S.swapTen = null; S.phase = 'idle'; ui.armed = null; sfx('place');
+  settle();
+}
+
+function releasePower(idx){
+  if (S.phase !== 'idle' && S.phase !== 'decide') return;
+  const p = S.powerups.splice(idx, 1)[0]; if (!p) return;
+  S.discard.push(p.card);
+  toast(`${POWER[p.card.rank].name} released.`); sfx('swish');
+  if (S.hand.length > capacity()){ S.phase = 'trim'; ui.armed = null; }
+  else settle();
+}
+function trimCard(id){
+  const i = S.hand.findIndex(c => c.id === id); if (i < 0) return;
+  const out = S.hand.splice(i, 1)[0]; S.discard.push(out); S.debt += S.bet; S.stats.discards++;
+  toast(`Discarded ${cardSpan(out)}`); sfx('debt'); ui.armed = null;
+  if (S.hand.length <= capacity()){ S.phase = 'idle'; settle(); }
+}
+
+function swapPreview(){
+  if (!S.pending) return null;
+  const base = evaluate(S.hand, S.powerups).mult;
+  let best = null;
+  S.hand.forEach((c, i) => {
+    const h = S.hand.slice(); h[i] = S.pending;
+    const m = evaluate(h, S.powerups).mult;
+    if (!best || m > best.mult) best = { mult:m, out:c };
+  });
+  const add = S.hand.length < capacity() ? evaluate(S.hand.concat([S.pending]), S.powerups).mult : null;
+  return { base, best, add };
+}
+function swapMult(id){
+  const h = S.hand.map(c => c.id === id ? S.pending : c);
+  return evaluate(h, S.powerups).mult;
+}
+
+function canCashOut(){ return S.phase === 'decide' || S.phase === 'idle'; }
+function cashOut(force){
+  if (!canCashOut()) return;
+  const ev = evaluate(S.hand, S.powerups);
+  const payout = S.bet * ev.mult;
+  // a cash-out that can't cover the debt ends the run: ask first
+  if (!force && S.coins + payout - S.debt < 0){ ui.modal = 'bust'; return; }
+  ui.modal = null;
+  const before = S.coins;
+  const total = S.coins + payout - S.debt;
+  const res = { hand:S.hand.slice(), powerups:S.powerups.slice(), ev, bet:S.bet, payout, debt:S.debt, before, total, deckLeft:S.deck.length,
+    start: S.handStart ?? (before + S.bet), discards: S.bet ? Math.round(S.debt / S.bet) : 0, handNo: S.stats.sets };
+  if (S.pending) S.throwaway.push(S.pending);
+  S.throwaway.push(...S.hand, ...S.powerups.map(p => p.card), ...S.discard);
+  S.hand = []; S.powerups = []; S.discard = []; S.pending = null;
+  S.stats.cashouts++;
+  coinChange(payout, 'payout'); coinChange(-S.debt, 'debt');
+  res.ledger = Object.assign({}, S.handLedger || { bet:-res.bet, payout, debt:-res.debt });
+  res.net = S.coins - res.start;
+  if (res.net > 0) S.stats.biggestWin = Math.max(S.stats.biggestWin || 0, res.net);
+  if (res.net < 0) S.stats.biggestLoss = Math.max(S.stats.biggestLoss || 0, -res.net);
+  recordHand(res, S.coins);
+  if (total < 0){
+    S.debt = 0; ui.shake = true; buzz([80, 50, 120]);
+    return gameOver(`Your coins plus the payout (${fmt(before + payout)}) couldn’t cover a debt of ${fmt(res.debt)}.`, { res });
+  }
+  S.debt = 0;
+  S.stats.bestPayout = Math.max(S.stats.bestPayout, payout);
+  S.stats.peak = Math.max(S.stats.peak, S.coins);
+  S.result = res; S.phase = 'result'; ui.modal = 'result';
+  sfx(payout > res.debt ? 'win' : payout > 0 ? 'coin' : 'lose');
+  if (ev.mult >= 10){ ui.celebrate = true; buzz([25, 40, 25, 40, 60]); } else if (res.net > 0) buzz(30);
+  reportProgress();
+  ui.say = `Cashed out. ${res.net >= 0 ? 'Gained' : 'Lost'} ${fmt(Math.abs(res.net))} coins. You now have ${fmt(S.coins)}.`;
+}
