@@ -682,3 +682,58 @@ html.four-color .card.s-C{color:var(--c4c)}
 .lbper{margin:0 0 6px}
 .lbsub{margin:0 0 10px}
 .lbsign{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:12px;border-radius:12px;border:1px dashed var(--brass-dim);font-size:13.5px;font-weight:600}
+
+/* can't pay upkeep */
+.jitter{animation:jitter .6s cubic-bezier(.36,.07,.19,.97) !important}
+@keyframes jitter{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(3px)}30%,50%,70%{transform:translateX(-6px) rotate(-1deg)}40%,60%{transform:translateX(6px) rotate(1deg)}}
+.callout{font-size:13.5px;line-height:1.45;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,143,122,.55);background:rgba(120,24,14,.42);color:var(--text)}
+.callout b{color:var(--debt)}
+html.light .callout{background:#fff1ed}
+.callout.flash{animation:calloutFlash .9s ease}
+@keyframes calloutFlash{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 3px rgba(255,143,122,.55), 0 0 22px rgba(255,110,85,.45)}}
+.btn.blocked{filter:saturate(.55) brightness(.92)}
+.powers.short .pu .x{border-color:var(--debt);color:var(--debt);animation:xPulse 1.3s ease-in-out infinite}
+@keyframes xPulse{50%{box-shadow:0 0 0 4px rgba(255,143,122,.35)}}
+
+/* ================= run over ================= */
+.m-over .ro-head{margin:0 calc(-1 * clamp(16px,4vw,26px)) 14px;padding:20px clamp(16px,4vw,26px) 18px;border-radius:22px 22px 0 0;text-align:center;
+  background:radial-gradient(120% 110% at 50% 0%, rgba(255,143,122,.22), transparent 72%);border-bottom:1px solid var(--line)}
+.ro-title{font-family:var(--f-display);font-size:clamp(24px,6.6vw,32px);line-height:1.12;color:var(--brass-hi);margin:6px 0 4px;text-wrap:balance}
+.ro-sub{margin:0 0 14px;color:var(--text);font-size:14.5px;text-wrap:balance}
+.gauge{max-width:420px;margin:0 auto;text-align:left}
+.g-labels{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:6px}
+.g-labels b{color:var(--text);font-size:15px;display:inline-flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums}
+.g-track{position:relative;height:22px;border-radius:999px;background:repeating-linear-gradient(45deg, rgba(255,143,122,.16) 0 6px, rgba(255,143,122,.06) 6px 12px);border:1px solid rgba(255,143,122,.45)}
+.g-track i{position:absolute;inset:0 auto 0 0;width:var(--to);border-radius:999px;background:linear-gradient(90deg,var(--gold-2),var(--gold-1));animation:gFill 1.1s cubic-bezier(.2,.8,.3,1) .2s backwards;box-shadow:0 0 12px rgba(245,217,140,.35)}
+@keyframes gFill{from{width:0}}
+.g-lock{position:absolute;right:-4px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--debt);color:#2a0905}
+.g-lock:empty{display:none}
+.g-lock svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8}
+.g-short{text-align:center;margin-top:10px;font-weight:700;color:var(--debt);font-size:14px}
+.g-short b{font-family:var(--f-ui);font-weight:900;font-size:26px;vertical-align:-3px;animation:shortPulse 1.6s ease-in-out 1.2s 2}
+@keyframes shortPulse{50%{text-shadow:0 0 16px rgba(255,110,85,.7)}}
+.journey{list-style:none;display:flex;align-items:flex-start;justify-content:center;gap:0;padding:4px 0 2px;margin:0 0 6px}
+.journey li{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:62px;position:relative;text-align:center}
+.journey li + li::before{content:"";position:absolute;top:16px;right:calc(50% + 17px);width:calc(100% - 34px);height:2px;background:var(--line)}
+.journey li.done + li::before{background:var(--gain)}
+.journey .jn{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:14px;border:2px solid var(--line);background:var(--panel)}
+.journey .done .jn{border-color:var(--gain);color:var(--gain)}
+.journey .end .jn{border-color:var(--debt);color:var(--debt);box-shadow:0 0 0 4px rgba(255,143,122,.18)}
+.journey .lock .jn{border-style:dashed;color:var(--muted)}
+.journey .jn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8}
+.journey small{font-size:11px;color:var(--muted);font-weight:700;white-space:nowrap}
+.journey .more{min-width:24px;color:var(--muted);padding-top:6px}
+.ro-best{text-align:center;margin:8px 0 0;font-weight:700;color:var(--brass-hi)}
+.tips{list-style:none;padding:0;margin:4px 0 0;display:grid;gap:8px}
+.tips li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;padding:10px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);font-size:13.5px;line-height:1.5}
+.tips svg{width:22px;height:22px;fill:none;stroke:var(--brass-hi);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;margin-top:1px}
+.tips b{color:var(--text)}
+.ro-hand{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+.ro-hand summary{cursor:pointer;font-weight:700;color:var(--brass-hi);min-height:28px;display:flex;align-items:center}
+.tile small{font-size:10.5px;color:var(--muted);font-weight:700}
+.chart .ch-target{stroke:var(--debt);stroke-width:1.6;stroke-dasharray:5 4}
+.chart .ch-tl{fill:var(--debt);font:800 9.5px var(--f-ui)}
+.chart .ch-end.short{fill:var(--debt)}
+.ro-actions{position:sticky;bottom:-20px;background:var(--modal-bg);padding:12px 0 4px;margin-bottom:-4px}
+.lvwarn{margin:10px 0 0}
+.modal .tips{padding:0}

@@ -118,6 +118,17 @@ function runSwapFx(f){
   fly(inEl, f.fromStage); fly(outEl, f.fromHand);
 }
 
+/* ---------- can't pay upkeep ---------- */
+function jitter(els){
+  els.forEach(el => { if (!el) return; el.classList.remove('jitter'); void el.offsetWidth; el.classList.add('jitter'); setTimeout(() => el.classList.remove('jitter'), 700); });
+}
+function upkeepShortFx(){
+  jitter([...document.querySelectorAll('#powers .pu'), $('st-coins'), $('upkeepNote')]);
+  const n = $('upkeepNote'); if (n){ n.classList.remove('flash'); void n.offsetWidth; n.classList.add('flash'); }
+  buzz([40, 30, 40]); sfx('debt');
+  announce(`Not enough coins to deal. Upkeep is ${upkeep()} and you have ${S.coins}. Release a power-up or cash out.`);
+}
+
 /* ---------- celebrations ---------- */
 // a coin shower with confetti for a ×10 (or bigger) cash-out
 function celebrate(){
@@ -160,31 +171,62 @@ function shakeApp(){
 
 /* ---------- combo links ---------- */
 // Brackets under the hand join the cards of each combo, with the combo's name and multiplier.
+// When the hand wraps onto several rows, each row gets its own brackets (and room for them);
+// a combo split across rows is drawn on every row it touches, and labelled on its last one.
 const LINK_COLORS = { pair:'#f5d98c', straight:'#6fd3c1', flush:'#ff9aa2' };
+const LINK_STEP = 17;
 function drawComboLinks(){
   const hand = $('hand'); if (!hand) return;
   hand.querySelectorAll('.links').forEach(n => n.remove());
   const visible = S.hand.filter(c => !S.faceDown.includes(c.id));
   const ev = S.phase === 'over' ? { combos:[] } : evaluate(visible, S.powerups);
-  const items = ev.combos.map(cb => ({ cb, els: cb.ids.map(id => hand.querySelector(`[data-cid="${id}"]`)).filter(Boolean) })).filter(x => x.els.length > 1 || x.cb.kind !== 'pair');
-  if (!items.length){ hand.style.paddingBottom = ''; return; }
+  const items = ev.combos.map(cb => ({ cb, els: cb.ids.map(id => hand.querySelector(`[data-cid="${id}"]`)).filter(Boolean) }))
+    .filter(x => x.els.length > 1 || x.cb.kind !== 'pair');
+  hand.style.rowGap = ''; hand.style.paddingBottom = '';
+  if (!items.length) return;
+
+  // group the hand's cards into rows by their vertical position
+  const rowsOf = () => {
+    const tops = [...hand.children].filter(el => el.matches('.card, .emptyslot')).map(el => el.offsetTop);
+    const rows = [...new Set(tops)].sort((a, b) => a - b).reduce((acc, t) => (acc.length && t - acc[acc.length - 1] < 8 ? acc : acc.concat(t)), []);
+    return el => { const t = el.offsetTop; let r = 0; rows.forEach((rt, i) => { if (t >= rt - 4) r = i; }); return r; };
+  };
+  let rowOf = rowsOf();
+  const nRows = Math.max(...[...hand.children].filter(el => el.matches('.card, .emptyslot')).map(rowOf)) + 1;
+  const perRow = Array.from({ length: nRows }, () => []);
+  items.forEach((it, k) => new Set(it.els.map(rowOf)).forEach(r => perRow[r].push(k)));
+  const room = n => (n ? n * LINK_STEP + 12 : 0);
+  // make room under the upper rows, then measure again (the layout moved)
+  const upper = Math.max(0, ...perRow.slice(0, -1).map(a => room(a.length)));
+  if (upper) hand.style.rowGap = `calc(var(--hg) + ${upper}px)`;
+  hand.style.paddingBottom = room(perRow[nRows - 1].length) + 'px';
+  rowOf = rowsOf();
+
   const hr = hand.getBoundingClientRect();
-  const rects = items.map(it => it.els.map(e => e.getBoundingClientRect()));
-  const base = Math.max(...rects.flat().map(r => r.bottom)) - hr.top + 14;   // leave a gap under the cards
-  const gap = 17, H = base + items.length * gap + 6;
   let paths = '', labels = '';
-  items.forEach((it, k) => {
-    const col = LINK_COLORS[it.cb.kind] || '#f5d98c';
-    const xs = rects[k].map(r => r.left - hr.left + r.width / 2);
-    const x1 = Math.min(...xs), x2 = Math.max(...xs), y = base + 6 + k * gap;
-    paths += `<path d="M${x1} ${y}H${x2}" style="stroke:${col}"/>` + xs.map(x => `<path d="M${x} ${base - 2}V${y}" style="stroke:${col}"/><circle cx="${x}" cy="${base - 2}" r="2.2" style="fill:${col}"/>`).join('');
-    labels += `<span class="lk" style="left:${(x1 + x2) / 2}px;top:${y}px;--lc:${col}">${it.cb.label} ×${fmt(it.cb.factor)}</span>`;
+  perRow.forEach((ks, r) => {
+    if (!ks.length) return;
+    const rowCards = [...hand.children].filter(el => el.matches('.card, .emptyslot') && rowOf(el) === r);
+    const base = Math.max(...rowCards.map(el => el.getBoundingClientRect().bottom)) - hr.top + 6;
+    ks.forEach((k, j) => {
+      const it = items[k], col = LINK_COLORS[it.cb.kind] || '#f5d98c';
+      const here = it.els.filter(el => rowOf(el) === r);
+      const xs = here.map(el => { const b = el.getBoundingClientRect(); return b.left - hr.left + b.width / 2; });
+      const x1 = Math.min(...xs), x2 = Math.max(...xs), y = base + 6 + j * LINK_STEP;
+      const lastRow = Math.max(...it.els.map(rowOf)) === r;
+      // a combo that continues on another row gets an open end pointing that way
+      const cont = !lastRow ? `<path d="M${x2} ${y}h7" style="stroke:${col};stroke-dasharray:2 3"/>` : '';
+      const lead = Math.min(...it.els.map(rowOf)) < r ? `<path d="M${x1 - 7} ${y}h7" style="stroke:${col};stroke-dasharray:2 3"/>` : '';
+      paths += `<path d="M${x1} ${y}H${x2}" style="stroke:${col}"/>${cont}${lead}` +
+        xs.map(x => `<path d="M${x} ${base - 2}V${y}" style="stroke:${col}"/><circle cx="${x}" cy="${base - 2}" r="2.2" style="fill:${col}"/>`).join('');
+      if (lastRow) labels += `<span class="lk" style="left:${(x1 + x2) / 2}px;top:${y}px;--lc:${col}">${it.cb.label} ×${fmt(it.cb.factor)}</span>`;
+    });
   });
+  const H = hand.scrollHeight;
   const wrap = document.createElement('div');
   wrap.className = 'links'; wrap.setAttribute('aria-hidden', 'true');
   wrap.innerHTML = `<svg width="${hr.width}" height="${H}" viewBox="0 0 ${hr.width} ${H}">${paths}</svg>${labels}`;
   hand.appendChild(wrap);
-  hand.style.paddingBottom = (items.length * gap + 10) + 'px';
 }
 let linkTimer = null;
 function scheduleComboLinks(){

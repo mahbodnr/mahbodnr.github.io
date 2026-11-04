@@ -46,7 +46,7 @@ function rand(){ // mulberry32, state kept in the save so a reload continues the
 }
 
 function newGame(seed){
-  S = { v:SAVE_VERSION, seed: cleanSeed(seed) || newSeed(), history:[], uid:1, coins:START_COINS, debt:0, bet:0, betInput:1, deck:[], throwaway:[], discard:[], hand:[], faceDown:[],
+  S = { v:SAVE_VERSION, seed: cleanSeed(seed) || newSeed(), history:[], runLedger:{}, uid:1, coins:START_COINS, debt:0, bet:0, betInput:1, deck:[], throwaway:[], discard:[], hand:[], faceDown:[],
         powerups:[], jokerSeen:[], pending:null, swapTen:null, swapCard:null, phase:'bet', result:null, over:null,
         level:1, stats:{ sets:0, cashouts:0, bestPayout:0, peak:START_COINS, shuffles:1, discards:0, biggestWin:0, biggestLoss:0 } };
   S.rng = seedState(S.seed);
@@ -70,6 +70,7 @@ function migrate(s){
   if (s.rng == null) s.rng = seedState(s.seed);
   if (!s.runId) s.runId = s.seed + '-' + Date.now().toString(36);
   s.history = Array.isArray(s.history) ? s.history : [];
+  s.runLedger = s.runLedger || {};
   s.v = SAVE_VERSION;
   return s;
 }

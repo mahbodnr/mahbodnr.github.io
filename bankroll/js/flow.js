@@ -6,7 +6,7 @@ function newSet(){
   S.handLedger = null;
   S.bet = 0; S.debt = 0; S.hand = []; S.powerups = []; S.pending = null; S.jokerSeen = []; S.faceDown = [];
   S.swapTen = null; S.swapCard = null; S.result = null; S.pendingCharged = false; S.swapRefund = false; ui.armed = null;
-  if (S.coins < 1) return gameOver('You have no coins left to bet.');
+  if (S.coins < 1) return gameOver('You have no coins left to bet.', { cause:'broke' });
   if (S.deck.length < 5) return deckOut();
   for (let i = 0; i < 5; i++) S.hand.push(S.deck.pop());
   S.faceDown = [S.hand[3].id, S.hand[4].id];
@@ -20,7 +20,8 @@ function deckOut(){
   S.throwaway.push(...S.deck); S.deck = [];
   const price = levelPrice(lvl());
   if (S.coins >= price){ S.phase = 'reshuffle'; ui.modal = 'reshuffle'; sfx('win'); }
-  else gameOver(`You finished level ${lvl()}, but reaching level ${lvl() + 1} costs ${fmt(price)} coins and you have ${fmt(S.coins)}.`);
+  else gameOver(`You finished level ${lvl()}, but reaching level ${lvl() + 1} costs ${fmt(price)} coins and you have ${fmt(S.coins)}.`,
+    { cause:'level', price, have:S.coins });
 }
 
 function reshuffle(){
@@ -127,6 +128,7 @@ function discardPending(){
   S.pendingCharged = false; S.phase = 'idle'; ui.armed = null;
   sfx('swish');
   settle();
+  if (S.phase === 'idle' && S.deck.length && S.coins < upkeep()) ui.upkeepFx = true;   // discarded, but the next card can't be paid for
 }
 
 // power-ups and the 10-swap belong to the freshly dealt card only
@@ -236,13 +238,16 @@ function cashOut(force){
   S.stats.cashouts++;
   coinChange(payout, 'payout'); coinChange(-S.debt, 'debt');
   res.ledger = Object.assign({}, S.handLedger || { bet:-res.bet, payout, debt:-res.debt });
+  S.runLedger = S.runLedger || {};
+  Object.entries(res.ledger).forEach(([k, v]) => { S.runLedger[k] = (S.runLedger[k] || 0) + v; });   // totals for the run-over tips
   res.net = S.coins - res.start;
   if (res.net > 0) S.stats.biggestWin = Math.max(S.stats.biggestWin || 0, res.net);
   if (res.net < 0) S.stats.biggestLoss = Math.max(S.stats.biggestLoss || 0, -res.net);
   recordHand(res, S.coins);
   if (total < 0){
     S.debt = 0; ui.shake = true; buzz([80, 50, 120]);
-    return gameOver(`Your coins plus the payout (${fmt(before + payout)}) couldn’t cover a debt of ${fmt(res.debt)}.`, { res });
+    return gameOver(`Your coins plus the payout (${fmt(before + payout)}) couldn’t cover a debt of ${fmt(res.debt)}.`,
+      { res, cause:'bust', need:res.debt, have:before + payout });
   }
   S.debt = 0;
   S.stats.bestPayout = Math.max(S.stats.bestPayout, payout);

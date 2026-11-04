@@ -168,7 +168,9 @@ document.addEventListener('click', e => {
     case 'handPick': onHandPick(id); return;
     case 'bestSwap': if (S.phase === 'decide'){ if (t.dataset.mode === 'add') addPending(); else swapWithCenter(id); } break;
     case 'release': { const i = S.powerups.map(x => x.type).lastIndexOf(t.dataset.type); if (i >= 0) releasePower(i); break; }
-    case 'next': drawNext(); break;
+    case 'next':
+      if (S.deck.length && S.coins < upkeep()){ ui.upkeepFx = true; break; }   // can't pay upkeep: explain instead of dealing
+      drawNext(); break;
     case 'cash': cashOut(); break;
     case 'nextSet': ui.modal = null; newSet(); break;
     case 'openReshuffle': ui.modal = 'reshuffle'; break;

@@ -107,6 +107,7 @@ function renderPowers(){
   const counts = {}; S.powerups.forEach(p => counts[p.type] = (counts[p.type] || 0) + 1);
   const prev = ui.pupPrev || {};
   const can = S.phase === 'idle' || S.phase === 'decide';
+  el.classList.toggle('short', S.phase === 'idle' && S.deck.length > 0 && S.coins < upkeep());   // point at the ✕ buttons
   setHTML(el, PU_ORDER.filter(t => counts[t]).map(t => {
     const n = counts[t], P = Object.values(POWER).find(x => x.type === t);
     const eff = t === 'A' ? `+${n} to every multiplier` : t === '2' ? 'Red & black count as suits' : `+${n} hand seat${n > 1 ? 's' : ''}`;
@@ -208,7 +209,8 @@ function renderDock(){
     case 'decide': {
       const c = S.pending, full = S.hand.length >= cap, dealt = offerIsDealt(), P = dealt ? POWER[c.rank] : null;
       const more = canDraw(), up = upkeep();
-      const discCost = [(!S.pendingCharged || (more && full)) ? `+${fmt(S.bet)} debt` : '', more && up ? `upkeep ${up}` : ''].filter(Boolean).join(' · ');
+      const discCost = [(!S.pendingCharged || (more && full)) ? `+${fmt(S.bet)} debt` : '', more && up ? `upkeep ${up}` : '',
+        !more && S.deck.length && S.coins < up ? `can't pay upkeep ${up}` : ''].filter(Boolean).join(' · ');
       const refund = S.pendingCharged ? ` · debt −${fmt(S.bet)}` : '';
       let btns = '';
       btns += `<button class="btn warn grow" data-act="discard">${more ? 'Discard &amp; deal next' : 'Discard'}${discCost ? ` <small>${discCost}</small>` : ''}${kbd('D')}</button>`;
@@ -224,10 +226,13 @@ function renderDock(){
     }
     case 'idle': {
       const up = upkeep(), dl = S.deck.length;
-      const why = !dl ? 'The deck is empty' : S.coins < up ? `Upkeep is ${up}: release a power-up to deal` : '';
+      const short = dl > 0 && S.coins < up;
+      const why = !dl ? 'The deck is empty' : short ? `upkeep ${up}` : '';
       const nextCost = [S.hand.length >= cap ? `+${fmt(S.bet)} debt` : '', up ? `upkeep ${up}` : ''].filter(Boolean).join(' · ');
-      rows = `<div class="row">
-        <button class="btn gold grow" data-act="next" ${!dl || S.coins < up ? 'disabled' : ''}>${dl ? 'Deal next card' : 'Deck empty'}${why ? ` <small>${why}</small>` : dl && nextCost ? ` <small>${nextCost}</small>` : ''}${kbd('N')}</button>
+      // can't pay upkeep: Deal stays pressable and answers with a shake (see input.js) and this note
+      rows = (short ? `<div class="callout" id="upkeepNote" role="alert"><b>Not enough coins to deal.</b>
+          Each new card costs ${fmt(up)} in power-up upkeep and you have ${fmt(S.coins)}. Release a power-up with ✕ to lower it, or cash out.</div>` : '') + `<div class="row">
+        <button class="btn gold grow ${short ? 'blocked' : ''}" data-act="next" ${!dl ? 'disabled' : ''}>${dl ? 'Deal next card' : 'Deck empty'}${why ? ` <small>${why}</small>` : dl && nextCost ? ` <small>${nextCost}</small>` : ''}${kbd('N')}</button>
         ${cashBtn()}</div>`;
       break;
     }
@@ -400,36 +405,110 @@ function resultHTML(){
     </div>
     <p class="rs-sum">${sum}${sum2}</p>
     ${handBody(r)}
-    <div class="actions rs-actions"><span class="rs-deck">${r.deckLeft} cards left in the deck</span><button class="btn gold" data-act="nextSet">Next hand</button></div>`;
+    ${levelWarning(r)}
+    <div class="actions rs-actions"><span class="rs-deck">${r.deckLeft} cards left in level ${lvl()}</span><button class="btn gold" data-act="nextSet">Next hand</button></div>`;
+}
+/* ---------- run over ----------
+   Leads with a picture of what happened (what you had against what you needed), then the run's path
+   through the levels, a coins chart with the target line, tips taken from this run, and stats beside bests. */
+const TIP_ICONS = {
+  target:'<path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7a5 5 0 1 0 5 5"/><path d="M12 12l8-8M16 4h4v4"/>',
+  cards:'<rect x="4" y="6" width="10" height="14" rx="1.6"/><path d="M9 4h9a1.6 1.6 0 0 1 1.6 1.6V17"/>',
+  power:'<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',
+  bet:'<path d="M4 17l5-5 4 4 7-8"/><path d="M15 8h5v5"/>',
+  idea:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/>',
+};
+function runTips(o, L){
+  const h = Array.isArray(S.history) ? S.history : [], RL = S.runLedger || {}, st = S.stats;
+  const tips = [];
+  if (o.cause === 'level'){
+    const lv = h.filter(x => x.level === L);
+    if (lv.length){
+      const start = lv[0].start, per = Math.ceil((o.price - start) / lv.length), got = Math.round((o.have - start) / lv.length);
+      tips.push(['target', `Level ${L} gave you ${lv.length} hand${lv.length === 1 ? '' : 's'}. To reach ${fmt(o.price)} you needed about <b>${signed(per)}</b> coins a hand; you averaged <b>${signed(got)}</b>. Watch the level bar: it shows how many cards are left and how far you are from the price.`]);
+    }
+  }
+  if (o.cause === 'bust') tips.push(['bet', 'Check the cash-out button before pressing it: when it turns red and reads “game over”, cashing out ends the run. You can keep dealing to improve the hand instead.']);
+  if (o.cause === 'broke') tips.push(['bet', 'Bets come out of your coins. Keep some back so one empty hand doesn’t leave you with nothing to bet.']);
+  const debt = -(RL.debt || 0), power = -((RL.upkeep || 0) + (RL['power-up'] || 0));
+  if (debt >= 8) tips.push(['cards', `Discards cost you <b>${fmt(debt)}</b> coins this run. Every card dealt into a full hand costs your bet, so cash out sooner when a hand stops improving.`]);
+  if (power >= 8) tips.push(['power', `Power-ups cost <b>${fmt(power)}</b> in purchases and upkeep. Release them with ✕ once they’ve done their job.`]);
+  if (st.biggestLoss >= Math.max(8, 0.4 * (st.peak || 0))) tips.push(['bet', `Your biggest single loss was <b>${fmt(st.biggestLoss)}</b>. Smaller bets keep one bad hand from sinking the run.`]);
+  tips.push(['idea', 'Multipliers stack: two pairs pay ×4, a flush with a pair pays ×10, and the Ace boost adds +1 to every multiplier.']);
+  return tips.slice(0, 3);
+}
+// On the hand result: warn when the level is about to end and the next price isn't covered.
+function levelWarning(r){
+  const price = levelPrice(lvl()), need = price - S.coins;
+  if (need <= 0 || r.deckLeft > 14) return '';
+  const last = r.deckLeft < 5;
+  return `<div class="callout lvwarn" role="note"><b>${last ? 'This was the last hand of the level.' : `Only ${r.deckLeft} cards left in level ${lvl()}.`}</b>
+    ${last ? `Reaching level ${lvl() + 1} costs ${fmt(price)} and you have ${fmt(S.coins)}, so the run ends here.` : `Reaching level ${lvl() + 1} costs ${fmt(price)}: you need ${fmt(need)} more coins before the deck runs out.`}</div>`;
 }
 function overHTML(){
   const o = S.over || {}, r = o.res, st = S.stats;
+  const cause = o.cause || (r ? 'bust' : 'level');
   const run = o.run || { level:lvl(), biggestWin:st.biggestWin || 0, biggestLoss:st.biggestLoss || 0, peak:st.peak, bestPayout:st.bestPayout, hands:st.cashouts };
-  const rec = prefs.record || run, isNew = o.isNew || {};
-  const tiles = [
-    ['level', 'Level reached', v => fmt(v)],
-    ['hands', 'Hands played', v => fmt(v)],
-    ['biggestWin', 'Biggest win', v => v ? '+' + fmt(v) : '—'],
-    ['biggestLoss', 'Biggest loss', v => v ? '−' + fmt(v) : '—'],
-    ['peak', 'Most coins', v => fmt(v)],
-    ['bestPayout', 'Best payout', v => fmt(v)],
-  ];
-  const grid = (src, mark) => `<div class="tiles">${tiles.map(([k, label, f]) =>
-    `<div class="tile ${mark && isNew[k] ? 'new' : ''} ${k === 'biggestWin' ? 'pos' : k === 'biggestLoss' ? 'neg' : ''}"><span>${label}</span><b>${f(src[k] || 0)}</b>${mark && isNew[k] && !o.firstRun ? '<i>New best</i>' : ''}</div>`).join('')}</div>`;
+  const L = run.level, rec = prefs.record || run, isNew = o.isNew || {};
+
+  // 1. headline: what ended the run, in one line
+  const head = {
+    level:{ title:`Level ${L + 1} costs ${fmt(o.price || levelPrice(L))} coins`, sub:`The deck ran out at the end of level ${L}, and you had ${fmt(o.have ?? S.coins)}.` },
+    bust: { title:'Your debt was bigger than your coins', sub:`You owed ${fmt(o.need ?? (r && r.debt) ?? 0)} and had ${fmt(o.have ?? 0)} after the payout.` },
+    broke:{ title:'You ran out of coins', sub:'There was nothing left to bet with.' },
+  }[cause];
+
+  // 2. gauge: what you had against what you needed
+  let gauge = '';
+  if (cause !== 'broke'){
+    const have = Math.max(0, o.have ?? 0), need = cause === 'level' ? (o.price || levelPrice(L)) : (o.need || 1);
+    const pct = Math.max(2, Math.min(100, have / need * 100));
+    gauge = `<div class="gauge" role="img" aria-label="You had ${fmt(have)} of the ${fmt(need)} you needed; short by ${fmt(need - have)}">
+      <div class="g-labels"><span>You had <b>${coin}${fmt(have)}</b></span><span>${cause === 'level' ? `Level ${L + 1} price` : 'Your debt'} <b>${coin}${fmt(need)}</b></span></div>
+      <div class="g-track"><i style="--to:${pct.toFixed(1)}%"></i><span class="g-lock">${cause === 'level' ? LOCK_SVG : ''}</span></div>
+      <div class="g-short">Short by <b>${fmt(need - have)}</b> coins</div></div>`;
+  }
+
+  // 3. journey through the levels
+  const first = Math.max(1, L - 3), nodes = [];
+  for (let i = first; i <= L; i++) nodes.push(i < L
+    ? `<li class="done"><span class="jn">${i}</span><small>paid ${fmt(levelPrice(i))}</small></li>`
+    : `<li class="end"><span class="jn">${i}</span><small>${cause === 'level' ? 'deck ran out' : 'run ended'}</small></li>`);
+  nodes.push(`<li class="lock"><span class="jn">${LOCK_SVG}</span><small>${L + 1}: ${fmt(levelPrice(L))}</small></li>`);
+  const journey = `<ol class="journey" aria-label="Levels">${first > 1 ? '<li class="more">…</li>' : ''}${nodes.join('')}</ol>`;
+
+  // 4. coins over the run, with the price you had to reach
+  const h = Array.isArray(S.history) ? S.history : [];
+  const fromIdx = Math.max(0, h.findIndex(x => x.level === L));
+  const chart = h.length >= 2 ? `<h3>Your coins this run</h3>${coinChart(h, cause === 'level' ? { v:o.price || levelPrice(L), from:fromIdx, label:`level ${L + 1} price` } : null)}` : '';
+
+  // 5. tips from this run
+  const tips = runTips(Object.assign({ have:S.coins }, o, { cause }), L).map(([ic, t]) =>
+    `<li><svg viewBox="0 0 24 24" aria-hidden="true">${TIP_ICONS[ic]}</svg><span>${t}</span></li>`).join('');
+
+  // 6. stats beside bests
+  const tiles = [['level', 'Level reached', v => fmt(v)], ['hands', 'Hands played', v => fmt(v)], ['biggestWin', 'Biggest win', v => v ? '+' + fmt(v) : '—'],
+    ['peak', 'Most coins', v => fmt(v)], ['bestPayout', 'Best payout', v => fmt(v)], ['biggestLoss', 'Biggest loss', v => v ? '−' + fmt(v) : '—']];
+  const stats = `<div class="tiles">${tiles.map(([k, label, f]) => `<div class="tile ${isNew[k] && !o.firstRun ? 'new' : ''} ${k === 'biggestWin' ? 'pos' : k === 'biggestLoss' ? 'neg' : ''}">
+      <span>${label}</span><b>${f(run[k] || 0)}</b>${isNew[k] && !o.firstRun ? '<i>New best</i>' : `<small>${k === 'biggestLoss' ? 'worst' : 'best'} ${f(rec[k] || 0)}</small>`}</div>`).join('')}</div>`;
   const newCount = Object.keys(isNew).length;
-  return `<div class="rs-head loss">
-      <div class="rs-eyebrow">Run over</div>
-      <div class="lv-medal dim"><span>Level</span><b>${run.level}</b></div>
-      <div class="rs-verdict">${newCount && !o.firstRun ? `${newCount} new personal best${newCount > 1 ? 's' : ''}!` : 'Your run has ended'}</div>
+  const meRow = leaderboardAvailable() && LB.me ? LB.boards.today.findIndex(x => x.id === LB.me) : -1;
+
+  return `<div class="ro-head">
+      <div class="rs-eyebrow">Run over · level ${L}</div>
+      <div class="ro-title">${head.title}</div>
+      <p class="ro-sub">${head.sub}</p>
+      ${gauge}
     </div>
-    <p class="rs-sum">${o.reason || ''}</p>
-    ${r ? `<div class="rs-short"><span>Short by</span><b>${fmt(-r.total)}</b><span>coins</span></div>${handBody(r)}` : ''}
-    <h3>This run</h3>
-    ${grid(run, true)}
-    <h3>Your best · ${fmt(rec.runs || 1)} run${(rec.runs || 1) === 1 ? '' : 's'}</h3>
-    ${grid(rec, false)}
-    <p class="snote">Run seed <code class="seed">${S.seed}</code>. Replay these exact cards from Settings.</p>
-    <div class="actions">${leaderboardAvailable() ? `<button class="btn" data-act="openBoard">Leaderboard</button>` : ''}<button class="btn" data-act="replaySeed">Replay this seed</button><button class="btn gold grow" data-act="restartNow">Play again</button></div>`;
+    ${journey}
+    ${newCount && !o.firstRun ? `<p class="ro-best">${newCount} new personal best${newCount > 1 ? 's' : ''} this run!</p>` : ''}
+    ${meRow >= 0 ? `<p class="ro-best">You’re <b>#${meRow + 1}</b> on today’s leaderboard.</p>` : ''}
+    ${chart}
+    <h3>For your next run</h3><ul class="tips">${tips}</ul>
+    ${r ? `<details class="ro-hand"><summary>See the last hand</summary>${handBody(r)}</details>` : ''}
+    <h3>This run</h3>${stats}
+    <p class="snote">Seed <code class="seed">${S.seed}</code>: “Try the same cards” replays this exact deck order.</p>
+    <div class="actions ro-actions">${leaderboardAvailable() ? `<button class="btn" data-act="openBoard">Leaderboard</button>` : ''}<button class="btn" data-act="replaySeed">Try the same cards</button><button class="btn gold grow" data-act="restartNow">Play again</button></div>`;
 }
 function helpHTML(){
   return `<h2>How to play</h2>
@@ -495,6 +574,7 @@ function render(){
   if (ui.celebrate){ ui.celebrate = false; setTimeout(celebrate, dur(250)); }
   if (ui.shake){ ui.shake = false; shakeApp(); }
   if (ui.say){ announce(ui.say); ui.say = null; }
+  if (ui.upkeepFx){ ui.upkeepFx = false; upkeepShortFx(); }
   scheduleComboLinks();
   tutorialTick();
   store(SAVE_KEY, S);

@@ -116,12 +116,12 @@ async function initLeaderboard(){
   if (host && typeof host.use === 'function') backend = claudeBackend;
   else if (cfg && cfg.supabaseUrl && cfg.supabaseAnonKey) backend = supabaseBackend;
   if (!backend) return;
-  LB.state = 'loading'; LB.backend = backend; LB.kind = backend === claudeBackend ? 'claude' : 'supabase';
+  LB.state = 'loading'; LB.kind = backend === claudeBackend ? 'claude' : 'supabase';
   refreshBoard();
-  try {
-    const ok = await backend.init(backend === claudeBackend ? host : cfg);
-    if (!ok){ LB.state = 'off'; LB.backend = null; }
-  } catch(e){ LB.state = 'off'; LB.backend = null; }
+  let ok = false;
+  try { ok = await backend.init(backend === claudeBackend ? host : cfg); } catch(e){}
+  // posting starts only once the backend (and the player's sign-in) is ready
+  if (ok) LB.backend = backend; else LB.state = 'off';
   refreshBoard();
   if (LB.backend) reportProgress();
 }
@@ -146,8 +146,8 @@ async function flushProgress(){
   if (res === 'rate_limited'){ await new Promise(r => setTimeout(r, 1300)); res = await LB.backend.submit(p); }
   LB.posting = false;
   if (res === 'ok'){ S.lbSent = p; store(SAVE_KEY, S); }
-  else if (res !== 'not_signed_in' && !LB.pending) LB.pending = p;   // keep it for the next try
-  if (LB.pending && res === 'ok') flushProgress();
+  if (LB.pending) return flushProgress();                         // a newer report arrived meanwhile
+  if (res !== 'ok' && res !== 'not_signed_in') LB.pending = p;    // keep it for the next try
 }
 
 /* ---------- view ---------- */
