@@ -80,7 +80,7 @@ function renderLedger(){
   const ok = need <= 0, pct = Math.max(0, Math.min(100, S.coins / price * 100));
   setHTML($('levelbar'), `
     <div class="lv-goal ${ok ? 'ok' : ''}" role="meter" aria-label="Coins toward level ${L + 1}" aria-valuemin="0" aria-valuemax="${price}" aria-valuenow="${Math.max(0, Math.min(S.coins, price))}"
-      title="${ok ? `You can pay for level ${L + 1}, with ${fmt(-need)} to spare` : `${fmt(need)} more coins needed for level ${L + 1}`}">
+      title="${ok ? `You can pay for level ${L + 1}, with ${fmtFit(-need)} to spare` : `${fmtFit(need)} more coins needed for level ${L + 1}`}">
       <span class="lv-tag">Level ${L + 1}</span>
       <div class="lv-track"><i style="width:${pct.toFixed(1)}%"></i>
         <span class="lv-nums">${coin}<b>${fmtFit(Math.max(0, S.coins))}</b><span class="of">/ ${fmtFit(price)}</span></span>
@@ -146,7 +146,7 @@ function renderPowers(){
     return `<div class="pu pu-${t} ${n > (prev[t] || 0) ? 'pop' : ''}" data-type="${t}" role="group" aria-label="${P.name}${n > 1 ? ` ×${n}` : ''}: ${eff}, upkeep ${each * n} per card" title="${P.name}: ${eff}">
       ${puEmblem(t, n)}
       <div class="pu-body"><div class="pu-name">${P.name}${n > 1 ? `<span class="pu-n">×${n}</span>` : ''}</div><div class="pu-eff">${eff}</div></div>
-      <div class="pu-up" title="Upkeep, paid on each new card"><span>${coin}${fmt(each * n)}</span><small>/card</small></div>
+      <div class="pu-up" title="Upkeep, paid on each new card"><span>${coin}${fmtFit(each * n)}</span><small>/card</small></div>
       <button class="x" data-act="release" data-type="${t}" ${can ? '' : 'disabled'} aria-label="Release one ${P.name}" title="Release one (stop paying its upkeep)">✕</button></div>`;
   }).join(''));
   ui.pupPrev = counts;
@@ -155,7 +155,7 @@ function renderPowers(){
 function renderHand(){
   const cap = capacity();
   const on = k => prefs.sort === k ? 'true' : 'false';
-  const note = S.phase === 'trim' ? `<div class="hnote trim">${S.hand.length} cards, ${cap} seats: tap a card to discard it <b>+${fmt(S.bet)} debt</b></div>`
+  const note = S.phase === 'trim' ? `<div class="hnote trim">${S.hand.length} cards, ${cap} seats: tap a card to discard it <b>+${fmtFit(S.bet)} debt</b></div>`
     : S.phase === 'swapPlace' ? `<div class="hnote">Replace which card with ${cardName(S.swapCard)}?</div>` : '';
   setHTML($('handhead'), `${note || `<div class="lbl">Hand <b>${S.hand.length}</b>/<b>${cap}</b></div>`}
     <div class="seg" role="group" aria-label="Sort hand">
@@ -172,13 +172,13 @@ function renderHand(){
     const extra = [hot.has(c.id) ? 'hot' : '', picking ? 'pick' : '', armed ? 'armed' : ''].join(' ');
     let tag = '';
     if (armed){
-      tag = `Tap again · +${fmt(S.bet)} debt`;
+      tag = `Tap again · +${fmtFit(S.bet)} debt`;
     }
     const dragX = S.phase === 'decide' || S.phase === 'swapPlace' ? ' drag' : '';
     let out = cardHTML(c, { extra: extra + dragX, act: picking ? 'handPick' : null, tag });
     if (picking && keyN < 9) out = out.replace(/<\/div>$/, `<kbd class="kc" aria-hidden="true">${++keyN}</kbd></div>`);
     // on hover (mouse), show what swapping this card in would score
-    if (S.phase === 'decide') out = out.replace(/<\/div>$/, `<span class="tag ok peek">→ ×${fmt(swapMult(c.id))}</span></div>`);
+    if (S.phase === 'decide') out = out.replace(/<\/div>$/, `<span class="tag ok peek">→ ×${fmtFit(swapMult(c.id))}</span></div>`);
     return out;
   });
   for (let i = S.hand.length; i < cap; i++) html.push(`<div class="emptyslot"></div>`);
@@ -192,16 +192,13 @@ function renderValue(){
   let tip = '';
   const pv = S.phase === 'decide' ? swapPreview() : null;
   if (pv && pv.best.mult > pv.base)
-    tip = `<button class="chip tip" data-act="bestSwap" data-id="${pv.best.out.id}">Swap ${cardSpan(pv.best.out)}<em>→ ×${fmt(pv.best.mult)}</em></button>`;
+    tip = `<button class="chip tip" data-act="bestSwap" data-id="${pv.best.out.id}">Swap ${cardSpan(pv.best.out)}<em>→ ×${fmtFit(pv.best.mult)}</em></button>`;
   const boosts = [ev.boost ? `<span class="chip">Ace +${ev.boost}</span>` : '', ev.twoTone ? '<span class="chip">Two-tone</span>' : ''].join('');
   const b = S.phase === 'bet' ? Math.max(1, Math.min(S.betInput, S.coins)) : S.bet;
   // fire behind a big multiplier: small flames from ×10, a blaze from ×100
   const heat = ev.mult >= 100 ? 'blaze' : ev.mult >= 10 ? 'fire' : '';
-  const FL = heat === 'blaze'
-    ? [[8,46,62,.0,.9],[22,58,86,.25,1.1],[36,64,104,.1,.8],[50,70,118,.35,1],[64,64,104,.15,.85],[78,58,86,.3,1.05],[92,46,62,.05,.95]]
-    : [[20,40,78,.0,.9],[50,52,104,.25,1.05],[80,40,78,.12,.85]];
-  const flames = heat ? `<span class="flames ${heat}" aria-hidden="true">${FL.map(([x, w, h, d, t]) => `<i style="--x:${x}%;--w:${w}%;--h:${h}%;--d:${d}s;--t:${t}s"></i>`).join('')}${heat === 'blaze' ? [12, 30, 47, 63, 81, 95].map((x, i) => `<b style="--x:${x}%;--d:${(i * .37) % 1.6}s"></b>`).join('') : ''}</span>` : '';
-  setHTML($('value'), `<div class="ro-mult ${ev.mult ? '' : 'zero'} ${heat}" title="Multiplier">${flames}<span class="x">×</span><span id="multBig">${fmt(ev.mult)}</span></div>
+  const flames = heat ? '<canvas class="firecv" aria-hidden="true"></canvas>' : '';
+  setHTML($('value'), `<div class="ro-mult ${ev.mult ? '' : 'zero'} ${heat}" title="Multiplier">${flames}<span class="x">×</span><span id="multBig">${fmtFit(ev.mult)}</span></div>
     ${S.phase === 'bet' ? '' : `<div class="ro-pay"><small>Pays</small><span>${coin}${fmtFit(b * ev.mult)} <em>bet ${fmtFit(b)}</em></span></div>`}
     <div class="ro-extra">${boosts}${tip}</div>`);
   if (ui.lastMult !== undefined && ui.lastMult !== ev.mult) rollMult($('multBig'), ui.lastMult, ev.mult);
@@ -244,7 +241,7 @@ function renderDock(){
     case 'decide': {
       const c = S.pending, full = S.hand.length >= cap, dealt = offerIsDealt(), P = dealt ? POWER[c.rank] : null;
       const more = canDraw(), up = upkeep();
-      const discCost = [(!S.pendingCharged || (more && full)) ? `+${fmt(S.bet)} debt` : '', more && up ? `upkeep ${up}` : '',
+      const discCost = [(!S.pendingCharged || (more && full)) ? `+${fmtFit(S.bet)} debt` : '', more && up ? `upkeep ${up}` : '',
         !more && S.deck.length && S.coins < up ? `upkeep ${up}` : ''].filter(Boolean).join(' · ');
       let btns = '';
       btns += `<button class="btn warn grow" data-act="discard">${ico('discard')}${bl('Discard', discCost)}${kbd('D')}</button>`;
@@ -252,9 +249,9 @@ function renderDock(){
         const dup = P.type === '2' && S.powerups.some(x => x.type === '2');
         btns += dup
           ? `<button class="btn power grow" disabled title="Already active">${ico('power')}${bl(P.name, 'active')}</button>`
-          : `<button class="btn power grow" data-act="power" ${S.coins < powerCost(c.rank) ? 'disabled' : ''} title="${P.short}">${ico('power')}${bl(P.name, `${coin}${fmt(powerCost(c.rank))} · ${P.short}`)}${kbd('P')}</button>`;
+          : `<button class="btn power grow" data-act="power" ${S.coins < powerCost(c.rank) ? 'disabled' : ''} title="${P.short}">${ico('power')}${bl(P.name, `${coin}${fmtFit(powerCost(c.rank))} · ${P.short}`)}${kbd('P')}</button>`;
       }
-      if (dealt && c.rank === 10) btns += `<button class="btn power grow" data-act="swap" ${S.coins < swapCost() || !S.discard.length ? 'disabled' : ''} title="Take a card back from the discard pile">${ico('back')}${bl('Take back', `${coin}${fmt(swapCost())} · from discard`)}${kbd('W')}</button>`;
+      if (dealt && c.rank === 10) btns += `<button class="btn power grow" data-act="swap" ${S.coins < swapCost() || !S.discard.length ? 'disabled' : ''} title="Take a card back from the discard pile">${ico('back')}${bl('Take back', `${coin}${fmtFit(swapCost())} · from discard`)}${kbd('W')}</button>`;
       rows = `<div class="row">${btns}</div><div class="row">${cashBtn()}</div>`;
       break;
     }
@@ -262,9 +259,9 @@ function renderDock(){
       const up = upkeep(), dl = S.deck.length;
       const short = dl > 0 && S.coins < up;
       const why = short ? `upkeep ${up}` : '';
-      const nextCost = [S.hand.length >= cap ? `+${fmt(S.bet)} debt` : '', up ? `upkeep ${up}` : ''].filter(Boolean).join(' · ');
+      const nextCost = [S.hand.length >= cap ? `+${fmtFit(S.bet)} debt` : '', up ? `upkeep ${up}` : ''].filter(Boolean).join(' · ');
       // can't pay upkeep: Deal stays pressable and answers with a shake (see input.js) and this note
-      rows = (short ? `<div class="callout" id="upkeepNote" role="alert"><b>Can’t pay upkeep (${fmt(up)}).</b> Release a power-up (✕) or cash out.</div>` : '') + `<div class="row">
+      rows = (short ? `<div class="callout" id="upkeepNote" role="alert"><b>Can’t pay upkeep (${fmtFit(up)}).</b> Release a power-up (✕) or cash out.</div>` : '') + `<div class="row">
         <button class="btn gold grow ${short ? 'blocked' : ''}" data-act="next" ${!dl ? 'disabled' : ''}>${ico('next')}${bl(dl ? 'Next card' : 'Deck empty', why || (dl ? nextCost : ''))}${kbd('N')}</button>
         ${cashBtn()}</div>`;
       break;
@@ -304,12 +301,12 @@ function renderModal(){
         <div class="rs-eyebrow">Level ${L} complete</div>
         <div class="lv-medal"><span>Level</span><b>${L + 1}</b></div>
       </div>
-      <div class="receipt"><div><span>Coins</span><b>${fmt(S.coins)}</b></div><div><span>Price</span><b class="neg">−${fmt(price)}</b></div><div class="tot"><span>Left</span><b>${fmt(S.coins - price)}</b></div></div>
+      <div class="receipt"><div><span>Coins</span><b>${fmtFit(S.coins)}</b></div><div><span>Price</span><b class="neg">−${fmtFit(price)}</b></div><div class="tot"><span>Left</span><b>${fmtFit(S.coins - price)}</b></div></div>
       <div class="pricebump"><div class="pb-head">Prices <b>×2</b> in level ${L + 1}</div>
         <div class="pb-list">${PU_ORDER.map(t => { const r = PU_RANK[t], now = powerCost(r);
-          return `<div class="pb-item">${puEmblem(t, 1)}<span>${Object.values(POWER).find(x => x.type === t).name}</span><b><s>${fmt(now)}</s>${coin}${fmt(now * 2)}</b></div>`; }).join('')}
-          <div class="pb-item"><span class="pb-ten">10</span><span>Take back</span><b><s>${fmt(swapCost())}</s>${coin}${fmt(swapCost() * 2)}</b></div></div></div>
-      <div class="actions"><button class="btn gold grow" data-act="reshuffle">Pay ${fmt(price)}</button></div>`;
+          return `<div class="pb-item">${puEmblem(t, 1)}<span>${Object.values(POWER).find(x => x.type === t).name}</span><b><s>${fmtFit(now)}</s>${coin}${fmtFit(now * 2)}</b></div>`; }).join('')}
+          <div class="pb-item"><span class="pb-ten">10</span><span>Take back</span><b><s>${fmtFit(swapCost())}</s>${coin}${fmtFit(swapCost() * 2)}</b></div></div></div>
+      <div class="actions"><button class="btn gold grow" data-act="reshuffle">Pay ${fmtFit(price)}</button></div>`;
   }
   else if (m === 'tracker') html = trackerHTML();
   else if (m === 'history') html = historyHTML();
@@ -320,7 +317,7 @@ function renderModal(){
   else if (m === 'release5'){
     const over = S.hand.length - (capacity() - 1);
     html = `<h2>Release Extra seat?</h2>
-      <p class="lead">Your hand has <b>${S.hand.length}</b> cards. With one seat fewer it holds <b>${capacity() - 1}</b>, so you'll have to <b>discard ${over === 1 ? 'one card' : over + ' cards'}</b> — each adds your bet (${coin}${fmt(S.bet)}) to the debt.</p>
+      <p class="lead">Your hand has <b>${S.hand.length}</b> cards. With one seat fewer it holds <b>${capacity() - 1}</b>, so you'll have to <b>discard ${over === 1 ? 'one card' : over + ' cards'}</b> — each adds your bet (${coin}${fmtFit(S.bet)}) to the debt.</p>
       <div class="actions"><button class="btn" data-act="close">Keep it</button><button class="btn warn" data-act="releaseConfirm">Release and discard</button></div>`;
   }
   else if (m === 'restart') html = `<h2>New game?</h2><p class="lead">This run will be lost.</p>
@@ -405,7 +402,7 @@ function handBody(r){
   const hot = new Set(r.ev.combos.flatMap(c => c.ids));
   const cards = r.hand.map(c => cardHTML(c, { track:false, extra: r.ev.combos.length ? (hot.has(c.id) ? 'hit' : 'dim') : '' })).join('');
   const eq = r.ev.combos.length
-    ? r.ev.combos.map(c => `<span class="combo">${c.label}<em>×${fmt(c.factor)}</em></span>`).join('<span class="op">×</span>') + `<span class="op">=</span><span class="tot"><span class="x">×</span>${fmt(r.ev.mult)}</span>`
+    ? r.ev.combos.map(c => `<span class="combo">${c.label}<em>×${fmtFit(c.factor)}</em></span>`).join('<span class="op">×</span>') + `<span class="op">=</span><span class="tot"><span class="x">×</span>${fmtFit(r.ev.mult)}</span>`
     : `<span class="combo">No pair, straight or flush</span><span class="op">=</span><span class="tot zero"><span class="x">×</span>0</span>`;
   const boosts = [r.ev.boost ? `Ace boost +${r.ev.boost}` : '', r.ev.twoTone ? 'Two-tone' : ''].filter(Boolean).join(' · ');
   const lines = [
@@ -435,7 +432,7 @@ function resultHTML(){
       <div class="rs-eyebrow">Hand ${r.handNo || ''}</div>
       <div class="rs-verdict">${verdict}</div>
       <div class="rs-net"><b data-to="${net}">${signed(net)}</b></div>
-      <div class="rs-flow">${coin}${fmt(r.start)} <span class="arr">→</span> ${coin}${fmt(r.total)}</div>
+      <div class="rs-flow">${coin}${fmtFit(r.start)} <span class="arr">→</span> ${coin}${fmtFit(r.total)}</div>
     </div>
     ${handBody(r)}
     ${levelWarning(r)}
@@ -464,9 +461,9 @@ function runTips(o, L){
   if (o.cause === 'bust') tips.push(['bet', 'A red cash-out button ends the run.']);
   if (o.cause === 'broke') tips.push(['bet', 'Keep coins back for the next bet.']);
   const debt = -(RL.debt || 0), power = -((RL.upkeep || 0) + (RL['power-up'] || 0));
-  if (debt >= 8) tips.push(['cards', `Discards cost <b>${fmt(debt)}</b>. Cash out sooner.`]);
-  if (power >= 8) tips.push(['power', `Power-ups cost <b>${fmt(power)}</b>. Release them sooner.`]);
-  if (st.biggestLoss >= Math.max(8, 0.4 * (st.peak || 0))) tips.push(['bet', `Biggest loss <b>${fmt(st.biggestLoss)}</b>. Bet smaller.`]);
+  if (debt >= 8) tips.push(['cards', `Discards cost <b>${fmtFit(debt)}</b>. Cash out sooner.`]);
+  if (power >= 8) tips.push(['power', `Power-ups cost <b>${fmtFit(power)}</b>. Release them sooner.`]);
+  if (st.biggestLoss >= Math.max(8, 0.4 * (st.peak || 0))) tips.push(['bet', `Biggest loss <b>${fmtFit(st.biggestLoss)}</b>. Bet smaller.`]);
   return tips.slice(0, 2);
 }
 // On the hand result: warn when the level is about to end and the next price isn't covered.
@@ -474,7 +471,7 @@ function levelWarning(r){
   const price = levelPrice(lvl()), need = price - S.coins;
   if (need <= 0 || r.deckLeft > 14) return '';
   const last = r.deckLeft < 5;
-  return `<div class="callout lvwarn" role="note"><b>${last ? 'Last hand of the level.' : `${r.deckLeft} cards left.`}</b> Need ${fmt(need)} more for level ${lvl() + 1}.</div>`;
+  return `<div class="callout lvwarn" role="note"><b>${last ? 'Last hand of the level.' : `${r.deckLeft} cards left.`}</b> Need ${fmtFit(need)} more for level ${lvl() + 1}.</div>`;
 }
 function overHTML(){
   const o = S.over || {}, r = o.res, st = S.stats;
@@ -494,18 +491,18 @@ function overHTML(){
   if (cause !== 'broke'){
     const have = Math.max(0, o.have ?? 0), need = cause === 'level' ? (o.price || levelPrice(L)) : (o.need || 1);
     const pct = Math.max(2, Math.min(100, have / need * 100));
-    gauge = `<div class="gauge" role="img" aria-label="You had ${fmt(have)} of the ${fmt(need)} you needed; short by ${fmt(need - have)}">
-      <div class="g-labels"><span>You had <b>${coin}${fmt(have)}</b></span><span>${cause === 'level' ? 'Price' : 'Debt'} <b>${coin}${fmt(need)}</b></span></div>
+    gauge = `<div class="gauge" role="img" aria-label="You had ${fmtFit(have)} of the ${fmtFit(need)} you needed; short by ${fmtFit(need - have)}">
+      <div class="g-labels"><span>You had <b>${coin}${fmtFit(have)}</b></span><span>${cause === 'level' ? 'Price' : 'Debt'} <b>${coin}${fmtFit(need)}</b></span></div>
       <div class="g-track"><i style="--to:${pct.toFixed(1)}%"></i><span class="g-lock">${cause === 'level' ? LOCK_SVG : ''}</span></div>
-      <div class="g-short">Short <b>${fmt(need - have)}</b></div></div>`;
+      <div class="g-short">Short <b>${fmtFit(need - have)}</b></div></div>`;
   }
 
   // 3. journey through the levels
   const first = Math.max(1, L - 3), nodes = [];
   for (let i = first; i <= L; i++) nodes.push(i < L
-    ? `<li class="done"><span class="jn">${i}</span><small>paid ${fmt(levelPrice(i))}</small></li>`
+    ? `<li class="done"><span class="jn">${i}</span><small>paid ${fmtFit(levelPrice(i))}</small></li>`
     : `<li class="end"><span class="jn">${i}</span><small>ended</small></li>`);
-  nodes.push(`<li class="lock"><span class="jn">${LOCK_SVG}</span><small>${L + 1}: ${fmt(levelPrice(L))}</small></li>`);
+  nodes.push(`<li class="lock"><span class="jn">${LOCK_SVG}</span><small>${L + 1}: ${fmtFit(levelPrice(L))}</small></li>`);
   const journey = `<ol class="journey" aria-label="Levels">${first > 1 ? '<li class="more">…</li>' : ''}${nodes.join('')}</ol>`;
 
   // 4. coins over the run, with the price you had to reach
@@ -518,7 +515,7 @@ function overHTML(){
     `<li><svg viewBox="0 0 24 24" aria-hidden="true">${TIP_ICONS[ic]}</svg><span>${t}</span></li>`).join('');
 
   // 6. stats beside bests
-  const tiles = [['level', 'Level', v => fmt(v)], ['hands', 'Hands', v => fmt(v)], ['peak', 'Most coins', v => fmt(v)], ['biggestWin', 'Biggest win', v => v ? '+' + fmt(v) : '—']];
+  const tiles = [['level', 'Level', v => fmtFit(v)], ['hands', 'Hands', v => fmtFit(v)], ['peak', 'Most coins', v => fmtFit(v)], ['biggestWin', 'Biggest win', v => v ? '+' + fmtFit(v) : '—']];
   const stats = `<div class="tiles">${tiles.map(([k, label, f]) => `<div class="tile ${isNew[k] && !o.firstRun ? 'new' : ''} ${k === 'biggestWin' ? 'pos' : k === 'biggestLoss' ? 'neg' : ''}">
       <span>${label}</span><b>${f(run[k] || 0)}</b>${isNew[k] && !o.firstRun ? '<i>New best</i>' : `<small>${k === 'biggestLoss' ? 'worst' : 'best'} ${f(rec[k] || 0)}</small>`}</div>`).join('')}</div>`;
   const newCount = Object.keys(isNew).length;
@@ -563,10 +560,10 @@ function helpHTML(){
     <h3>Special cards</h3>
     <div class="combo-ex specials">
       ${exHand('0R', [0])}<span>Joker<small>+1 seat, free</small></span><b></b>
-      ${exHand('AS', [0])}<span>Ace boost<small>+1 to every multiplier</small></span><b class="cost">${coin}${fmt(powerCost(1))}</b>
-      ${exHand('2H', [0])}<span>Two-tone<small>suits become red and black</small></span><b class="cost">${coin}${fmt(powerCost(2))}</b>
-      ${exHand('5C', [0])}<span>Extra seat<small>+1 seat</small></span><b class="cost">${coin}${fmt(powerCost(5))}</b>
-      ${exHand('10D', [0])}<span>Take back<small>any card from the discard pile</small></span><b class="cost">${coin}${fmt(swapCost())}</b>
+      ${exHand('AS', [0])}<span>Ace boost<small>+1 to every multiplier</small></span><b class="cost">${coin}${fmtFit(powerCost(1))}</b>
+      ${exHand('2H', [0])}<span>Two-tone<small>suits become red and black</small></span><b class="cost">${coin}${fmtFit(powerCost(2))}</b>
+      ${exHand('5C', [0])}<span>Extra seat<small>+1 seat</small></span><b class="cost">${coin}${fmtFit(powerCost(5))}</b>
+      ${exHand('10D', [0])}<span>Take back<small>any card from the discard pile</small></span><b class="cost">${coin}${fmtFit(swapCost())}</b>
     </div>
     <p>Power-ups cost their price again on every new card. ✕ releases one. Their prices, and the 10's fee, <b>double each level</b>${lvl() > 1 ? ` (shown for level ${lvl()})` : ''}.</p>
     <h3>Levels</h3>
@@ -594,9 +591,9 @@ function render(){
   ui.flips.clear();
   if (ui.prev){
     const dd = S.debt - ui.prev.debt;
-    if (dd) floatDelta('st-debt', (dd > 0 ? '+' : '−') + fmt(Math.abs(dd)), dd > 0 ? 'debt-up' : 'debt-down', dd > 0 ? 'hit' : 'bump');
+    if (dd) floatDelta('st-debt', (dd > 0 ? '+' : '−') + fmtFit(Math.abs(dd)), dd > 0 ? 'debt-up' : 'debt-down', dd > 0 ? 'hit' : 'bump');
     (ui.coinEv || []).forEach((e, i) => setTimeout(() =>
-      floatDelta('st-coins', (e.d > 0 ? '+' : '−') + fmt(Math.abs(e.d)) + ' ' + e.label, e.d > 0 ? 'coin-up' : 'coin-down', e.d > 0 ? 'bump' : 'hit'), i * 380));
+      floatDelta('st-coins', (e.d > 0 ? '+' : '−') + fmtFit(Math.abs(e.d)) + ' ' + e.label, e.d > 0 ? 'coin-up' : 'coin-down', e.d > 0 ? 'bump' : 'hit'), i * 380));
   }
   ui.prev = { debt:S.debt, coins:S.coins }; ui.coinEv = [];
   if (ui.flies.length){ const fs = ui.flies; ui.flies = []; requestAnimationFrame(() => fs.forEach((f, i) => setTimeout(() => runFly(f), i * 260))); }
@@ -608,6 +605,7 @@ function render(){
   if (ui.say){ announce(ui.say); ui.say = null; }
   if (ui.upkeepFx){ ui.upkeepFx = false; upkeepShortFx(); }
   scheduleComboLinks();
+  startFire();
   tutorialTick();
   store(SAVE_KEY, S);
 }

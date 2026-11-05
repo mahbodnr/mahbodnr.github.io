@@ -20,7 +20,7 @@ function buzz(pattern){
 }
 
 /* ---------- numbers ---------- */
-const signed = n => (n > 0 ? '+' : n < 0 ? '−' : '') + fmt(Math.abs(n));
+const signed = n => (n > 0 ? '+' : n < 0 ? '−' : '') + fmtFit(Math.abs(n));
 function countUp(el, to){
   if (reduceMotion() || !to) return;
   const t0 = performance.now(), T = dur(750);
@@ -39,8 +39,8 @@ function rollMult(el, from, to){
   box.classList.remove('rolled'); void box.offsetWidth; box.classList.add('rolled');
   const step = t => {
     const k = Math.min(1, (t - t0) / T), e = 1 - Math.pow(1 - k, 3);
-    el.textContent = fmt(Math.round(from + (to - from) * e));
-    if (k < 1 && el.isConnected) requestAnimationFrame(step); else el.textContent = fmt(to);
+    el.textContent = fmtFit(Math.round(from + (to - from) * e));
+    if (k < 1 && el.isConnected) requestAnimationFrame(step); else el.textContent = fmtFit(to);
   };
   requestAnimationFrame(step);
 }
@@ -262,3 +262,71 @@ function scheduleComboLinks(){
   clearTimeout(linkTimer); linkTimer = setTimeout(drawComboLinks, dur(650));
 }
 window.addEventListener('resize', () => { if (S) scheduleComboLinks(); });
+
+/* ---------- fire behind a big multiplier ----------
+   A small particle fire drawn on a canvas behind the number (render.js puts the canvas in .ro-mult for ×10 and up;
+   .blaze from ×100). Particles rise from the base of the digits, cooling from white-yellow through orange to deep
+   red, with a little turbulence; the blaze is taller and denser and throws sparks. The particles live here, so the
+   fire carries on smoothly when the readout is redrawn. It stops as soon as there is no fire to draw. */
+const fire = { parts:[], sparks:[], running:false, sprites:null, last:0 };
+function fireSprites(){
+  // pre-drawn soft discs along the colour ramp: drawing these is much cheaper than a gradient per particle
+  const ramp = [[255,250,225],[255,236,150],[255,205,90],[255,165,50],[255,120,30],[240,80,20],[200,45,15],[140,25,10]];
+  return ramp.map(([r, g, b]) => {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, `rgba(${r},${g},${b},1)`); gr.addColorStop(.35, `rgba(${r},${g},${b},.55)`); gr.addColorStop(1, `rgba(${r},${g},${b},0)`);
+    x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return c;
+  });
+}
+function startFire(){
+  if (fire.running || reduceMotion()) return;
+  if (!document.querySelector('.ro-mult .firecv')) return;
+  fire.running = true; fire.last = performance.now();
+  requestAnimationFrame(fireFrame);
+}
+function fireFrame(now){
+  const cv = document.querySelector('.ro-mult .firecv');
+  if (!cv || reduceMotion()){ fire.running = false; fire.parts = []; fire.sparks = []; return; }
+  if (document.hidden){ fire.last = now; requestAnimationFrame(fireFrame); return; }
+  const dt = Math.min(50, now - fire.last) / 16.7; fire.last = now;
+  const big = cv.parentElement.classList.contains('blaze');
+  const dpr = Math.min(2, window.devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+  if (!W || !H){ requestAnimationFrame(fireFrame); return; }
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)){ cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  const g = cv.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  if (!fire.sprites) fire.sprites = fireSprites();
+  // the canvas is centred on the number; flames start at the digits' baseline and are sized from the font
+  const el = cv.parentElement, tw = el.clientWidth, th = el.clientHeight;
+  const scale = (parseFloat(getComputedStyle(el).fontSize) || 30) / 30;
+  const x0 = (W - tw) / 2 + tw * .06, x1 = (W + tw) / 2 - tw * .04, base = H + parseFloat(getComputedStyle(cv).bottom || 0) - th * .12;
+  const rate = (big ? 5.5 : 2.6) * dt;
+  for (let i = 0; i < rate + (Math.random() < rate % 1 ? 1 : 0); i++) {
+    const x = x0 + Math.random() * (x1 - x0), edge = 1 - Math.abs((x - W / 2) / ((x1 - x0) / 2));   // taller in the middle
+    fire.parts.push({ x, y: base - Math.random() * 4 * scale, vx: (Math.random() - .5) * .35 * scale, vy: -(0.8 + Math.random() * .8 + edge * 1.1) * scale * (big ? 1.35 : 1),
+      r: (big ? 13 : 10) * scale * (0.6 + Math.random() * .6) * (0.7 + edge * .5), life: 0, max: (big ? 34 : 28) + Math.random() * 22, seed: Math.random() * 6.28 });
+  }
+  if (big && Math.random() < .3 * dt) fire.sparks.push({ x: x0 + Math.random() * (x1 - x0), y: base - 10 * scale, vx: (Math.random() - .5) * 1.2 * scale, vy: -(2 + Math.random() * 2) * scale, life: 0, max: 40 + Math.random() * 30 });
+  const t = now / 1000;
+  g.globalCompositeOperation = 'lighter';
+  fire.parts = fire.parts.filter(p => {
+    p.life += dt; const k = p.life / p.max; if (k >= 1) return false;
+    p.vx += Math.sin(t * 3 + p.seed + p.y * .05) * .045 * dt;            // turbulence
+    p.vx += ((W / 2) - p.x) * .0009 * dt;                                // flames lean in toward the middle
+    p.x += p.vx * dt; p.y += p.vy * dt; p.vy *= Math.pow(.99, dt);
+    const r = p.r * (1 - k * .75), si = Math.min(7, Math.floor(k * 8));
+    g.globalAlpha = Math.min(1, (1 - k) * 1.6) * (k < .1 ? k / .1 : 1) * .5;
+    g.drawImage(fire.sprites[si], p.x - r, p.y - r, r * 2, r * 2);
+    return true;
+  });
+  fire.sparks = fire.sparks.filter(s => {
+    s.life += dt; const k = s.life / s.max; if (k >= 1) return false;
+    s.vx += Math.sin(t * 7 + s.max) * .06 * dt; s.x += s.vx * dt; s.y += s.vy * dt;
+    g.globalAlpha = (1 - k) * .95; g.drawImage(fire.sprites[1], s.x - 2.2, s.y - 2.2, 4.4, 4.4);
+    return true;
+  });
+  g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  if (fire.parts.length > 500) fire.parts.splice(0, fire.parts.length - 500);
+  requestAnimationFrame(fireFrame);
+}

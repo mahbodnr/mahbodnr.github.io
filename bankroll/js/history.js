@@ -30,8 +30,8 @@ function coinChart(hist, target){
     const fx = x(Math.max(0, target.from || 0)), ty = y(target.v);
     marks += `<path class="ch-target" d="M${fx.toFixed(1)} ${ty.toFixed(1)}H${W - padR}"/><text class="ch-tl" x="${W - padR}" y="${(ty - 5).toFixed(1)}" text-anchor="end">${target.label}</text>`;
   }
-  const grid = [hi, (hi + lo) / 2, lo].map(v => `<path class="ch-grid" d="M${padL} ${y(v).toFixed(1)}H${W - padR}"/><text class="ch-ax" x="${padL - 6}" y="${(y(v) + 3.5).toFixed(1)}">${fmt(Math.round(v))}</text>`).join('');
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Coins after each hand: from ${fmt(pts[0].v)} to ${fmt(last.v)} over ${hist.length} hands">
+  const grid = [hi, (hi + lo) / 2, lo].map(v => `<path class="ch-grid" d="M${padL} ${y(v).toFixed(1)}H${W - padR}"/><text class="ch-ax" x="${padL - 6}" y="${(y(v) + 3.5).toFixed(1)}">${fmtFit(Math.round(v))}</text>`).join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Coins after each hand: from ${fmtFit(pts[0].v)} to ${fmtFit(last.v)} over ${hist.length} hands">
     <defs><linearGradient id="chFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ch-f1"/><stop offset="1" class="ch-f2"/></linearGradient></defs>
     ${grid}${lo < 0 ? `<path class="ch-zero" d="M${padL} ${y(0).toFixed(1)}H${W - padR}"/>` : ''}${marks}
     <path class="ch-area" d="${area}" fill="url(#chFill)"/><path class="ch-line" d="${line}"/>
@@ -55,7 +55,7 @@ function historyHTML(){
       const net = h.reduce((a, x) => a + x.net, 0), best = h.reduce((a, x) => x.net > a.net ? x : a, h[0]);
       const rows = h.slice(-10).reverse().map(x => `<div class="hrow">
           <span class="hn">#${x.n}</span><span class="hl">L${x.level}</span>
-          <span class="hc">${x.labels.length ? x.labels.join(' + ') : 'No combo'}<small>bet ${fmt(x.bet)} · ×${fmt(x.mult)}</small></span>
+          <span class="hc">${x.labels.length ? x.labels.join(' + ') : 'No combo'}<small>bet ${fmtFit(x.bet)} · ×${fmtFit(x.mult)}</small></span>
           <b class="${x.net > 0 ? 'pos' : x.net < 0 ? 'neg' : ''}">${signed(x.net)}</b></div>`).join('');
       body = `${coinChart(h)}
         <div class="hsum"><div><span>Hands</span><b>${h.length}</b></div><div><span>Net</span><b class="${net >= 0 ? 'pos' : 'neg'}">${signed(net)}</b></div><div><span>Best hand</span><b class="pos">${signed(best.net)}</b></div></div>

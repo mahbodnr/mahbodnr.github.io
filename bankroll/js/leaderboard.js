@@ -306,7 +306,7 @@ function recordHTML(){
       <svg class="rec-crown" viewBox="0 0 64 48" aria-hidden="true"><path d="M6 40 2 10l16 12L32 2l14 20 16-12-4 30z"/><path class="band" d="M7 40h50v6H7z"/><circle cx="32" cy="27" r="4"/></svg>
       <div class="rs-eyebrow">Top hand of the day</div>
       <h2 class="rec-title">Nobody has beaten it today!</h2>
-      <div class="rec-mult"><span class="x">×</span>${fmt(r.mult)}</div>
+      <div class="rec-mult"><span class="x">×</span>${fmtFit(r.mult)}</div>
       <div class="minihand rec-cards">${lbCards(r.cards)}</div>
       ${r.labels.length ? `<p class="rec-labels">${r.labels.map(esc).join(' <span>×</span> ')}</p>` : ''}
       <div class="rec-name"><span>Your name is on top of today’s leaderboard</span><b>${esc(r.name || LB.myName || 'You')}</b></div>
@@ -328,11 +328,11 @@ function handsHTML(per){
   if (!list.length) return `${title}<p class="empty">None yet</p>`;
   const [top, ...rest] = list;
   const best = `<div class="tophand ${top.id === LB.me ? 'me' : ''}">
-      <div class="th-head"><b class="th-mult"><small>×</small>${fmt(top.mult)}</b>${lbName(top)}</div>
+      <div class="th-head"><b class="th-mult"><small>×</small>${fmtFit(top.mult)}</b>${lbName(top)}</div>
       <div class="minihand th-cards">${lbCards(top.cards)}</div>
       <p class="th-labels">${top.labels.map(esc).join(' <span>×</span> ')}</p></div>`;
   const others = rest.length ? `<div class="board hboard" role="table" aria-label="Runner-up hands">${rest.map((r, i) => `<div class="brow ${r.id === LB.me ? 'me' : ''}" role="row">
-      <span>${i + 2}</span>${lbName(r)}<span class="hm">×${fmt(r.mult)}</span><span class="hlab">${r.labels.map(esc).join(' + ')}</span></div>`).join('')}</div>` : '';
+      <span>${i + 2}</span>${lbName(r)}<span class="hm">×${fmtFit(r.mult)}</span><span class="hlab">${r.labels.map(esc).join(' + ')}</span></div>`).join('')}</div>` : '';
   return title + best + others;
 }
 function leaderboardHTML(){
@@ -360,7 +360,7 @@ function leaderboardHTML(){
     : `<div class="board" role="table" aria-label="Leaderboard, ${per === 'today' ? 'today' : 'all time'}">
       <div class="brow bhead" role="row"><span>#</span><span>Player</span><span>Level</span><span>Most coins</span><span>Biggest win</span></div>
       ${rows.map((r, i) => `<div class="brow ${r.id === LB.me ? 'me' : ''}" role="row"><span>${i + 1}</span>${lbName(r)}
-        <span>${fmt(r.level || 1)}</span><span>${fmt(r.peak || 0)}</span><span class="pos">${r.biggestWin ? '+' + fmt(r.biggestWin) : '—'}</span></div>`).join('')}
+        <span>${fmtFit(r.level || 1)}</span><span>${fmtFit(r.peak || 0)}</span><span class="pos">${r.biggestWin ? '+' + fmtFit(r.biggestWin) : '—'}</span></div>`).join('')}
     </div>`;
   return `${toggle}${sub}${list}${handsHTML(per)}${foot}${seeded}`;
 }
