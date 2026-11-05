@@ -107,7 +107,7 @@ function renderPit(){
     <div class="zone"><button class="discardbtn" data-act="viewDiscard" ${S.discard.length ? '' : 'disabled'} aria-label="View discard pile">${dis}</button><div class="lbl">Discard <b>${S.discard.length}</b></div></div>`);
 }
 
-const PU_ORDER = ['A', '2', '5'];
+const PU_ORDER = ['A', '2', '5'], PU_RANK = { A:1, 2:2, 5:5 };
 function puEmblem(type, n){
   if (type === 'A') return `<svg class="pu-emb" viewBox="0 0 40 40" aria-hidden="true"><defs><radialGradient id="puGA" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#fff6d2"/><stop offset=".45" stop-color="#f5d98c"/><stop offset="1" stop-color="#a87d28"/></radialGradient></defs>
     <circle cx="20" cy="20" r="18" fill="url(#puGA)" stroke="#6b4c12" stroke-width="1.2"/><circle cx="20" cy="20" r="14.6" fill="none" stroke="#6b4c12" stroke-opacity=".5" stroke-dasharray="1.6 2.1"/>
@@ -129,12 +129,12 @@ function renderPowers(){
   const can = S.phase === 'idle' || S.phase === 'decide';
   el.classList.toggle('short', S.phase === 'idle' && S.deck.length > 0 && S.coins < upkeep());   // point at the ✕ buttons
   setHTML(el, PU_ORDER.filter(t => counts[t]).map(t => {
-    const n = counts[t], P = Object.values(POWER).find(x => x.type === t);
+    const n = counts[t], P = Object.values(POWER).find(x => x.type === t), each = powerCost(PU_RANK[t]);
     const eff = t === 'A' ? `+${n} multipliers` : t === '2' ? 'Red/black suits' : `+${n} seat${n > 1 ? 's' : ''}`;
-    return `<div class="pu pu-${t} ${n > (prev[t] || 0) ? 'pop' : ''}" data-type="${t}" role="group" aria-label="${P.name}${n > 1 ? ` ×${n}` : ''}: ${eff}, upkeep ${P.cost * n} per card" title="${P.name}: ${eff}">
+    return `<div class="pu pu-${t} ${n > (prev[t] || 0) ? 'pop' : ''}" data-type="${t}" role="group" aria-label="${P.name}${n > 1 ? ` ×${n}` : ''}: ${eff}, upkeep ${each * n} per card" title="${P.name}: ${eff}">
       ${puEmblem(t, n)}
       <div class="pu-body"><div class="pu-name">${P.name}${n > 1 ? `<span class="pu-n">×${n}</span>` : ''}</div><div class="pu-eff">${eff}</div></div>
-      <div class="pu-up" title="Upkeep, paid on each new card"><span>${coin}${P.cost * n}</span><small>/card</small></div>
+      <div class="pu-up" title="Upkeep, paid on each new card"><span>${coin}${fmt(each * n)}</span><small>/card</small></div>
       <button class="x" data-act="release" data-type="${t}" ${can ? '' : 'disabled'} aria-label="Release one ${P.name}" title="Release one (stop paying its upkeep)">✕</button></div>`;
   }).join(''));
   ui.pupPrev = counts;
@@ -143,7 +143,7 @@ function renderPowers(){
 function renderHand(){
   const cap = capacity();
   const on = k => prefs.sort === k ? 'true' : 'false';
-  const note = S.phase === 'trim' ? `<div class="hnote">Discard one · +${fmt(S.bet)} debt</div>`
+  const note = S.phase === 'trim' ? `<div class="hnote trim">${S.hand.length} cards, ${cap} seats: tap a card to discard it <b>+${fmt(S.bet)} debt</b></div>`
     : S.phase === 'swapPlace' ? `<div class="hnote">Replace which card with ${cardName(S.swapCard)}?</div>` : '';
   setHTML($('handhead'), `${note || `<div class="lbl">Hand <b>${S.hand.length}</b>/<b>${cap}</b></div>`}
     <div class="seg" role="group" aria-label="Sort hand">
@@ -155,7 +155,7 @@ function renderHand(){
   const picking = S.phase === 'decide' || S.phase === 'trim' || S.phase === 'swapPlace';
   let keyN = 0;
   const html = sortedHand().map(c => {
-    if (S.faceDown.includes(c.id)) return cardHTML(c, { back:true, extra: ui.seen.has(c.id) ? '' : 'enter' }).replace('class="card', `data-fd="${c.id}" class="card`);
+    if (S.faceDown.includes(c.id) && !ui.throwing) return cardHTML(c, { back:true, extra: ui.seen.has(c.id) ? '' : 'enter' }).replace('class="card', `data-fd="${c.id}" class="card`);
     const armed = ui.armed === c.id;
     const extra = [hot.has(c.id) ? 'hot' : '', picking ? 'pick' : '', armed ? 'armed' : ''].join(' ');
     let tag = '';
@@ -218,8 +218,8 @@ function renderDock(){
           <input type="range" id="betRange" min="0" max="${RN}" step="1" value="${betToPos(b)}" aria-label="Bet slider" ${S.coins <= 1 ? 'disabled' : ''}>
         </div></div>
         <div class="row">
-          <button class="btn grow" data-act="throw">${ico('throw')}${bl('Throw away')}${kbd('T')}</button>
-          <button class="btn gold grow" data-act="deal">${ico('deal')}${bl('Deal')}${kbd('D')}</button>
+          <button class="btn grow" data-act="throw" ${ui.throwing ? 'disabled' : ''}>${ico('throw')}${bl('Throw away')}${kbd('T')}</button>
+          <button class="btn gold grow" data-act="deal" ${ui.throwing ? 'disabled' : ''}>${ico('deal')}${bl('Deal')}${kbd('D')}</button>
         </div>`;
       break;
     }
@@ -234,7 +234,7 @@ function renderDock(){
         const dup = P.type === '2' && S.powerups.some(x => x.type === '2');
         btns += dup
           ? `<button class="btn power grow" disabled title="Already active">${ico('power')}${bl(P.name, 'active')}</button>`
-          : `<button class="btn power grow" data-act="power" ${S.coins < P.cost ? 'disabled' : ''} title="${P.short}">${ico('power')}${bl(P.name, `${coin}${P.cost} · ${P.short}`)}${kbd('P')}</button>`;
+          : `<button class="btn power grow" data-act="power" ${S.coins < powerCost(c.rank) ? 'disabled' : ''} title="${P.short}">${ico('power')}${bl(P.name, `${coin}${fmt(powerCost(c.rank))} · ${P.short}`)}${kbd('P')}</button>`;
       }
       if (dealt && c.rank === 10) btns += `<button class="btn power grow" data-act="swap" ${S.coins < SWAP_COST || !S.discard.length ? 'disabled' : ''} title="Take a card back from the discard pile">${ico('back')}${bl('Take back', `${coin}${SWAP_COST} · from discard`)}${kbd('W')}</button>`;
       rows = `<div class="row">${btns}</div><div class="row">${cashBtn()}</div>`;
@@ -287,12 +287,22 @@ function renderModal(){
         <div class="lv-medal"><span>Level</span><b>${L + 1}</b></div>
       </div>
       <div class="receipt"><div><span>Coins</span><b>${fmt(S.coins)}</b></div><div><span>Price</span><b class="neg">−${fmt(price)}</b></div><div class="tot"><span>Left</span><b>${fmt(S.coins - price)}</b></div></div>
+      <div class="pricebump"><div class="pb-head">Power-ups cost <b>×2</b> in level ${L + 1}</div>
+        <div class="pb-list">${PU_ORDER.map(t => { const r = PU_RANK[t], now = powerCost(r);
+          return `<div class="pb-item">${puEmblem(t, 1)}<span>${Object.values(POWER).find(x => x.type === t).name}</span><b><s>${fmt(now)}</s>${coin}${fmt(now * 2)}</b></div>`; }).join('')}</div></div>
       <div class="actions"><button class="btn gold grow" data-act="reshuffle">Pay ${fmt(price)}</button></div>`;
   }
   else if (m === 'tracker') html = trackerHTML();
   else if (m === 'history') html = historyHTML();
   else if (m === 'settings') html = settingsHTML();
   else if (m === 'bust') html = bustHTML();
+  else if (m === 'record') html = recordHTML();
+  else if (m === 'release5'){
+    const over = S.hand.length - (capacity() - 1);
+    html = `<h2>Release Extra seat?</h2>
+      <p class="lead">Your hand has <b>${S.hand.length}</b> cards. With one seat fewer it holds <b>${capacity() - 1}</b>, so you'll have to <b>discard ${over === 1 ? 'one card' : over + ' cards'}</b> — each adds your bet (${coin}${fmt(S.bet)}) to the debt.</p>
+      <div class="actions"><button class="btn" data-act="close">Keep it</button><button class="btn warn" data-act="releaseConfirm">Release and discard</button></div>`;
+  }
   else if (m === 'restart') html = `<h2>New game?</h2><p class="lead">This run will be lost.</p>
     <div class="actions"><button class="btn" data-act="close">Cancel</button><button class="btn gold" data-act="restartNow">New game</button></div>`;
   else if (m === 'pick' || m === 'view'){
@@ -307,8 +317,19 @@ function renderModal(){
   const closable = CLOSABLE.includes(m);
   const opened = ui.modalShown !== m;
   if (opened && !ui.modalShown) ui.lastFocus = document.activeElement;
+  // the same dialog, new content (a tab, the leaderboard loading): update its body only, so it doesn't replay its
+  // opening animation (the "flash"), and keep the scroll position and the focused button
+  const body = !opened && root.querySelector(`.modal.m-${m} .mbody`);
+  if (body){
+    if (body.__html === html) return;
+    const top = body.scrollTop, f = document.activeElement, key = f && body.contains(f) && f.dataset ? [f.dataset.act, f.dataset.v] : null;
+    body.innerHTML = html; body.__html = html; body.scrollTop = top;
+    if (key && key[0]){ const again = body.querySelector(`[data-act="${key[0]}"]${key[1] ? `[data-v="${key[1]}"]` : ''}`); if (again) again.focus({ preventScroll:true }); }
+    return;
+  }
   const x = closable ? `<button class="mclose" data-act="close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>` : '';
   setHTML(root, `<div class="scrim" data-act="${closable ? 'scrimClose' : ''}"><div class="modal ${m === 'result' || m === 'over' || m === 'bust' || m === 'reshuffle' ? 'm-result' : ''} m-${m}" role="dialog" aria-modal="true" aria-label="${MODAL_NAMES[m] || 'Dialog'}">${x}<div class="mbody">${html}</div></div></div>`);
+  const nb = root.querySelector('.mbody'); if (nb) nb.__html = html;
   ui.modalShown = m;
   if (opened){
     const f = root.querySelector('.modal .btn.gold, .modal .mbody [data-act]:not([data-act="scrimClose"]), .modal button, .modal input');
@@ -316,8 +337,10 @@ function renderModal(){
   }
 }
 
-const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart'];
-const MODAL_NAMES = { help:'How to play', result:'Hand result', over:'Run over', reshuffle:'Level complete', tracker:'Card tracker', view:'Discard pile', pick:'Take a card back', history:'History', settings:'Settings', bust:'Cash-out warning', restart:'New game' };
+const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart', 'release5', 'record'];
+const MODAL_NAMES = { help:'How to play', result:'Hand result', over:'Run over', reshuffle:'Level complete', tracker:'Card tracker', view:'Discard pile', pick:'Take a card back', history:'History', settings:'Settings', bust:'Cash-out warning', restart:'New game', release5:'Release Extra seat', record:'Top hand of the day' };
+// closing a dialog that opened over another (the top-hand celebration) returns to the one underneath
+function closeModal(){ ui.modal = ui.modal === 'record' && ui.modalBack ? ui.modalBack : null; ui.modalBack = null; }
 function bustHTML(){
   const ev = evaluate(S.hand, S.powerups), payout = S.bet * ev.mult, after = S.coins + payout - S.debt;
   return `<div class="rs-head loss"><div class="rs-verdict">This ends your run</div>
@@ -519,12 +542,12 @@ function helpHTML(){
     <h3>Special cards</h3>
     <div class="combo-ex specials">
       ${exHand('0R', [0])}<span>Joker<small>+1 seat, free</small></span><b></b>
-      ${exHand('AS', [0])}<span>Ace boost<small>+1 to every multiplier</small></span><b class="cost">${coin}1</b>
-      ${exHand('2H', [0])}<span>Two-tone<small>suits become red and black</small></span><b class="cost">${coin}2</b>
-      ${exHand('5C', [0])}<span>Extra seat<small>+1 seat</small></span><b class="cost">${coin}5</b>
+      ${exHand('AS', [0])}<span>Ace boost<small>+1 to every multiplier</small></span><b class="cost">${coin}${fmt(powerCost(1))}</b>
+      ${exHand('2H', [0])}<span>Two-tone<small>suits become red and black</small></span><b class="cost">${coin}${fmt(powerCost(2))}</b>
+      ${exHand('5C', [0])}<span>Extra seat<small>+1 seat</small></span><b class="cost">${coin}${fmt(powerCost(5))}</b>
       ${exHand('10D', [0])}<span>Take back<small>any card from the discard pile</small></span><b class="cost">${coin}10</b>
     </div>
-    <p>Power-ups cost their price again on every new card. ✕ releases one.</p>
+    <p>Power-ups cost their price again on every new card. ✕ releases one. Their prices <b>double each level</b>${lvl() > 1 ? ` (shown for level ${lvl()})` : ''}.</p>
     <h3>Levels</h3>
     <p>When the deck runs out, pay the level price (100, 200, 500, 1,000 …) to reshuffle, or the run ends.</p>
     <div class="actions"><button class="btn" data-act="replayTutorial">Tutorial</button><button class="btn gold" data-act="close">Got it</button></div>`;

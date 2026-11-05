@@ -145,14 +145,15 @@ function swapWithCenter(id){
 }
 function usePower(){
   if (S.phase !== 'decide' || !offerIsDealt()) return;
-  const p = POWER[S.pending.rank]; if (!p || S.coins < p.cost) return;
+  const p = POWER[S.pending.rank]; if (!p) return;
+  const cost = powerCost(S.pending.rank); if (S.coins < cost) return;
   if (p.type === '2' && S.powerups.some(x => x.type === '2')) return; // Two-tone doesn't stack
   if (S.pendingCharged){ S.debt -= S.bet; S.stats.discards--; } S.pendingCharged = false;
-  coinChange(-p.cost, 'power-up'); S.powerups.push({ card:S.pending, type:p.type }); S.pending = null; S.phase = 'idle'; ui.armed = null;
+  coinChange(-cost, 'power-up'); S.powerups.push({ card:S.pending, type:p.type }); S.pending = null; S.phase = 'idle'; ui.armed = null;
   sfx('power');
   ui.say = `${p.name} active.`;
   // buying a power-up deals the next card right away; the purchase price covers that power-up's upkeep for this card
-  drawNext(p.cost, p.type === '5' ? 'five' : null);
+  drawNext(cost, p.type === '5' ? 'five' : null);
 }
 
 function startSwap(){

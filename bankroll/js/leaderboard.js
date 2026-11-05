@@ -70,6 +70,7 @@ const claudeBackend = {
       LB.boards[per] = list.filter(x => x.s.level > 0).map(({ r, s }) => ({ ...person(r.id), level:s.level || 1, peak:s.peak || 0, biggestWin:s.biggestWin || 0 })).sort(byScore).slice(0, 50);
       LB.hands[per] = list.filter(x => x.s.hand && x.s.hand.mult > 0).map(({ r, s }) => ({ ...person(r.id), ...s.hand })).sort(byMult).slice(0, 10);
     }
+    checkTopHand();
     refreshBoard();
   },
   async submit(p){
@@ -140,6 +141,7 @@ const supabaseBackend = {
       LB.boards.today = (today.data || []).map(row); LB.boards.all = (all.data || []).map(row);
       LB.hands.today = (todayHands.data || []).map(hand); LB.hands.all = (allHands.data || []).map(hand);
       LB.state = 'ready';
+      checkTopHand();
     } catch(e){ LB.state = LB.boards.all.length ? 'ready' : 'error'; }
     refreshBoard();
   },
@@ -278,6 +280,40 @@ async function flushProgress(){
   }
   if (LB.pending) return flushProgress();                         // a newer report arrived meanwhile
   if (res === 'error') LB.pending = p;                            // a network hiccup: keep it for the next try
+}
+
+/* ---------- top hand of the day ---------- */
+// When the board comes back with this player on top of today's hands, for the hand they just made in this run,
+// a celebration opens (once per day and multiplier). It shows over whatever dialog is open and returns to it.
+function checkTopHand(){
+  const top = LB.hands.today[0];
+  if (!top || !LB.me || top.id !== LB.me || !S || !S.bestHand || top.mult !== S.bestHand.mult) return;
+  const key = todayUTC() + ':' + top.mult;
+  if (prefs.topHandSeen === key) return;
+  prefs.topHandSeen = key; store(PREF_KEY, prefs);
+  ui.record = { mult:top.mult, cards:top.cards, labels:top.labels || [], name:top.name, second:LB.hands.today[1] || null };
+  if (ui.modal !== 'record') ui.modalBack = ui.modal;
+  ui.modal = 'record';
+  render();
+  sfx('win'); buzz([30, 40, 30, 40, 60]);
+  setTimeout(celebrate, dur(200));
+  announce(`Top hand of the day: times ${top.mult}. Your name is first on today's leaderboard.`);
+}
+function recordHTML(){
+  const r = ui.record; if (!r) return '';
+  const beat = r.second ? `<p class="rec-beat">Ahead of ${esc(r.second.name || 'Player')} (×${fmt(r.second.mult)})</p>` : '';
+  return `<div class="rec">
+      <div class="rec-rays" aria-hidden="true"></div>
+      <svg class="rec-crown" viewBox="0 0 64 48" aria-hidden="true"><path d="M6 40 2 10l16 12L32 2l14 20 16-12-4 30z"/><path class="band" d="M7 40h50v6H7z"/><circle cx="32" cy="27" r="4"/></svg>
+      <div class="rs-eyebrow">Top hand of the day</div>
+      <h2 class="rec-title">Nobody has beaten it today!</h2>
+      <div class="rec-mult"><span class="x">×</span>${fmt(r.mult)}</div>
+      <div class="minihand rec-cards">${lbCards(r.cards)}</div>
+      ${r.labels.length ? `<p class="rec-labels">${r.labels.map(esc).join(' <span>×</span> ')}</p>` : ''}
+      <div class="rec-name"><span>Your name is on top of today’s leaderboard</span><b>${esc(r.name || LB.myName || 'You')}</b></div>
+      ${beat}
+    </div>
+    <div class="actions"><button class="btn" data-act="recordBoard">See leaderboard</button><button class="btn gold" data-act="close">Keep playing</button></div>`;
 }
 
 /* ---------- view ---------- */

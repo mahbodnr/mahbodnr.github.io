@@ -11,6 +11,19 @@ function onHandPick(id){
   render();
 }
 
+/* Throw away: first turn the two face-down cards over so the player sees what they're giving up, then toss the
+   whole hand. Only the display waits; the move itself is the same single 'throw'. */
+function throwWithReveal(){
+  if (ui.throwing || S.phase !== 'bet') return;
+  if (!S.faceDown.length){ act('throw'); render(); return; }
+  ui.throwing = true;
+  S.faceDown.forEach(id => ui.flips.add(id));
+  render();
+  const show = reduceMotion() ? 900 : dur(1150);
+  setTimeout(() => { if (ui.throwing) document.querySelectorAll('#hand .card').forEach(el => el.classList.add('toss')); }, Math.max(0, show - dur(320)));
+  setTimeout(() => { ui.throwing = false; act('throw'); render(); }, show);
+}
+
 /* drag a hand card onto the table to swap it with the center card */
 const drag = { id:null, x0:0, y0:0, on:false, ghost:null, src:null };
 document.addEventListener('pointerdown', e => {
@@ -126,11 +139,12 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]');
   if (!t){ if (ui.armed){ ui.armed = null; render(); } return; }
   const action = t.dataset.act;
-  if (action === 'scrimClose'){ if (e.target === t){ ui.modal = null; render(); } return; }
+  if (action === 'scrimClose'){ if (e.target === t){ closeModal(); render(); } return; }
   const id = t.dataset.id;
   switch (action){
     case 'help': ui.modal = 'help'; break;
-    case 'close': ui.modal = null; break;
+    case 'close': closeModal(); break;
+    case 'recordBoard': ui.modalBack = null; ui.histTab = 'board'; ui.modal = 'history'; LB.period = 'today'; if (LB.backend && LB.backend.refresh) LB.backend.refresh(); break;
     case 'restart':
       if (S.phase === 'over' || (S.phase === 'bet' && S.stats.sets === 0)) { beginRun(); break; }
       ui.modal = 'restart'; break;
@@ -153,7 +167,7 @@ document.addEventListener('click', e => {
     case 'sortRank': prefs.sort = 'rank'; store(PREF_KEY, prefs); break;
     case 'sortSuit': prefs.sort = 'suit'; store(PREF_KEY, prefs); break;
     case 'betKey': if (e.detail === 0) stepBet(+t.dataset.hold); return; // keyboard; pointer presses are handled on pointerdown
-    case 'throw': act('throw'); break;
+    case 'throw': throwWithReveal(); return;
     case 'deal': act('deal', S.betInput); break;
     case 'discard': act('discard'); break;
     case 'power': act('power'); break;
@@ -165,7 +179,13 @@ document.addEventListener('click', e => {
     case 'viewDiscard': if (S.phase === 'swapPick') ui.modal = 'pick'; else ui.modal = 'view'; break;
     case 'handPick': onHandPick(id); return;
     case 'bestSwap': act('swap', id); break;
-    case 'release': { const i = S.powerups.map(x => x.type).lastIndexOf(t.dataset.type); if (i >= 0) act('release', i); break; }
+    case 'release': {
+      const i = S.powerups.map(x => x.type).lastIndexOf(t.dataset.type); if (i < 0) break;
+      // giving up a seat with a full hand means a card has to go: say so first
+      if (t.dataset.type === '5' && S.hand.length > capacity() - 1){ ui.releaseIdx = i; ui.modal = 'release5'; break; }
+      act('release', i); break;
+    }
+    case 'releaseConfirm': ui.modal = null; if (Number.isInteger(ui.releaseIdx)) act('release', ui.releaseIdx); ui.releaseIdx = null; break;
     case 'next':
       if (S.deck.length && S.coins < upkeep()){ ui.upkeepFx = true; break; }   // can't pay upkeep: explain instead of dealing
       act('next'); break;
@@ -180,7 +200,7 @@ document.addEventListener('click', e => {
 
 document.addEventListener('keydown', e => {
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.card[data-act]')){ e.preventDefault(); e.target.click(); return; }
-  if (e.key === 'Escape' && CLOSABLE.includes(ui.modal)){ ui.modal = null; render(); return; }
+  if (e.key === 'Escape' && CLOSABLE.includes(ui.modal)){ closeModal(); render(); return; }
   // keep keyboard focus inside an open dialog
   if (e.key === 'Tab' && ui.modal){
     const f = [...document.querySelectorAll('#modalRoot .modal button:not([disabled]), #modalRoot .modal input:not([disabled]), #modalRoot .modal [tabindex="0"]')];

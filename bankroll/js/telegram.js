@@ -22,7 +22,7 @@ const BankrollTG = (() => {
     try { if (at('7.7')) app.disableVerticalSwipes(); } catch(e){}       // dragging cards shouldn't close the app
     try { if (at('6.1')){ app.setHeaderColor('#082621'); app.setBackgroundColor('#082621'); } } catch(e){}
     try { if (at('7.10')) app.setBottomBarColor('#082621'); } catch(e){}
-    try { if (at('6.1')) app.BackButton.onClick(() => { if (ui.modal && CLOSABLE.includes(ui.modal)){ ui.modal = null; render(); } }); } catch(e){}
+    try { if (at('6.1')) app.BackButton.onClick(() => { if (ui.modal && CLOSABLE.includes(ui.modal)){ closeModal(); render(); } }); } catch(e){}
   };
   tg.ready = new Promise(resolve => {
     const s = document.createElement('script');

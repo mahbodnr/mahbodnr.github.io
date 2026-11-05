@@ -643,10 +643,10 @@ code.seed{white-space:nowrap;font:800 14px/1 ui-monospace,SFMono-Regular,Menlo,C
 /* ================= card packs ================= */
 /* Every pack sets its colours and fonts as variables on the card itself, so packs can sit side by side (Settings preview). */
 .card{--idx-font:var(--f-card); --gold:#c9a24a; --line:#2a2420; --skin:#f3dcc2; --cbg:#fbf3df; --cameo:#efe3f5; --leaf:#5b7b4a;
-  --court-border:transparent; --c4d:#1f5fbf; --c4c:#1b7a3c}
+  --court-border:transparent; --c4d:#e0620f; --c4c:#1b7a3c}
 html.four-color .card.s-D{color:var(--c4d)}
 html.four-color .card.s-C{color:var(--c4c)}
-html.four-color .tc.s-D{color:#1f5fbf}
+html.four-color .tc.s-D{color:#e0620f}
 html.four-color .tc.s-C{color:#1b7a3c}
 .card .court{position:absolute;inset:14% 23%;overflow:hidden;border-radius:calc(var(--cw)*.025);background:var(--cbg)}
 .card .court::after{content:"";position:absolute;inset:0;border:1px solid var(--court-border);border-radius:inherit;pointer-events:none}
@@ -660,23 +660,23 @@ html.four-color .tc.s-C{color:#1b7a3c}
 .card:not(.pk-classic) .pips.ace::after{display:none}
 .card.pk-classic{--court-border:#1d1f26}
 .card.pk-deco{--paper:#f7f1e1; --paper-hi:#fffaf0; --paper-lo:#ece0c2; --ink:#1b2238; --suit-red:#b8323c; --gold:#b8913a; --line:#1b2238;
-  --skin:#f1d9bd; --cbg:#f3ead2; --idx-font:'Limelight',Georgia,serif; --court-border:#b8913a; --c4d:#2457b8; --c4c:#1d7342}
+  --skin:#f1d9bd; --cbg:#f3ead2; --idx-font:'Limelight',Georgia,serif; --court-border:#b8913a; --c4d:#d8600f; --c4c:#1d7342}
 .card.pk-deco:not(.back)::before{border:1px solid var(--gold);box-shadow:inset 0 0 0 2px var(--paper), inset 0 0 0 2.6px var(--gold)}
 .card.pk-deco .pp{stroke:var(--gold);stroke-width:5px;paint-order:stroke fill;stroke-linejoin:round}
 .card.pk-deco .ix b{letter-spacing:-.02em}
 .card.pk-deco .ace-orn{width:calc(var(--cw)*.8);height:calc(var(--cw)*.8)}
 .card.pk-botanical{--paper:#f6f3e7; --paper-hi:#fcfaf1; --paper-lo:#e9e3cc; --ink:#22392c; --suit-red:#b04a37; --gold:#a58a3c; --line:#22392c;
-  --leaf:#5f7f4b; --cbg:transparent; --idx-font:'Cormorant Garamond',Georgia,serif; --c4d:#2c5ea8; --c4c:#2f7d45}
+  --leaf:#5f7f4b; --cbg:transparent; --idx-font:'Cormorant Garamond',Georgia,serif; --c4d:#cf6418; --c4c:#2f7d45}
 .card.pk-botanical:not(.back)::before{border-color:rgba(95,127,75,.45)}
 .card.pk-botanical .ix b{font-style:italic;font-weight:700;letter-spacing:0;font-size:calc(var(--cw)*.27)}
 .card.pk-onyx{--paper:#1b1b20; --paper-hi:#2a2a31; --paper-lo:#131317; --ink:#e6c26a; --suit-red:#ff7b6b; --gold:#c9a24a; --line:#e6c26a;
-  --idx-font:'Josefin Sans',var(--f-ui); --c4d:#79aefc; --c4c:#6fd39a}
+  --idx-font:'Josefin Sans',var(--f-ui); --c4d:#ff9a4d; --c4c:#6fd39a}
 .card.pk-onyx:not(.back){box-shadow:0 1px 0 #000, 0 2px 3px rgba(0,0,0,.3), 0 8px 18px -6px rgba(0,0,0,.6), inset 0 0 0 1px rgba(201,162,74,.4)}
 .card.pk-onyx:not(.back)::before{border-color:rgba(201,162,74,.28)}
 .card.pk-onyx .ix b{font-weight:600;letter-spacing:-.04em}
 .card.pk-onyx .court{background:transparent}
 .card.pk-royal{--paper:#fbf6ef; --paper-hi:#fffdf9; --paper-lo:#efe4d6; --ink:#2a1840; --suit-red:#a8233a; --gold:#b88a2e; --line:#2a1840;
-  --cameo:#efe4f3; --cbg:#f6eef5; --idx-font:'Cinzel Decorative',Georgia,serif; --court-border:#b88a2e; --c4d:#2d55a8; --c4c:#246b3c}
+  --cameo:#efe4f3; --cbg:#f6eef5; --idx-font:'Cinzel Decorative',Georgia,serif; --court-border:#b88a2e; --c4d:#d65a12; --c4c:#246b3c}
 .card.pk-royal:not(.back)::before{border:1px solid rgba(42,24,64,.5);box-shadow:inset 0 0 0 2px var(--paper), inset 0 0 0 3px var(--gold)}
 .card.pk-royal .pp{stroke:var(--gold);stroke-width:4px;paint-order:stroke fill;stroke-linejoin:round}
 .card.pk-royal .ix b{font-size:calc(var(--cw)*.2);letter-spacing:-.08em}
@@ -817,3 +817,47 @@ html.speed-fast *, html.speed-fast *::before, html.speed-fast *::after{animation
 }
 .chip .r{color:#ff8a92}
 html.light .chip .r{color:var(--suit-red)}
+
+/* level complete: power-up prices double */
+.pricebump{margin:4px 0 6px;padding:10px 12px;border-radius:14px;border:1px solid var(--brass-dim);background:rgba(217,171,76,.08)}
+.pb-head{font-size:13px;font-weight:700;color:var(--muted);text-align:center;margin-bottom:8px}
+.pb-head b{color:var(--brass-hi);font-size:15px}
+.pb-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.pb-item{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;min-width:0}
+.pb-item .pu-emb{width:30px;height:30px}
+.pb-item span{font-size:11.5px;font-weight:700;white-space:nowrap}
+.pb-item b{display:inline-flex;align-items:center;gap:4px;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+.pb-item s{color:var(--muted);font-weight:600;font-size:12px;margin-right:2px}
+.hnote.trim{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 10px;border-radius:10px;font-size:12px;color:var(--text);
+  background:rgba(255,143,122,.16);border:1px solid rgba(255,143,122,.55);animation:calloutFlash 1.2s ease 2}
+.hnote.trim b{color:var(--debt)}
+
+/* top hand of the day */
+.m-record{border-color:var(--brass-hi);box-shadow:0 0 0 1px rgba(245,217,140,.4), 0 0 60px rgba(245,217,140,.25), 0 30px 80px rgba(0,0,0,.6)}
+.rec{position:relative;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:6px;overflow:hidden}
+.rec > *{position:relative}
+.rec-rays{position:absolute !important;left:50%;top:70px;width:520px;height:520px;margin:-260px 0 0 -260px;pointer-events:none;opacity:.5;
+  background:repeating-conic-gradient(from 0deg, rgba(245,217,140,.16) 0 8deg, transparent 8deg 20deg);
+  -webkit-mask:radial-gradient(closest-side, #000 30%, transparent 75%);mask:radial-gradient(closest-side, #000 30%, transparent 75%);animation:recSpin 30s linear infinite}
+@keyframes recSpin{to{transform:rotate(360deg)}}
+.rec-crown{width:64px;height:48px;fill:var(--gold-1);filter:drop-shadow(0 4px 10px rgba(245,217,140,.5));animation:medalIn .7s cubic-bezier(.2,.9,.3,1.3) backwards}
+.rec-crown .band{fill:var(--gold-2)} .rec-crown circle{fill:#c3303b}
+.modal .rec-title{margin:2px 0 0;text-align:center;font-size:clamp(22px,6vw,28px)}
+.rec-mult{font-family:var(--f-card);font-weight:800;font-size:clamp(64px,20vw,96px);line-height:1;color:var(--brass-hi);text-shadow:0 0 34px rgba(245,217,140,.45);
+  display:inline-flex;align-items:baseline;animation:recPop .8s cubic-bezier(.2,.9,.3,1.4) backwards .15s}
+.rec-mult .x{font-family:var(--f-ui);font-size:.42em;font-weight:700;margin-right:2px}
+@keyframes recPop{from{transform:scale(.3);opacity:0}}
+.rec-cards{--cw:clamp(44px,12vw,58px)}
+.rec-labels{margin:0;font-size:13.5px;font-weight:700;color:var(--muted)}
+.rec-labels span{color:var(--brass)}
+.rec-name{margin-top:10px;display:flex;flex-direction:column;gap:2px;padding:10px 16px;border-radius:14px;border:1px solid var(--brass);background:rgba(217,171,76,.12)}
+.rec-name span{font-size:12.5px;color:var(--muted);font-weight:700}
+.rec-name b{font-size:19px;color:var(--brass-hi)}
+.modal .rec-beat{margin:6px 0 0;font-size:12.5px;color:var(--muted)}
+.m-record .actions{justify-content:center}
+/* Throw away: the revealed hand is tossed off the table */
+.hand .card.toss{animation:toss .32s cubic-bezier(.5,0,.8,.4) forwards !important}
+.hand .card.toss:nth-child(2){animation-delay:.03s !important}.hand .card.toss:nth-child(3){animation-delay:.06s !important}
+.hand .card.toss:nth-child(4){animation-delay:.09s !important}.hand .card.toss:nth-child(5){animation-delay:.12s !important}
+@keyframes toss{to{transform:translate(60px,-90px) rotate(18deg) scale(.85);opacity:0}}
+html.speed-off .hand .card.toss{opacity:0}
