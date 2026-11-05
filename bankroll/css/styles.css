@@ -80,7 +80,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible,summary:focus-
 .stat{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.035),transparent 60%),var(--panel);border:1px solid var(--line);
   border-radius:12px;padding:6px 10px 7px;min-width:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
 .stat .k{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
-.stat .v{font-size:clamp(17px,4.8vw,22px);font-weight:800;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:5px;line-height:1.2;white-space:nowrap;letter-spacing:-.01em}
+.stat .v{--fs:clamp(17px,4.8vw,22px);font-size:calc(var(--fs) * var(--k, 1));min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:800;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:5px;line-height:1.2;white-space:nowrap;letter-spacing:-.01em}
 .stat.debt{border-color:rgba(255,143,122,.6);background:linear-gradient(180deg,rgba(150,32,20,.62),rgba(70,10,6,.7))}
 .stat.debt .k{color:#ffb4a6}
 .stat.debt .v{color:var(--debt);font-weight:900;text-shadow:0 0 14px rgba(255,110,85,.35)}
@@ -775,7 +775,7 @@ html.speed-fast *, html.speed-fast *::before, html.speed-fast *::after{animation
   .iconbtn svg{width:18px;height:18px}
   .stat{padding:8px 12px 9px}
   .stat .k{font-size:10.5px}
-  .stat .v{font-size:24px}
+  .stat .v{--fs:24px}
   .levelbar{min-height:28px}
   .lv-track{height:26px} .lv-nums{font-size:13.5px} .lv-tag{font-size:11px} .lv-need{font-size:13px} .lv-need b{font-size:15px}
   .rail{padding:9px;border-radius:32px}
@@ -822,7 +822,7 @@ html.speed-fast *, html.speed-fast *::before, html.speed-fast *::after{animation
   .felt::before{inset:5px;border-radius:15px}
   .brand{font-size:21px}
   .iconbtn{width:32px;height:32px} .iconbtn svg{width:15px;height:15px}
-  .stat{padding:4px 8px 5px} .stat .v{font-size:17px}
+  .stat{padding:4px 8px 5px} .stat .v{--fs:17px}
   .side{grid-area:side;display:flex;flex-direction:column;min-height:0}
   .side .dock{position:static;margin:0;padding:0;background:none;gap:6px}
   .side .dock-in{gap:6px}
@@ -899,3 +899,29 @@ html.speed-off .hand .card.toss{opacity:0}
 
 html.light .lv-tag, html.light .lv-need{color:var(--muted)}
 html.light .lv-nums{color:#1f2a26;text-shadow:0 1px 0 rgba(255,255,255,.6)}
+
+/* long numbers shrink to fit their box (core.js fitCls); a million and up is written short (1.25M) */
+.stat .v.f1{--k:.9} .stat .v.f2{--k:.8} .stat .v.f3{--k:.7} .stat .v.f4{--k:.62}
+.stat .v .num{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.lv-nums{overflow:hidden}
+
+/* once a dialog is open, updating it doesn't replay the entry animations of what's inside (no flash) */
+.modal.settled .mbody *:not(.rec-rays){animation:none !important}
+
+/* fire behind the multiplier: ×10 and up (fire), ×100 and up (blaze) */
+.ro-mult{position:relative;isolation:isolate}
+.ro-mult.fire,.ro-mult.blaze{color:#fff1c2}
+.ro-mult.fire{text-shadow:0 0 14px rgba(255,170,60,.75), 0 2px 0 rgba(120,40,0,.5)}
+.ro-mult.blaze{color:#fff7d6;text-shadow:0 0 10px rgba(255,220,120,.9), 0 0 26px rgba(255,120,30,.85), 0 2px 0 rgba(120,30,0,.6);animation:blazePulse 1.4s ease-in-out infinite}
+@keyframes blazePulse{50%{transform:scale(1.05)}}
+.flames{position:absolute;z-index:-1;left:-12%;right:-12%;bottom:-6%;height:150%;pointer-events:none;filter:blur(.6px)}
+.flames i{position:absolute;bottom:0;left:var(--x);width:var(--w);height:var(--h);transform:translateX(-50%);transform-origin:50% 100%;
+  border-radius:50% 50% 44% 44% / 78% 78% 26% 26%;
+  background:radial-gradient(ellipse 50% 60% at 50% 82%, #fff6c4 0 14%, #ffd04a 30%, #ff8a1f 52%, rgba(232,56,20,.55) 66%, transparent 76%);
+  animation:flick var(--t) ease-in-out var(--d) infinite alternate;opacity:.95}
+@keyframes flick{0%{transform:translateX(-50%) scale(1,.82) skewX(-4deg)}45%{transform:translateX(-50%) scale(.9,1.12) skewX(5deg)}100%{transform:translateX(-50%) scale(1.06,.92) skewX(-2deg)}}
+.flames.blaze{left:-20%;right:-20%;height:185%;filter:blur(.8px) drop-shadow(0 0 10px rgba(255,110,30,.7))}
+.flames.blaze::after{content:"";position:absolute;left:10%;right:10%;bottom:-4%;height:30%;border-radius:50%;background:radial-gradient(closest-side, rgba(255,140,40,.7), transparent);animation:flick 1s ease-in-out infinite alternate}
+.flames b{position:absolute;bottom:20%;left:var(--x);width:3px;height:3px;border-radius:50%;background:#ffd36b;box-shadow:0 0 6px #ff9a2e;opacity:0;animation:ember 1.6s linear var(--d) infinite}
+@keyframes ember{0%{opacity:0;transform:translate(0,0)}15%{opacity:1}100%{opacity:0;transform:translate(6px,-260%)}}
+html.light .ro-mult.fire,html.light .ro-mult.blaze{color:#7a2a00;text-shadow:0 0 12px rgba(255,170,60,.8)}

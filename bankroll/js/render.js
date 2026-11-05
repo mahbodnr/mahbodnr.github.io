@@ -71,10 +71,10 @@ function sortedHand(){
 function renderLedger(){
   const ev = S.phase === 'bet' ? null : evaluate(S.hand, S.powerups);
   setHTML($('ledger'), `
-    <div class="stat" id="st-coins"><div class="k">Coins</div><div class="v">${coin}<span class="num">${fmt(S.coins)}</span></div></div>
-    <div class="stat"><div class="k">Bet</div><div class="v">${S.bet ? fmt(S.bet) : '—'}</div></div>
-    <div class="stat debt ${S.debt ? '' : 'zero'}" id="st-debt"><div class="k">Debt</div><div class="v">${fmt(S.debt)}</div></div>
-    <div class="stat" id="st-level"><div class="k">Level</div><div class="v">${lvl()}</div></div>`);
+    <div class="stat" id="st-coins" title="${fmt(S.coins)} coins"><div class="k">Coins</div><div class="v ${fitCls(fmtFit(S.coins) + 'c')}">${coin}<span class="num">${fmtFit(S.coins)}</span></div></div>
+    <div class="stat" title="Bet ${fmt(S.bet)}"><div class="k">Bet</div><div class="v ${fitCls(fmtFit(S.bet))}">${S.bet ? fmtFit(S.bet) : '—'}</div></div>
+    <div class="stat debt ${S.debt ? '' : 'zero'}" id="st-debt" title="Debt ${fmt(S.debt)}"><div class="k">Debt</div><div class="v ${fitCls(fmtFit(S.debt))}">${fmtFit(S.debt)}</div></div>
+    <div class="stat" id="st-level"><div class="k">Level</div><div class="v ${fitCls(lvl())}">${lvl()}</div></div>`);
   const L = lvl(), price = levelPrice(L), used = 54 - S.deck.length, need = price - S.coins;
   // progress toward the next level's price: coins against the price, and what's still missing (or to spare)
   const ok = need <= 0, pct = Math.max(0, Math.min(100, S.coins / price * 100));
@@ -83,10 +83,10 @@ function renderLedger(){
       title="${ok ? `You can pay for level ${L + 1}, with ${fmt(-need)} to spare` : `${fmt(need)} more coins needed for level ${L + 1}`}">
       <span class="lv-tag">Level ${L + 1}</span>
       <div class="lv-track"><i style="width:${pct.toFixed(1)}%"></i>
-        <span class="lv-nums">${coin}<b>${fmt(Math.max(0, S.coins))}</b><span class="of">/ ${fmt(price)}</span></span>
+        <span class="lv-nums">${coin}<b>${fmtFit(Math.max(0, S.coins))}</b><span class="of">/ ${fmtFit(price)}</span></span>
         <svg class="lv-flag" viewBox="0 0 24 24" aria-hidden="true">${ok ? '<path d="M5 12.5l4.2 4.2L19 7"/>' : '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>'}</svg>
       </div>
-      <span class="lv-need">${ok ? `<b>+${fmt(-need)}</b> spare` : `<b>${fmt(need)}</b> to go`}</span>
+      <span class="lv-need">${ok ? `<b>+${fmtFit(-need)}</b> spare` : `<b>${fmtFit(need)}</b> to go`}</span>
     </div>`);
   if (ui.levelUp){ ui.levelUp = false; floatDelta('st-level', 'LEVEL UP', 'coin-up', 'bump'); }
 }
@@ -195,8 +195,14 @@ function renderValue(){
     tip = `<button class="chip tip" data-act="bestSwap" data-id="${pv.best.out.id}">Swap ${cardSpan(pv.best.out)}<em>→ ×${fmt(pv.best.mult)}</em></button>`;
   const boosts = [ev.boost ? `<span class="chip">Ace +${ev.boost}</span>` : '', ev.twoTone ? '<span class="chip">Two-tone</span>' : ''].join('');
   const b = S.phase === 'bet' ? Math.max(1, Math.min(S.betInput, S.coins)) : S.bet;
-  setHTML($('value'), `<div class="ro-mult ${ev.mult ? '' : 'zero'}" title="Multiplier"><span class="x">×</span><span id="multBig">${fmt(ev.mult)}</span></div>
-    ${S.phase === 'bet' ? '' : `<div class="ro-pay"><small>Pays</small><span>${coin}${fmt(b * ev.mult)} <em>bet ${fmt(b)}</em></span></div>`}
+  // fire behind a big multiplier: small flames from ×10, a blaze from ×100
+  const heat = ev.mult >= 100 ? 'blaze' : ev.mult >= 10 ? 'fire' : '';
+  const FL = heat === 'blaze'
+    ? [[8,46,62,.0,.9],[22,58,86,.25,1.1],[36,64,104,.1,.8],[50,70,118,.35,1],[64,64,104,.15,.85],[78,58,86,.3,1.05],[92,46,62,.05,.95]]
+    : [[20,40,78,.0,.9],[50,52,104,.25,1.05],[80,40,78,.12,.85]];
+  const flames = heat ? `<span class="flames ${heat}" aria-hidden="true">${FL.map(([x, w, h, d, t]) => `<i style="--x:${x}%;--w:${w}%;--h:${h}%;--d:${d}s;--t:${t}s"></i>`).join('')}${heat === 'blaze' ? [12, 30, 47, 63, 81, 95].map((x, i) => `<b style="--x:${x}%;--d:${(i * .37) % 1.6}s"></b>`).join('') : ''}</span>` : '';
+  setHTML($('value'), `<div class="ro-mult ${ev.mult ? '' : 'zero'} ${heat}" title="Multiplier">${flames}<span class="x">×</span><span id="multBig">${fmt(ev.mult)}</span></div>
+    ${S.phase === 'bet' ? '' : `<div class="ro-pay"><small>Pays</small><span>${coin}${fmtFit(b * ev.mult)} <em>bet ${fmtFit(b)}</em></span></div>`}
     <div class="ro-extra">${boosts}${tip}</div>`);
   if (ui.lastMult !== undefined && ui.lastMult !== ev.mult) rollMult($('multBig'), ui.lastMult, ev.mult);
   ui.lastMult = ev.mult;
@@ -211,7 +217,7 @@ function renderDock(){
     const after = S.coins + S.bet * ev.mult - S.debt;
     const start = S.handStart ?? (S.coins + S.bet);
     const net = after - start;
-    const what = after < 0 ? 'ends run' : net > 0 ? `win ${fmt(net)}` : net < 0 ? `lose ${fmt(-net)}` : 'break even';
+    const what = after < 0 ? 'ends run' : net > 0 ? `win ${fmtFit(net)}` : net < 0 ? `lose ${fmtFit(-net)}` : 'break even';
     return `<button class="btn cash grow ${after < 0 ? 'bust' : net < 0 ? 'down' : ''}" data-act="cash">${ico('cash')}<span class="bl"><b>Cash out</b><small class="cashnet">${what}</small></span>${kbd('C')}</button>`;
   };
   switch (S.phase){
@@ -223,7 +229,7 @@ function renderDock(){
         <div class="betbox">
           <div class="bet-row">
             <button class="step" data-act="betKey" data-hold="-1" aria-label="Lower bet" ${b <= 1 ? 'disabled' : ''}>−</button>
-            <label class="val">${coin}<input id="betNum" type="number" inputmode="numeric" min="1" max="${S.coins}" step="1" value="${b}" aria-label="Bet amount"></label>
+            <label class="val">${coin}<input id="betNum" style="width:${Math.max(5, String(b).length + 1)}ch" type="number" inputmode="numeric" min="1" max="${S.coins}" step="1" value="${b}" aria-label="Bet amount"></label>
             <button class="step" data-act="betKey" data-hold="1" aria-label="Raise bet" ${b >= S.coins ? 'disabled' : ''}>+</button>
             <div class="presets" role="group" aria-label="Quick bets">${pre.map(([k, l, v]) => `<button class="q" data-act="preset" data-v="${v}" aria-pressed="${b === v}" title="Bet ${fmt(v)}" aria-label="${k === 'last' ? 'Last bet' : k === 'max' ? 'All in' : l + ' of your coins'}: ${fmt(v)}">${l}</button>`).join('')}</div>
           </div>
@@ -337,6 +343,7 @@ function renderModal(){
   if (body){
     if (body.__html === html) return;
     const top = body.scrollTop, f = document.activeElement, key = f && body.contains(f) && f.dataset ? [f.dataset.act, f.dataset.v] : null;
+    body.closest('.modal').classList.add('settled');          // entry animations inside the window don't replay
     body.innerHTML = html; body.__html = html; body.scrollTop = top;
     if (key && key[0]){ const again = body.querySelector(`[data-act="${key[0]}"]${key[1] ? `[data-v="${key[1]}"]` : ''}`); if (again) again.focus({ preventScroll:true }); }
     return;
@@ -574,7 +581,7 @@ function render(){
   renderLedger(); renderPit(); renderPowers(); renderHand(); renderValue(); renderDock(); renderModal();
   const top = document.querySelector('#pit .discardbtn .card:last-child');
   if (top && was.has(top.dataset.cid) && (!topBefore || topBefore.cid !== top.dataset.cid)) runDiscardFx(top, was.get(top.dataset.cid));
-  if (ui.prev && ui.prev.coins !== S.coins) rollNumber(document.querySelector('#st-coins .num'), ui.prev.coins, S.coins);
+  if (ui.prev && ui.prev.coins !== S.coins && Math.max(ui.prev.coins, S.coins) < 1e6) rollNumber(document.querySelector('#st-coins .num'), ui.prev.coins, S.coins);
   const netEl = document.querySelector('#modalRoot .rs-net b[data-to]');
   if (netEl && ui.counted !== S.stats.cashouts){ ui.counted = S.stats.cashouts; countUp(netEl, +netEl.dataset.to); }
   // remember which cards are already on screen so only new ones animate

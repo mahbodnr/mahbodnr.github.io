@@ -301,7 +301,6 @@ function checkTopHand(){
 }
 function recordHTML(){
   const r = ui.record; if (!r) return '';
-  const beat = r.second ? `<p class="rec-beat">Ahead of ${esc(r.second.name || 'Player')} (×${fmt(r.second.mult)})</p>` : '';
   return `<div class="rec">
       <div class="rec-rays" aria-hidden="true"></div>
       <svg class="rec-crown" viewBox="0 0 64 48" aria-hidden="true"><path d="M6 40 2 10l16 12L32 2l14 20 16-12-4 30z"/><path class="band" d="M7 40h50v6H7z"/><circle cx="32" cy="27" r="4"/></svg>
@@ -311,7 +310,6 @@ function recordHTML(){
       <div class="minihand rec-cards">${lbCards(r.cards)}</div>
       ${r.labels.length ? `<p class="rec-labels">${r.labels.map(esc).join(' <span>×</span> ')}</p>` : ''}
       <div class="rec-name"><span>Your name is on top of today’s leaderboard</span><b>${esc(r.name || LB.myName || 'You')}</b></div>
-      ${beat}
     </div>
     <div class="actions"><button class="btn" data-act="recordBoard">See leaderboard</button><button class="btn gold" data-act="close">Keep playing</button></div>`;
 }

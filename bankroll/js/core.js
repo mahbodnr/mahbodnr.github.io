@@ -89,6 +89,13 @@ const powerCost = rank => POWER[rank].cost * Math.pow(2, lvl() - 1);
 const swapCost = () => SWAP_COST * Math.pow(2, lvl() - 1);   // the 10 take-back fee doubles too
 const upkeep = () => S.powerups.reduce((a, p) => a + powerCost(p.card.rank), 0);
 const fmt = n => Math.round(n).toLocaleString('en-US');
+// for tight boxes: a million and up becomes 1.25M / 12.5M / 125M (and B beyond), so any amount fits
+const fmtFit = n => { const a = Math.abs(n), s = n < 0 ? '−' : '';
+  if (a < 1e6) return fmt(n);
+  const [d, u] = a >= 1e9 ? [1e9, 'B'] : [1e6, 'M'], v = a / d;
+  return s + (v >= 100 ? Math.floor(v) : v >= 10 ? Math.floor(v * 10) / 10 : Math.floor(v * 100) / 100) + u; };
+// a font-size step for a number box by how long its text is
+const fitCls = str => { const n = String(str).length; return n >= 8 ? 'f4' : n >= 7 ? 'f3' : n >= 6 ? 'f2' : n >= 5 ? 'f1' : ''; };
 function cardName(c){
   if (isJoker(c)) return (c.suit === 'JR' ? 'Red' : 'Black') + ' Joker';
   return RANKS[c.rank] + SUITS[c.suit].sym;
