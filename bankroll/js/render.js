@@ -111,7 +111,10 @@ function renderPit(){
     ? top.map((c, i) => cardHTML(c, { track:false }).replace('class="card', `style="left:${i * 14}px;transform:rotate(${(i - 1) * 6}deg)" class="card`)).join('')
     : `<div class="emptyslot" style="position:absolute;left:14px;top:0"></div>`;
   setHTML($('pit'), `
-    <div class="zone"><button class="deckbtn" data-act="viewOut" aria-label="Deck: open the card tracker" title="Card tracker">${deck}</button><div class="lbl dk"><span>Deck <b>${dl}</b></span><span class="dk-bar" aria-hidden="true"><i style="width:${(dl / 54 * 100).toFixed(1)}%"></i></span></div></div>
+    <div class="zone"><button class="deckbtn" data-act="viewOut" aria-label="Deck: open the card tracker" title="Card tracker">${deck}</button><div class="lbl dk"><span>Deck <b>${dl}</b></span><span class="dk-bar ${dl <= 10 ? 'low' : ''}" aria-hidden="true">${Array.from({ length: 9 }, (_, i) => {
+      // nine cells of six cards each: full at the start, emptying from the right as cards are dealt
+      const f = Math.max(0, Math.min(1, (dl - i * 6) / 6));
+      return `<i style="--f:${f.toFixed(2)}"></i>`; }).join('')}</span></div></div>
     <div class="zone spot"><div class="stage">${spot}</div><div class="lbl">${spotLbl}</div></div>
     <div class="zone"><button class="discardbtn" data-act="viewDiscard" ${S.discard.length ? '' : 'disabled'} aria-label="View discard pile">${dis}</button><div class="lbl">Discard <b>${S.discard.length}</b></div></div>`);
 }

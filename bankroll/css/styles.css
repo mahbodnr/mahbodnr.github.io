@@ -122,8 +122,10 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible,summary:focus-
 .lv-goal.ok .lv-flag{stroke:#0f3a20}
 .lv-goal.ok .lv-need b{color:var(--gain)}
 /* deck: a thin bar under the count shows how much of the deck is left */
-.dk-bar{display:block;width:calc(var(--cw) * .62);height:3px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
-.dk-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,rgba(245,217,140,.45),rgba(245,217,140,.8));transition:width .4s ease}
+.dk-bar{display:flex;gap:2px;width:calc(var(--cw) * .74);height:5px}
+.dk-bar i{flex:1;border-radius:1.5px;background:linear-gradient(90deg,var(--c) calc(var(--f) * 100%), rgba(255,255,255,.07) 0);
+  --c:rgba(245,217,140,.75);box-shadow:inset 0 0 0 1px rgba(245,217,140,.14);transition:background .3s}
+.dk-bar.low i{--c:var(--debt);box-shadow:inset 0 0 0 1px rgba(255,143,122,.25)}
 .zone .lbl.dk{display:flex;flex-direction:column;align-items:center;gap:4px}
 
 /* ================= table ================= */
