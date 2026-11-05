@@ -50,7 +50,7 @@ function historyHTML(){
   if (tab === 'board') body = leaderboardHTML();
   else {
     const h = Array.isArray(S.history) ? S.history : [];
-    if (!h.length) body = `<p class="empty">No hands yet. After each cash-out, the hand and your coins appear here.</p>`;
+    if (!h.length) body = `<p class="empty">No hands yet.</p>`;
     else {
       const net = h.reduce((a, x) => a + x.net, 0), best = h.reduce((a, x) => x.net > a.net ? x : a, h[0]);
       const rows = h.slice(-10).reverse().map(x => `<div class="hrow">
@@ -58,7 +58,7 @@ function historyHTML(){
           <span class="hc">${x.labels.length ? x.labels.join(' + ') : 'No combo'}<small>bet ${fmt(x.bet)} · ×${fmt(x.mult)}</small></span>
           <b class="${x.net > 0 ? 'pos' : x.net < 0 ? 'neg' : ''}">${signed(x.net)}</b></div>`).join('');
       body = `${coinChart(h)}
-        <div class="hsum"><div><span>Hands</span><b>${h.length}</b></div><div><span>Net this run</span><b class="${net >= 0 ? 'pos' : 'neg'}">${signed(net)}</b></div><div><span>Best hand</span><b class="pos">${signed(best.net)}</b></div></div>
+        <div class="hsum"><div><span>Hands</span><b>${h.length}</b></div><div><span>Net</span><b class="${net >= 0 ? 'pos' : 'neg'}">${signed(net)}</b></div><div><span>Best hand</span><b class="pos">${signed(best.net)}</b></div></div>
         <h3>Last ${Math.min(10, h.length)} hands</h3><div class="hlist">${rows}</div>`;
     }
   }

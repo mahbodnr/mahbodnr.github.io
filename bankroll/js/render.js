@@ -54,13 +54,13 @@ function renderLedger(){
   const ev = S.phase === 'bet' ? null : evaluate(S.hand, S.powerups);
   setHTML($('ledger'), `
     <div class="stat" id="st-coins"><div class="k">Coins</div><div class="v">${coin}${fmt(S.coins)}</div></div>
-    <div class="stat"><div class="k">Bet</div><div class="v">${S.bet ? fmt(S.bet) : '<small>not placed</small>'}</div></div>
+    <div class="stat"><div class="k">Bet</div><div class="v">${S.bet ? fmt(S.bet) : '—'}</div></div>
     <div class="stat debt ${S.debt ? '' : 'zero'}" id="st-debt"><div class="k">Debt</div><div class="v">${fmt(S.debt)}</div></div>
     <div class="stat" id="st-level"><div class="k">Level</div><div class="v">${lvl()}</div></div>`);
   const L = lvl(), price = levelPrice(L), used = 54 - S.deck.length, need = price - S.coins;
   setHTML($('levelbar'), `
-    <div class="lb-track" title="${S.deck.length} cards left in level ${L}"><i style="width:${(used / 54 * 100).toFixed(1)}%"></i><span>${S.deck.length} cards left in level ${L}</span></div>
-    <div class="lb-price">To reach level ${L + 1}: <b>${coin}${fmt(price)}</b> <em class="${need > 0 ? 'short' : 'ok'}">${need > 0 ? `need ${fmt(need)} more` : '✓ covered'}</em></div>`);
+    <div class="lb-track" title="${S.deck.length} cards left in level ${L}"><i style="width:${(used / 54 * 100).toFixed(1)}%"></i><span>${S.deck.length} cards left</span></div>
+    <div class="lb-price">Level ${L + 1} <b>${coin}${fmt(price)}</b> <em class="${need > 0 ? 'short' : 'ok'}">${need > 0 ? `need ${fmt(need)}` : '✓'}</em></div>`);
   if (ui.levelUp){ ui.levelUp = false; floatDelta('st-level', 'LEVEL UP', 'coin-up', 'bump'); }
 }
 
@@ -68,19 +68,18 @@ function renderPit(){
   const dl = S.deck.length;
   const deck = dl
     ? `<div class="stack deck ${ui.shuffleFx ? 'shuffling' : ''}">${dl > 2 ? cardHTML(null, { back:true }) : ''}${dl > 1 ? cardHTML(null, { back:true }) : ''}${cardHTML(null, { back:true })}</div>`
-    : `<div class="emptyslot">Empty</div>`;
+    : `<div class="emptyslot"></div>`;
   let spot;
   if (S.pending) spot = cardHTML(S.pending, { extra:'hot' });
   else if (S.phase === 'swapPlace' && S.swapCard) spot = cardHTML(S.swapCard, { extra:'hot' });
   else {
-    const msg = S.phase === 'bet' ? 'Place a bet' : (!dl ? 'Deck empty' : 'Deal a card');
-    spot = `<div class="emptyslot">${msg}</div>`;
+    spot = `<div class="emptyslot"></div>`;
   }
-  const spotLbl = S.phase === 'swapPlace' ? 'From discard' : S.pending && S.pending.id !== S.dealtId ? 'Center card' : 'New card';
+  const spotLbl = S.phase === 'swapPlace' ? 'From discard' : S.pending && S.pending.id !== S.dealtId ? 'Center' : 'New card';
   const top = S.discard.slice(-3);
   const dis = top.length
     ? top.map((c, i) => cardHTML(c, { track:false }).replace('class="card', `style="left:${i * 14}px;transform:rotate(${(i - 1) * 6}deg)" class="card`)).join('')
-    : `<div class="emptyslot" style="position:absolute;left:14px;top:0">None yet</div>`;
+    : `<div class="emptyslot" style="position:absolute;left:14px;top:0"></div>`;
   setHTML($('pit'), `
     <div class="zone"><button class="deckbtn" data-act="viewOut" aria-label="Deck: open the card tracker" title="Card tracker">${deck}</button><div class="lbl">Deck <b>${dl}</b></div></div>
     <div class="zone spot"><div class="stage">${spot}</div><div class="lbl">${spotLbl}</div></div>
@@ -110,11 +109,11 @@ function renderPowers(){
   el.classList.toggle('short', S.phase === 'idle' && S.deck.length > 0 && S.coins < upkeep());   // point at the ✕ buttons
   setHTML(el, PU_ORDER.filter(t => counts[t]).map(t => {
     const n = counts[t], P = Object.values(POWER).find(x => x.type === t);
-    const eff = t === 'A' ? `+${n} to every multiplier` : t === '2' ? 'Red & black count as suits' : `+${n} hand seat${n > 1 ? 's' : ''}`;
+    const eff = t === 'A' ? `+${n} multipliers` : t === '2' ? 'Red/black suits' : `+${n} seat${n > 1 ? 's' : ''}`;
     return `<div class="pu pu-${t} ${n > (prev[t] || 0) ? 'pop' : ''}" data-type="${t}">
       ${puEmblem(t, n)}
       <div class="pu-body"><div class="pu-name">${P.name}${n > 1 ? `<span class="pu-n">×${n}</span>` : ''}</div><div class="pu-eff">${eff}</div></div>
-      <div class="pu-up" title="Upkeep: paid each time a new card is dealt"><span>${coin}${P.cost * n}</span><small>per card</small></div>
+      <div class="pu-up" title="Upkeep, paid on each new card"><span>${coin}${P.cost * n}</span><small>/card</small></div>
       <button class="x" data-act="release" data-type="${t}" ${can ? '' : 'disabled'} aria-label="Release one ${P.name}" title="Release one (stop paying its upkeep)">✕</button></div>`;
   }).join(''));
   ui.pupPrev = counts;
@@ -123,9 +122,9 @@ function renderPowers(){
 function renderHand(){
   const cap = capacity();
   const on = k => prefs.sort === k ? 'true' : 'false';
-  const note = S.phase === 'trim' ? `<div class="hnote">Too many cards for your seats: tap one to discard (+${fmt(S.bet)} debt)</div>`
-    : S.phase === 'swapPlace' ? `<div class="hnote">Tap the card that ${cardName(S.swapCard)} should replace</div>` : '';
-  setHTML($('handhead'), `${note || `<div class="lbl">Hand · <b>${S.hand.length}</b> of <b>${cap}</b> seats</div>`}
+  const note = S.phase === 'trim' ? `<div class="hnote">Discard one · +${fmt(S.bet)} debt</div>`
+    : S.phase === 'swapPlace' ? `<div class="hnote">Replace which card with ${cardName(S.swapCard)}?</div>` : '';
+  setHTML($('handhead'), `${note || `<div class="lbl">Hand <b>${S.hand.length}</b>/<b>${cap}</b></div>`}
     <div class="seg" role="group" aria-label="Sort hand">
       <button data-act="sortRank" aria-pressed="${on('rank')}" title="Sort by rank"><span class="ico rk"><i></i><i></i><i></i></span>Rank</button>
       <button data-act="sortSuit" aria-pressed="${on('suit')}" title="Sort by suit"><span class="ico st">${suitSVG('S')}${suitSVG('H')}</span>Suit</button>
@@ -146,10 +145,10 @@ function renderHand(){
     let out = cardHTML(c, { extra: extra + dragX, act: picking ? 'handPick' : null, tag });
     if (picking && keyN < 9) out = out.replace(/<\/div>$/, `<kbd class="kc" aria-hidden="true">${++keyN}</kbd></div>`);
     // on hover (mouse), show what swapping this card in would score
-    if (S.phase === 'decide') out = out.replace(/<\/div>$/, `<span class="tag ok peek">swap → ×${fmt(swapMult(c.id))}</span></div>`);
+    if (S.phase === 'decide') out = out.replace(/<\/div>$/, `<span class="tag ok peek">→ ×${fmt(swapMult(c.id))}</span></div>`);
     return out;
   });
-  for (let i = S.hand.length; i < cap; i++) html.push(`<div class="emptyslot">Open seat</div>`);
+  for (let i = S.hand.length; i < cap; i++) html.push(`<div class="emptyslot"></div>`);
   $('hand').style.setProperty('--n', Math.max(cap, S.hand.length));
   setHTML($('hand'), html.join(''));
 }
@@ -157,19 +156,16 @@ function renderHand(){
 function renderValue(){
   const visible = S.hand.filter(c => !S.faceDown.includes(c.id));
   const ev = evaluate(visible, S.powerups);
-  const chips = ev.combos.length
-    ? ev.combos.map(c => `<span class="combo">${c.label}${c.note ? ` <small>(${c.note})</small>` : ''}<em>×${fmt(c.factor)}</em></span>`).join('')
-    : `<span class="none">${S.phase === 'bet' ? 'No combos among your face-up cards yet.' : 'No pair, straight or flush yet. Cashing out now pays nothing.'}</span>`;
   let tip = '';
   const pv = S.phase === 'decide' ? swapPreview() : null;
   if (pv){
     if (pv.best.mult > pv.base)
-      tip = `<button class="combo tip" data-act="bestSwap" data-id="${pv.best.out.id}">Swap ${cardName(pv.best.out)} for ${cardName(S.pending)} <em>→ ×${fmt(pv.best.mult)}</em></button>`;
+      tip = `<button class="combo tip" data-act="bestSwap" data-id="${pv.best.out.id}">Swap ${cardName(pv.best.out)} <em>→ ×${fmt(pv.best.mult)}</em></button>`;
   }
   const boostNote = (ev.boost || ev.twoTone) ? `<span class="combo" style="background:transparent">${[ev.boost ? `Ace boost +${ev.boost}` : '', ev.twoTone ? 'Two-tone on' : ''].filter(Boolean).join(' · ')}</span>` : '';
   const b = S.phase === 'bet' ? Math.max(1, Math.min(S.betInput, S.coins)) : S.bet;
-  const sub = `Payout: bet ${fmt(b)} × ${fmt(ev.mult)} = <b>${fmt(b * ev.mult)}</b>`;
-  setHTML($('value'), `<div class="combos">${chips}${boostNote}${tip}</div>
+  const sub = `${fmt(b)} × ${fmt(ev.mult)} = <b>${fmt(b * ev.mult)}</b>`;
+  setHTML($('value'), `<div class="combos">${boostNote}${tip}</div>
     <div class="mult"><div class="big ${ev.mult ? '' : 'zero'}" id="multBig">×${fmt(ev.mult)}</div><div class="sub">${sub}</div></div>`);
   if (ui.lastMult !== undefined && ui.lastMult !== ev.mult) rollMult($('multBig'), ui.lastMult, ev.mult);
   ui.lastMult = ev.mult;
@@ -184,7 +180,7 @@ function renderDock(){
     const after = S.coins + S.bet * ev.mult - S.debt;
     const start = S.handStart ?? (S.coins + S.bet);
     const net = after - start;
-    const what = after < 0 ? `game over · short ${fmt(-after)}` : net > 0 ? `win ${fmt(net)}` : net < 0 ? `lose ${fmt(-net)}` : 'break even';
+    const what = after < 0 ? 'ends run' : net > 0 ? `win ${fmt(net)}` : net < 0 ? `lose ${fmt(-net)}` : 'break even';
     return `<button class="btn cash grow ${after < 0 ? 'bust' : net < 0 ? 'down' : ''}" data-act="cash">Cash out <span class="cashnet">${what}</span>${kbd('C')}</button>`;
   };
   switch (S.phase){
@@ -201,8 +197,8 @@ function renderDock(){
           <div class="presets" role="group" aria-label="Quick bets">${pre.map(([k, l, v]) => `<button class="q" data-act="preset" data-v="${v}" aria-pressed="${b === v}">${l} <b>${fmt(v)}</b></button>`).join('')}</div>
         </div></div>
         <div class="row">
-          <button class="btn grow" data-act="throw">Throw away <small>free</small>${kbd('T')}</button>
-          <button class="btn gold grow" data-act="deal"><span id="dealBtn">Deal · bet ${fmt(b)}</span>${kbd('D')}</button>
+          <button class="btn grow" data-act="throw">Throw away${kbd('T')}</button>
+          <button class="btn gold grow" data-act="deal"><span id="dealBtn">Deal</span>${kbd('D')}</button>
         </div>`;
       break;
     }
@@ -210,44 +206,42 @@ function renderDock(){
       const c = S.pending, full = S.hand.length >= cap, dealt = offerIsDealt(), P = dealt ? POWER[c.rank] : null;
       const more = canDraw(), up = upkeep();
       const discCost = [(!S.pendingCharged || (more && full)) ? `+${fmt(S.bet)} debt` : '', more && up ? `upkeep ${up}` : '',
-        !more && S.deck.length && S.coins < up ? `can't pay upkeep ${up}` : ''].filter(Boolean).join(' · ');
-      const refund = S.pendingCharged ? ` · debt −${fmt(S.bet)}` : '';
+        !more && S.deck.length && S.coins < up ? `upkeep ${up}` : ''].filter(Boolean).join(' · ');
       let btns = '';
-      btns += `<button class="btn warn grow" data-act="discard">${more ? 'Discard &amp; deal next' : 'Discard'}${discCost ? ` <small>${discCost}</small>` : ''}${kbd('D')}</button>`;
+      btns += `<button class="btn warn grow" data-act="discard">Discard${discCost ? ` <small>${discCost}</small>` : ''}${kbd('D')}</button>`;
       if (P){
         const dup = P.type === '2' && S.powerups.some(x => x.type === '2');
         btns += dup
-          ? `<button class="btn power grow" disabled title="A second Two-tone would have no effect">${P.name} <small>already active</small></button>`
-          : `<button class="btn power grow" data-act="power" ${S.coins < P.cost ? 'disabled' : ''}>${P.name} <small>${coin}${P.cost} · ${P.short}${refund}</small>${kbd('P')}</button>`;
+          ? `<button class="btn power grow" disabled title="Already active">${P.name} <small>active</small></button>`
+          : `<button class="btn power grow" data-act="power" ${S.coins < P.cost ? 'disabled' : ''} title="${P.short}">${P.name} <small>${coin}${P.cost}</small>${kbd('P')}</button>`;
       }
-      if (dealt && c.rank === 10) btns += `<button class="btn power grow" data-act="swap" ${S.coins < SWAP_COST || !S.discard.length ? 'disabled' : ''} title="${!S.discard.length ? 'The discard pile is empty' : ''}">Swap from discard <small>${coin}${SWAP_COST}${refund}</small>${kbd('W')}</button>`;
+      if (dealt && c.rank === 10) btns += `<button class="btn power grow" data-act="swap" ${S.coins < SWAP_COST || !S.discard.length ? 'disabled' : ''} >Swap from discard <small>${coin}${SWAP_COST}</small>${kbd('W')}</button>`;
       rows = `<div class="row">${btns}</div><div class="row">${cashBtn()}</div>`;
       break;
     }
     case 'idle': {
       const up = upkeep(), dl = S.deck.length;
       const short = dl > 0 && S.coins < up;
-      const why = !dl ? 'The deck is empty' : short ? `upkeep ${up}` : '';
+      const why = short ? `upkeep ${up}` : '';
       const nextCost = [S.hand.length >= cap ? `+${fmt(S.bet)} debt` : '', up ? `upkeep ${up}` : ''].filter(Boolean).join(' · ');
       // can't pay upkeep: Deal stays pressable and answers with a shake (see input.js) and this note
-      rows = (short ? `<div class="callout" id="upkeepNote" role="alert"><b>Not enough coins to deal.</b>
-          Each new card costs ${fmt(up)} in power-up upkeep and you have ${fmt(S.coins)}. Release a power-up with ✕ to lower it, or cash out.</div>` : '') + `<div class="row">
-        <button class="btn gold grow ${short ? 'blocked' : ''}" data-act="next" ${!dl ? 'disabled' : ''}>${dl ? 'Deal next card' : 'Deck empty'}${why ? ` <small>${why}</small>` : dl && nextCost ? ` <small>${nextCost}</small>` : ''}${kbd('N')}</button>
+      rows = (short ? `<div class="callout" id="upkeepNote" role="alert"><b>Can’t pay upkeep (${fmt(up)}).</b> Release a power-up (✕) or cash out.</div>` : '') + `<div class="row">
+        <button class="btn gold grow ${short ? 'blocked' : ''}" data-act="next" ${!dl ? 'disabled' : ''}>${dl ? 'Next card' : 'Deck empty'}${why ? ` <small>${why}</small>` : dl && nextCost ? ` <small>${nextCost}</small>` : ''}${kbd('N')}</button>
         ${cashBtn()}</div>`;
       break;
     }
     case 'swapPick':
-      rows = `<div class="row"><button class="btn grow" data-act="openPick">Show discard pile</button><button class="btn grow" data-act="cancelSwap">Cancel · refund ${SWAP_COST}</button></div>`;
+      rows = `<div class="row"><button class="btn grow" data-act="openPick">Discard pile</button><button class="btn grow" data-act="cancelSwap">Cancel</button></div>`;
       break;
     case 'swapPlace':
-      rows = `<div class="row"><button class="btn grow" data-act="cancelSwap">Pick a different card</button></div>`;
+      rows = `<div class="row"><button class="btn grow" data-act="cancelSwap">Cancel</button></div>`;
       break;
     case 'trim':
       break;
     case 'result':
       rows = `<div class="row"><button class="btn gold grow" data-act="nextSet">Next hand${kbd('Enter')}</button></div>`; break;
     case 'reshuffle':
-      rows = `<div class="row"><button class="btn gold grow" data-act="openReshuffle">Level ${lvl()} complete · continue</button></div>`; break;
+      rows = `<div class="row"><button class="btn gold grow" data-act="openReshuffle">Next level</button></div>`; break;
     case 'over':
       rows = `<div class="row"><button class="btn gold grow" data-act="restartNow">Play again</button></div>`; break;
   }
@@ -270,28 +264,24 @@ function renderModal(){
     html = `<div class="rs-head win">
         <div class="rs-eyebrow">Level ${L} complete</div>
         <div class="lv-medal"><span>Level</span><b>${L + 1}</b></div>
-        <div class="rs-verdict">You made it through the deck</div>
       </div>
-      <p class="rs-sum">Pay the level price to shuffle all 54 cards back in and start level ${L + 1}.</p>
-      <div class="receipt"><div><span>Your coins</span><b>${fmt(S.coins)}</b></div><div><span>Level ${L} price</span><b class="neg">−${fmt(price)}</b></div><div class="tot"><span>You start level ${L + 1} with</span><b>${fmt(S.coins - price)}</b></div></div>
-      <p class="rs-note">Finishing level ${L + 1} will cost ${fmt(levelPrice(L + 1))}.</p>
-      <div class="actions"><button class="btn gold grow" data-act="reshuffle">Pay ${fmt(price)} · start level ${L + 1}</button></div>`;
+      <div class="receipt"><div><span>Coins</span><b>${fmt(S.coins)}</b></div><div><span>Price</span><b class="neg">−${fmt(price)}</b></div><div class="tot"><span>Left</span><b>${fmt(S.coins - price)}</b></div></div>
+      <div class="actions"><button class="btn gold grow" data-act="reshuffle">Pay ${fmt(price)}</button></div>`;
   }
   else if (m === 'tracker') html = trackerHTML();
   else if (m === 'history') html = historyHTML();
   else if (m === 'settings') html = settingsHTML();
   else if (m === 'bust') html = bustHTML();
-  else if (m === 'restart') html = `<h2>Start a new game?</h2><p class="lead">Your current run (${fmt(S.coins)} coins, level ${lvl()}) will be lost.</p>
-    <div class="actions"><button class="btn" data-act="close">Keep playing</button><button class="btn gold" data-act="restartNow">New game</button></div>`;
+  else if (m === 'restart') html = `<h2>New game?</h2><p class="lead">This run will be lost.</p>
+    <div class="actions"><button class="btn" data-act="close">Cancel</button><button class="btn gold" data-act="restartNow">New game</button></div>`;
   else if (m === 'pick' || m === 'view'){
     const picking = m === 'pick';
     html = `<h2>${picking ? 'Take a card back' : 'Discard pile'}</h2>
-      <p class="lead">${picking ? `Your 10 paid the ${SWAP_COST}-coin fee. Pick any card below.` : 'Cards discarded this hand. They move out of play when you cash out.'}</p>
       <div class="pickgrid">${S.discard.slice().reverse().map(c => {
         const used = picking && S.swapTen && c.id === S.swapTen.id;
         return cardHTML(c, { track:false, act: picking && !used ? 'pickDiscard' : null, extra: used ? 'used' : '' });
       }).join('')}</div>
-      <div class="actions">${picking ? `<button class="btn" data-act="cancelSwap">Cancel · refund ${SWAP_COST}</button>` : `<button class="btn gold" data-act="close">Close</button>`}</div>`;
+      <div class="actions">${picking ? `<button class="btn" data-act="cancelSwap">Cancel</button>` : `<button class="btn gold" data-act="close">Close</button>`}</div>`;
   }
   const closable = CLOSABLE.includes(m);
   const opened = ui.modalShown !== m;
@@ -308,10 +298,9 @@ const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'res
 const MODAL_NAMES = { help:'How to play', result:'Hand result', over:'Run over', reshuffle:'Level complete', tracker:'Card tracker', view:'Discard pile', pick:'Take a card back', history:'History', settings:'Settings', bust:'Cash-out warning', restart:'New game' };
 function bustHTML(){
   const ev = evaluate(S.hand, S.powerups), payout = S.bet * ev.mult, after = S.coins + payout - S.debt;
-  return `<div class="rs-head loss"><div class="rs-eyebrow">Careful</div><div class="rs-verdict">This cash-out ends your run</div>
+  return `<div class="rs-head loss"><div class="rs-verdict">This ends your run</div>
       <div class="rs-net"><b>${signed(after)}</b><span>coins after</span></div></div>
-    <p class="rs-sum">Your coins (${fmt(S.coins)}) plus the payout (${fmt(payout)}) don't cover your debt of ${fmt(S.debt)}. You would be short <b>${fmt(-after)}</b> and the run would end.</p>
-    <div class="actions"><button class="btn" data-act="close">Keep playing</button><button class="btn warn" data-act="bustConfirm">Cash out and end the run</button></div>`;
+    <div class="actions"><button class="btn" data-act="close">Cancel</button><button class="btn warn" data-act="bustConfirm">Cash out</button></div>`;
 }
 
 function trackerHTML(){
@@ -334,11 +323,10 @@ function trackerHTML(){
   }).join('');
   const jk = [['JR','Red'],['JB','Black']].map(([k, n]) => `<div class="tc s-${status[k + 0]} ${k === 'JR' ? 'red' : ''}" title="${n} Joker">★</div>`).join('');
   return `<h2>Card tracker</h2>
-    <p class="lead">Where every card in this deck is right now. <b>${count('deck')}</b> cards haven’t been seen yet.</p>
     <div class="tlegend">
-      <span><i class="k-deck"></i>Not seen yet <b>${count('deck')}</b></span>
+      <span><i class="k-deck"></i>Unseen <b>${count('deck')}</b></span>
       <span><i class="k-play"></i>In play <b>${count('play')}</b></span>
-      <span><i class="k-disc"></i>Discard pile <b>${count('disc')}</b></span>
+      <span><i class="k-disc"></i>Discard <b>${count('disc')}</b></span>
       <span><i class="k-out"></i>Out <b>${count('out')}</b></span>
     </div>
     <div class="tgrid">${rows}</div>
@@ -357,30 +345,23 @@ function handBody(r){
   const eq = r.ev.combos.length
     ? r.ev.combos.map(c => `<span class="combo">${c.label}<em>×${fmt(c.factor)}</em></span>`).join('<span class="op">×</span>') + `<span class="op">=</span><span class="tot">×${fmt(r.ev.mult)}</span>`
     : `<span class="combo">No pair, straight or flush</span><span class="op">=</span><span class="tot zero">×0</span>`;
-  const boosts = [r.ev.boost ? `Ace boost +${r.ev.boost} on every multiplier` : '', r.ev.twoTone ? 'Two-tone flushes' : ''].filter(Boolean).join(' · ');
+  const boosts = [r.ev.boost ? `Ace boost +${r.ev.boost}` : '', r.ev.twoTone ? 'Two-tone' : ''].filter(Boolean).join(' · ');
   const lines = [
-    { k:'Payout', d: r.ev.mult ? `bet ${fmt(r.bet)} × ${fmt(r.ev.mult)}` : 'nothing scored', v: r.payout, show:true },
-    { k:'Your bet', d:'', v: L.bet ?? -r.bet, show:true },
-    { k:'Discard debt', d: r.discards ? `${r.discards} card${r.discards === 1 ? '' : 's'} × ${fmt(r.bet)}` : '', v: L.debt ?? -r.debt, show: !!r.debt },
-    { k:'Power-up upkeep', d:'', v: L.upkeep || 0 },
-    { k:'Power-ups bought', d:'', v: L['power-up'] || 0 },
-    { k:'10-swap fee', d:'', v: L['10 swap'] || 0 },
+    { k:'Payout', v: r.payout, show:true },
+    { k:'Bet', v: L.bet ?? -r.bet, show:true },
+    { k:'Debt', v: L.debt ?? -r.debt, show: !!r.debt },
+    { k:'Upkeep', v: L.upkeep || 0 },
+    { k:'Power-ups', v: L['power-up'] || 0 },
+    { k:'10-swap', v: L['10 swap'] || 0 },
   ].filter(l => l.show || l.v);
-  const won = lines.filter(l => l.v > 0).reduce((a, l) => a + l.v, 0);
-  const spent = -lines.filter(l => l.v < 0).reduce((a, l) => a + l.v, 0);
-  const scale = Math.max(won, spent, 1);
-  const net = won - spent;
+  const net = lines.reduce((a, l) => a + l.v, 0);
   return `
     <div class="minihand rs-hand">${cards}</div>
     <div class="rs-eq">${eq}</div>
     ${boosts ? `<p class="rs-note">${boosts}</p>` : ''}
-    <div class="rs-bars">
-      <span>Won</span><div class="trk won"><i style="width:${(won / scale * 100).toFixed(1)}%"></i></div><b class="pos">+${fmt(won)}</b>
-      <span>Spent</span><div class="trk spent"><i style="width:${(spent / scale * 100).toFixed(1)}%"></i></div><b class="neg">−${fmt(spent)}</b>
-    </div>
     <div class="rs-lines">
-      ${lines.map(l => `<div class="rs-line ${l.v > 0 ? 'plus' : l.v < 0 ? 'minus' : ''}"><i class="dot"></i><span>${l.k}${l.d ? `<small>${l.d}</small>` : ''}</span><b>${signed(l.v)}</b></div>`).join('')}
-      <div class="rs-line total"><i></i><span>${net >= 0 ? 'Gained this hand' : 'Lost this hand'}</span><b class="${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}">${signed(net)}</b></div>
+      ${lines.map(l => `<div class="rs-line ${l.v > 0 ? 'plus' : l.v < 0 ? 'minus' : ''}"><i class="dot"></i><span>${l.k}</span><b>${signed(l.v)}</b></div>`).join('')}
+      <div class="rs-line total"><i></i><span>Net</span><b class="${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}">${signed(net)}</b></div>
     </div>`;
 }
 function resultHTML(){
@@ -388,25 +369,15 @@ function resultHTML(){
   const net = r.net ?? (r.payout - r.debt - r.bet);
   const mood = net > 0 ? 'win' : net < 0 ? 'loss' : 'even';
   const verdict = net > 0 ? (net >= r.bet * 5 ? 'Big win' : 'Profit') : net < 0 ? 'Loss' : 'Broke even';
-  const names = r.ev.combos.map(c => c.label).join(' + ');
-  const L = r.ledger || {};
-  const parts = [[-(L.debt || 0), 'discards'], [-((L.upkeep || 0) + (L['power-up'] || 0)), 'power-ups'], [-(L['10 swap'] || 0), 'the 10-swap']].filter(([v]) => v > 0);
-  const costs = parts.reduce((a, [v]) => a + v, 0);
-  const costWho = parts.map(([, n]) => n).join(parts.length > 2 ? ', ' : ' and ').replace(/, ([^,]*)$/, ' and $1');
-  const sum = r.ev.mult
-    ? `${names} paid <b>×${fmt(r.ev.mult)}</b> on your bet of ${fmt(r.bet)}, so the hand paid out <b>${fmt(r.payout)}</b>.`
-    : `Nothing scored, so your bet of ${fmt(r.bet)} paid nothing.`;
-  const sum2 = costs ? ` ${costWho[0].toUpperCase() + costWho.slice(1)} cost you <b>${fmt(costs)}</b>.` : '';
   return `<div class="rs-head ${mood}">
-      <div class="rs-eyebrow">Hand ${r.handNo || ''} · cashed out</div>
+      <div class="rs-eyebrow">Hand ${r.handNo || ''}</div>
       <div class="rs-verdict">${verdict}</div>
-      <div class="rs-net"><b data-to="${net}">${signed(net)}</b><span>coins</span></div>
+      <div class="rs-net"><b data-to="${net}">${signed(net)}</b></div>
       <div class="rs-flow">${coin}${fmt(r.start)} <span class="arr">→</span> ${coin}${fmt(r.total)}</div>
     </div>
-    <p class="rs-sum">${sum}${sum2}</p>
     ${handBody(r)}
     ${levelWarning(r)}
-    <div class="actions rs-actions"><span class="rs-deck">${r.deckLeft} cards left in level ${lvl()}</span><button class="btn gold" data-act="nextSet">Next hand</button></div>`;
+    <div class="actions rs-actions"><button class="btn gold" data-act="nextSet">Next hand</button></div>`;
 }
 /* ---------- run over ----------
    Leads with a picture of what happened (what you had against what you needed), then the run's path
@@ -425,25 +396,23 @@ function runTips(o, L){
     const lv = h.filter(x => x.level === L);
     if (lv.length){
       const start = lv[0].start, per = Math.ceil((o.price - start) / lv.length), got = Math.round((o.have - start) / lv.length);
-      tips.push(['target', `Level ${L} gave you ${lv.length} hand${lv.length === 1 ? '' : 's'}. To reach ${fmt(o.price)} you needed about <b>${signed(per)}</b> coins a hand; you averaged <b>${signed(got)}</b>. Watch the level bar: it shows how many cards are left and how far you are from the price.`]);
+      tips.push(['target', `Needed <b>${signed(per)}</b> a hand; you made <b>${signed(got)}</b>.`]);
     }
   }
-  if (o.cause === 'bust') tips.push(['bet', 'Check the cash-out button before pressing it: when it turns red and reads “game over”, cashing out ends the run. You can keep dealing to improve the hand instead.']);
-  if (o.cause === 'broke') tips.push(['bet', 'Bets come out of your coins. Keep some back so one empty hand doesn’t leave you with nothing to bet.']);
+  if (o.cause === 'bust') tips.push(['bet', 'A red cash-out button ends the run.']);
+  if (o.cause === 'broke') tips.push(['bet', 'Keep coins back for the next bet.']);
   const debt = -(RL.debt || 0), power = -((RL.upkeep || 0) + (RL['power-up'] || 0));
-  if (debt >= 8) tips.push(['cards', `Discards cost you <b>${fmt(debt)}</b> coins this run. Every card dealt into a full hand costs your bet, so cash out sooner when a hand stops improving.`]);
-  if (power >= 8) tips.push(['power', `Power-ups cost <b>${fmt(power)}</b> in purchases and upkeep. Release them with ✕ once they’ve done their job.`]);
-  if (st.biggestLoss >= Math.max(8, 0.4 * (st.peak || 0))) tips.push(['bet', `Your biggest single loss was <b>${fmt(st.biggestLoss)}</b>. Smaller bets keep one bad hand from sinking the run.`]);
-  tips.push(['idea', 'Multipliers stack: two pairs pay ×4, a flush with a pair pays ×10, and the Ace boost adds +1 to every multiplier.']);
-  return tips.slice(0, 3);
+  if (debt >= 8) tips.push(['cards', `Discards cost <b>${fmt(debt)}</b>. Cash out sooner.`]);
+  if (power >= 8) tips.push(['power', `Power-ups cost <b>${fmt(power)}</b>. Release them sooner.`]);
+  if (st.biggestLoss >= Math.max(8, 0.4 * (st.peak || 0))) tips.push(['bet', `Biggest loss <b>${fmt(st.biggestLoss)}</b>. Bet smaller.`]);
+  return tips.slice(0, 2);
 }
 // On the hand result: warn when the level is about to end and the next price isn't covered.
 function levelWarning(r){
   const price = levelPrice(lvl()), need = price - S.coins;
   if (need <= 0 || r.deckLeft > 14) return '';
   const last = r.deckLeft < 5;
-  return `<div class="callout lvwarn" role="note"><b>${last ? 'This was the last hand of the level.' : `Only ${r.deckLeft} cards left in level ${lvl()}.`}</b>
-    ${last ? `Reaching level ${lvl() + 1} costs ${fmt(price)} and you have ${fmt(S.coins)}, so the run ends here.` : `Reaching level ${lvl() + 1} costs ${fmt(price)}: you need ${fmt(need)} more coins before the deck runs out.`}</div>`;
+  return `<div class="callout lvwarn" role="note"><b>${last ? 'Last hand of the level.' : `${r.deckLeft} cards left.`}</b> Need ${fmt(need)} more for level ${lvl() + 1}.</div>`;
 }
 function overHTML(){
   const o = S.over || {}, r = o.res, st = S.stats;
@@ -453,9 +422,9 @@ function overHTML(){
 
   // 1. headline: what ended the run, in one line
   const head = {
-    level:{ title:`Level ${L + 1} costs ${fmt(o.price || levelPrice(L))} coins`, sub:`The deck ran out at the end of level ${L}, and you had ${fmt(o.have ?? S.coins)}.` },
-    bust: { title:'Your debt was bigger than your coins', sub:`You owed ${fmt(o.need ?? (r && r.debt) ?? 0)} and had ${fmt(o.have ?? 0)} after the payout.` },
-    broke:{ title:'You ran out of coins', sub:'There was nothing left to bet with.' },
+    level:{ title:`Couldn’t pay for level ${L + 1}` },
+    bust: { title:'Debt bigger than coins' },
+    broke:{ title:'Out of coins' },
   }[cause];
 
   // 2. gauge: what you had against what you needed
@@ -464,31 +433,30 @@ function overHTML(){
     const have = Math.max(0, o.have ?? 0), need = cause === 'level' ? (o.price || levelPrice(L)) : (o.need || 1);
     const pct = Math.max(2, Math.min(100, have / need * 100));
     gauge = `<div class="gauge" role="img" aria-label="You had ${fmt(have)} of the ${fmt(need)} you needed; short by ${fmt(need - have)}">
-      <div class="g-labels"><span>You had <b>${coin}${fmt(have)}</b></span><span>${cause === 'level' ? `Level ${L + 1} price` : 'Your debt'} <b>${coin}${fmt(need)}</b></span></div>
+      <div class="g-labels"><span>You had <b>${coin}${fmt(have)}</b></span><span>${cause === 'level' ? 'Price' : 'Debt'} <b>${coin}${fmt(need)}</b></span></div>
       <div class="g-track"><i style="--to:${pct.toFixed(1)}%"></i><span class="g-lock">${cause === 'level' ? LOCK_SVG : ''}</span></div>
-      <div class="g-short">Short by <b>${fmt(need - have)}</b> coins</div></div>`;
+      <div class="g-short">Short <b>${fmt(need - have)}</b></div></div>`;
   }
 
   // 3. journey through the levels
   const first = Math.max(1, L - 3), nodes = [];
   for (let i = first; i <= L; i++) nodes.push(i < L
     ? `<li class="done"><span class="jn">${i}</span><small>paid ${fmt(levelPrice(i))}</small></li>`
-    : `<li class="end"><span class="jn">${i}</span><small>${cause === 'level' ? 'deck ran out' : 'run ended'}</small></li>`);
+    : `<li class="end"><span class="jn">${i}</span><small>ended</small></li>`);
   nodes.push(`<li class="lock"><span class="jn">${LOCK_SVG}</span><small>${L + 1}: ${fmt(levelPrice(L))}</small></li>`);
   const journey = `<ol class="journey" aria-label="Levels">${first > 1 ? '<li class="more">…</li>' : ''}${nodes.join('')}</ol>`;
 
   // 4. coins over the run, with the price you had to reach
   const h = Array.isArray(S.history) ? S.history : [];
   const fromIdx = Math.max(0, h.findIndex(x => x.level === L));
-  const chart = h.length >= 2 ? `<h3>Your coins this run</h3>${coinChart(h, cause === 'level' ? { v:o.price || levelPrice(L), from:fromIdx, label:`level ${L + 1} price` } : null)}` : '';
+  const chart = h.length >= 2 ? `<h3>Coins</h3>${coinChart(h, cause === 'level' ? { v:o.price || levelPrice(L), from:fromIdx, label:'price' } : null)}` : '';
 
   // 5. tips from this run
   const tips = runTips(Object.assign({ have:S.coins }, o, { cause }), L).map(([ic, t]) =>
     `<li><svg viewBox="0 0 24 24" aria-hidden="true">${TIP_ICONS[ic]}</svg><span>${t}</span></li>`).join('');
 
   // 6. stats beside bests
-  const tiles = [['level', 'Level reached', v => fmt(v)], ['hands', 'Hands played', v => fmt(v)], ['biggestWin', 'Biggest win', v => v ? '+' + fmt(v) : '—'],
-    ['peak', 'Most coins', v => fmt(v)], ['bestPayout', 'Best payout', v => fmt(v)], ['biggestLoss', 'Biggest loss', v => v ? '−' + fmt(v) : '—']];
+  const tiles = [['level', 'Level', v => fmt(v)], ['hands', 'Hands', v => fmt(v)], ['peak', 'Most coins', v => fmt(v)], ['biggestWin', 'Biggest win', v => v ? '+' + fmt(v) : '—']];
   const stats = `<div class="tiles">${tiles.map(([k, label, f]) => `<div class="tile ${isNew[k] && !o.firstRun ? 'new' : ''} ${k === 'biggestWin' ? 'pos' : k === 'biggestLoss' ? 'neg' : ''}">
       <span>${label}</span><b>${f(run[k] || 0)}</b>${isNew[k] && !o.firstRun ? '<i>New best</i>' : `<small>${k === 'biggestLoss' ? 'worst' : 'best'} ${f(rec[k] || 0)}</small>`}</div>`).join('')}</div>`;
   const newCount = Object.keys(isNew).length;
@@ -497,55 +465,45 @@ function overHTML(){
   return `<div class="ro-head">
       <div class="rs-eyebrow">Run over · level ${L}</div>
       <div class="ro-title">${head.title}</div>
-      <p class="ro-sub">${head.sub}</p>
       ${gauge}
     </div>
     ${journey}
-    ${newCount && !o.firstRun ? `<p class="ro-best">${newCount} new personal best${newCount > 1 ? 's' : ''} this run!</p>` : ''}
-    ${meRow >= 0 ? `<p class="ro-best">You’re <b>#${meRow + 1}</b> on today’s leaderboard.</p>` : ''}
+    ${newCount && !o.firstRun ? `<p class="ro-best">${newCount} new best${newCount > 1 ? 's' : ''}!</p>` : ''}
+    ${meRow >= 0 ? `<p class="ro-best"><b>#${meRow + 1}</b> today</p>` : ''}
     ${chart}
-    <h3>For your next run</h3><ul class="tips">${tips}</ul>
-    ${r ? `<details class="ro-hand"><summary>See the last hand</summary>${handBody(r)}</details>` : ''}
+    ${tips ? `<h3>Tips</h3><ul class="tips">${tips}</ul>` : ''}
+    ${r ? `<details class="ro-hand"><summary>Last hand</summary>${handBody(r)}</details>` : ''}
     <h3>This run</h3>${stats}
-    <p class="snote">Seed <code class="seed">${S.seed}</code>: “Try the same cards” replays this exact deck order.</p>
-    <div class="actions ro-actions">${leaderboardAvailable() ? `<button class="btn" data-act="openBoard">Leaderboard</button>` : ''}<button class="btn" data-act="replaySeed">Try the same cards</button><button class="btn gold grow" data-act="restartNow">Play again</button></div>`;
+    <p class="snote">Seed <code class="seed">${S.seed}</code></p>
+    <div class="actions ro-actions">${leaderboardAvailable() ? `<button class="btn" data-act="openBoard">Leaderboard</button>` : ''}<button class="btn" data-act="replaySeed">Same cards</button><button class="btn gold grow" data-act="restartNow">Play again</button></div>`;
 }
 function helpHTML(){
   return `<h2>How to play</h2>
-    <p class="lead">Build a paying hand from a 54-card deck, then cash out before your discards cost more than the hand is worth. You start with ${START_COINS} coins.</p>
     <h3>A hand</h3>
     <ul>
-      <li>You get 5 cards: 3 face up, 2 face down. <b>Throw away</b> is free before you bet: the five leave play and five new ones arrive.</li>
-      <li>Set a bet (up to all your coins) and press <b>Deal</b>. The bet leaves your coins, the hidden cards flip, and a new card is dealt.</li>
-      <li>When your hand is full, <b>each new card adds your bet to your debt</b> as soon as it's dealt. It sits in the center of the table.</li>
-      <li>Tap a hand card, or drag it up to the table, to swap it with the center card. Swapping is free and you can do it as often as you like. <b>Discard</b> throws away whatever card is in the center and deals the next one.</li>
-      <li>If you have an open seat, the new card goes straight into your hand for free. Using the freshly dealt card as a power-up or for the 10-swap refunds its debt.</li>
-      <li>Tap the deck to see which cards have already left play. The history button shows your hands and coins over the run.</li>
-      <li>On a keyboard: 1–9 swap a card, D discard or deal, C cash out, N next card, T throw away, P power-up, W 10-swap, ↑↓ change the bet.</li>
-      <li>Cash out at any point. You get <b>bet × multiplier</b>, minus the debt. If that leaves you below zero, the game is over.</li>
+      <li>5 cards: 3 up, 2 down. <b>Throw away</b> is free before you bet.</li>
+      <li>Bet and <b>Deal</b>. Each card dealt into a full hand adds your bet to the <b>debt</b>.</li>
+      <li>Tap or drag a hand card to swap it with the center card (free). <b>Discard</b> deals the next one.</li>
+      <li><b>Cash out</b>: bet × multiplier − debt. Below zero ends the run.</li>
     </ul>
-    <h3>Multipliers (they multiply together)</h3>
+    <h3>Multipliers (they multiply)</h3>
     <div class="paytable">
-      <b>×2</b><span>each pair. Three of a kind is 2 pairs (×4), four of a kind is 3 pairs (×8)</span>
-      <b>×5</b><span>each straight: 5 ranks in a row. Ace can be low or high. A 6-card run counts as two straights</span>
-      <b>×5</b><span>flush: 5 or more cards of one suit</span>
-      <b>×0</b><span>no combo: the bet is lost</span>
+      <b>×2</b><span>each pair · trips = 2 pairs, quads = 3</span>
+      <b>×5</b><span>straight (5 in a row)</span>
+      <b>×5</b><span>flush (5+ of a suit)</span>
     </div>
-    <p>Example: a flush with a pair in it pays ×10. Two pairs pay ×4.</p>
     <h3>Special cards</h3>
-    <ul>
-      <li><b>Joker</b> goes straight to your hand and adds a seat (hand size +1). Swap it out later like any card. A Joker in your starting hand means the first dealt card joins for free.</li>
-      <li><b>Ace boost</b> (buy an Ace for 1): +1 to every multiplier, so a pair is ×3 and a flush ×6.</li>
-      <li><b>Two-tone</b> (buy a 2 for 2): suits merge into red and black, and the Jokers count toward the flush of their colour.</li>
-      <li><b>Extra seat</b> (buy a 5 for 5): hand size +1, and the next card is dealt straight into that seat. If you release it with a full hand, you must discard a card.</li>
-      <li>Two-tone doesn't stack: once it's active, a second 2 can't be bought.</li>
-      <li>Buying a power-up deals the next card at once, with no upkeep for that power-up on that card. After that, power-ups stack and each one charges its price again every time you deal a new card. Release one with ✕ to stop paying. All of them leave play when you cash out.</li>
-      <li><b>10 swap</b>: discard a dealt 10 and pay 10 to take any card from the discard pile into your hand. No debt for this swap.</li>
-    </ul>
-    <h3>The deck</h3>
-    <p>Cashed-out and thrown-away cards leave play. One trip through the deck is a <b>level</b>. When the deck can't fill a new hand, pay the level price to reshuffle all 54 cards and move up a level, or the run ends. Prices go 100, 200, 500, 1,000, 2,000, 5,000 and so on.</p>
-    <p>When a run ends, your best record (highest level, biggest win and loss, most coins) is saved in this browser. Higher levels unlock new card backs and table felts in Settings.</p>
-    <div class="actions"><button class="btn" data-act="replayTutorial">Replay the tutorial</button><button class="btn gold" data-act="close">Got it</button></div>`;
+    <div class="paytable">
+      <b>Joker</b><span>+1 seat</span>
+      <b>A</b><span>${coin}1 · +1 to every multiplier</span>
+      <b>2</b><span>${coin}2 · suits become red and black</span>
+      <b>5</b><span>${coin}5 · +1 seat</span>
+      <b>10</b><span>${coin}10 · take back a discarded card</span>
+    </div>
+    <p>Power-ups cost their price again on every new card. ✕ releases one.</p>
+    <h3>Levels</h3>
+    <p>When the deck runs out, pay the level price (100, 200, 500, 1,000 …) to reshuffle, or the run ends.</p>
+    <div class="actions"><button class="btn" data-act="replayTutorial">Tutorial</button><button class="btn gold" data-act="close">Got it</button></div>`;
 }
 
 function render(){

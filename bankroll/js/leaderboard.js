@@ -200,14 +200,14 @@ async function beginRun(seed){
   if (!officialPossible()){ newGame(chosen || undefined); render(); return; }
   if (runStarting) return;
   runStarting = true;
-  ui.modal = null; render(); toast('Dealing a new run…');
+  ui.modal = null; render();
   let run = await LB.backend.startRun(chosen || null);
   if (run.error === 'rate_limited'){ await new Promise(r => setTimeout(r, 2100)); run = await LB.backend.startRun(chosen || null); }
   runStarting = false;
   if (run.run_id) useServerRun(run);
   else {
     newGame(chosen || undefined);
-    toast(run.error === 'banned' ? 'This account can’t post to the leaderboard.' : 'Couldn’t reach the leaderboard: this run won’t be posted.');
+    toast(run.error === 'banned' ? 'Posting disabled for this account' : 'Offline: this run won’t be posted');
   }
   render();
 }
@@ -266,8 +266,8 @@ const lbName = r => `<span class="bname">${r.avatar ? `<img src="${esc(r.avatar)
 const lbCards = cards => (cards || []).filter(c => Array.isArray(c)).map(([rank, suit], i) => cardHTML({ id:'lb' + i, rank:+rank, suit:String(suit) }, { track:false })).join('');
 function handsHTML(per){
   const list = LB.hands[per];
-  const title = `<h3 class="lbh">Biggest multiplier ${per === 'today' ? 'today' : 'of all time'}</h3>`;
-  if (!list.length) return `${title}<p class="empty">${per === 'today' ? 'No scoring hands yet today.' : 'No scoring hands yet.'}</p>`;
+  const title = `<h3 class="lbh">Top hand</h3>`;
+  if (!list.length) return `${title}<p class="empty">None yet</p>`;
   const [top, ...rest] = list;
   const best = `<div class="tophand ${top.id === LB.me ? 'me' : ''}">
       <div class="th-head"><b class="th-mult"><small>×</small>${fmt(top.mult)}</b>${lbName(top)}</div>
@@ -286,24 +286,22 @@ function leaderboardHTML(){
   const toggle = `<div class="lbbar"><div class="sg lbper" role="group" aria-label="Leaderboard period">
       <button data-act="lbPeriod" data-v="today" aria-pressed="${per === 'today'}">Today</button>
       <button data-act="lbPeriod" data-v="all" aria-pressed="${per === 'all'}">All time</button></div>
-      <button class="lbseed" role="switch" data-act="lbSeeded" aria-checked="${LB.seeded}"><span class="switch" aria-hidden="true"><i></i></span>Include seeded runs</button></div>`;
-  const sub = (per === 'today' ? `Best run per player today (UTC). Resets in ${resetIn()}.` : 'Each player’s best run ever.')
-    + (LB.seeded ? ' Includes runs where the player chose the seed.' : ' Fresh shuffles only.');
+      <button class="lbseed" role="switch" data-act="lbSeeded" aria-checked="${LB.seeded}" title="Include runs where the player chose the seed"><i aria-hidden="true"></i>Seeded runs</button></div>`;
+  const sub = per === 'today' ? `<p class="snote lbsub">Resets in ${resetIn()}</p>` : '';
   let foot;
   if (LB.kind === 'supabase' && !LB.signedIn)
-    foot = `<div class="lbsign"><span>Sign in to post your runs to the leaderboard.</span><button class="btn gold" data-act="lbSignIn">Sign in with Google</button></div>`;
+    foot = `<div class="lbsign"><button class="btn gold" data-act="lbSignIn">Sign in to post scores</button></div>`;
   else if (LB.kind === 'supabase'){
-    const note = !S.official ? ' This run started before you signed in, so it isn’t posted; your next run will be.'
-      : LB.closedRun === S.runId ? ' This run can’t be posted.' : ' Your runs are posted as you play, and the server replays each one to check its score.';
-    foot = `<p class="snote">Signed in${LB.myName ? ` as <b>${esc(LB.myName)}</b>` : ''}.${note}</p>`;
+    const note = !S.official ? 'This run isn’t posted (started signed out)' : LB.closedRun === S.runId ? 'This run can’t be posted' : '';
+    foot = note ? `<p class="snote">${note}</p>` : '';
   }
-  else foot = `<p class="snote">${!LB.me ? 'Sign in to claude.ai to post your own runs.' : LB.writeFailed ? 'Your runs couldn’t be posted: this page is view-only for you.' : 'Your runs are posted as you play.'} Scores on this page aren’t verified.</p>`;
+  else foot = `<p class="snote">Unverified scores${!LB.me ? ' · sign in to post' : LB.writeFailed ? ' · view only' : ''}</p>`;
   const list = !rows.length
-    ? `<p class="empty">${per === 'today' ? 'No runs yet today. Play one to take the top spot.' : 'No scores yet. Play a run to post the first one.'}</p>`
+    ? `<p class="empty">No runs yet</p>`
     : `<div class="board" role="table" aria-label="Leaderboard, ${per === 'today' ? 'today' : 'all time'}">
       <div class="brow bhead" role="row"><span>#</span><span>Player</span><span>Level</span><span>Most coins</span><span>Biggest win</span></div>
       ${rows.map((r, i) => `<div class="brow ${r.id === LB.me ? 'me' : ''}" role="row"><span>${i + 1}</span>${lbName(r)}
         <span>${fmt(r.level || 1)}</span><span>${fmt(r.peak || 0)}</span><span class="pos">${r.biggestWin ? '+' + fmt(r.biggestWin) : '—'}</span></div>`).join('')}
     </div>`;
-  return `${toggle}<p class="snote lbsub">${sub}</p>${list}${handsHTML(per)}${foot}`;
+  return `${toggle}${sub}${list}${handsHTML(per)}${foot}`;
 }

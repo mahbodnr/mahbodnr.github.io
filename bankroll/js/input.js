@@ -250,6 +250,6 @@ document.addEventListener('submit', e => {
   if (!e.target.matches('[data-form="seed"]')) return;
   e.preventDefault();
   const seed = cleanSeed($('seedInput').value);
-  if (!seed){ const m = $('seedMsg'); if (m){ m.textContent = 'A seed has 4 to 8 letters or digits, like ABCD-1234.'; m.classList.add('err'); } return; }
+  if (!seed){ const m = $('seedMsg'); if (m){ m.textContent = '4–8 letters or digits'; m.classList.add('err'); } return; }
   beginRun(seed);
 });

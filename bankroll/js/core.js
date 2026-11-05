@@ -6,9 +6,9 @@ const SUITS = { S:{sym:'♠',red:false,name:'Spades'}, H:{sym:'♥',red:true,nam
 const RANKS = ['','A','2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 const RANK_NAMES = ['','Aces','Twos','Threes','Fours','Fives','Sixes','Sevens','Eights','Nines','Tens','Jacks','Queens','Kings'];
 const POWER = {
-  1: { type:'A', cost:1, name:'Ace boost', short:'+1 to every multiplier' },
-  2: { type:'2', cost:2, name:'Two-tone',  short:'Suits merge into red & black' },
-  5: { type:'5', cost:5, name:'Extra seat',short:'+1 hand size' },
+  1: { type:'A', cost:1, name:'Ace boost', short:'+1 multipliers' },
+  2: { type:'2', cost:2, name:'Two-tone',  short:'Red/black suits' },
+  5: { type:'5', cost:5, name:'Extra seat',short:'+1 seat' },
 };
 const SWAP_COST = 10, START_COINS = 10;
 // price to pass level L: 100, 200, 500, 1000, 2000, 5000, …

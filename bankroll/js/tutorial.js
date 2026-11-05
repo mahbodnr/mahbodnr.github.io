@@ -3,19 +3,19 @@
 
 const TUT_STEPS = [
   { phase:'bet', target:'#ledger', title:'Your bankroll',
-    text:'You start with 10 coins. Bets and power-ups come out of your coins. Debt builds up during a hand and is settled when you cash out.' },
+    text:'Bets come out of your coins. Debt is paid when you cash out.' },
   { phase:'bet', target:'#hand', title:'Your hand',
-    text:'Three cards face up, two face down. Pairs, straights and flushes give a multiplier, and multipliers stack.' },
+    text:'Pairs, straights and flushes multiply your bet.' },
   { phase:'bet', target:'.betbox', title:'Place a bet',
-    text:'Pick your bet. Cashing out pays your bet × the hand’s multiplier.' },
+    text:'Cashing out pays bet × multiplier.' },
   { phase:'bet', target:'[data-act="deal"]', title:'Deal',
-    text:'Press Deal. The face-down cards flip over and a new card lands in the center.', waitFor:'decide' },
+    text:'Flips your hidden cards and deals one to the center.', waitFor:'decide' },
   { phase:'decide', target:'#pit .stage', title:'The center card',
-    text:'Dealing it added one bet to your debt. Tap a hand card, or drag it up here, to swap it in. Swapping is free.' },
+    text:'It added your bet to the debt. Tap a hand card to swap it in, free.' },
   { phase:'decide', target:'[data-act="discard"]', title:'Discard',
-    text:'Discard throws the center card away and deals the next one, which adds another bet of debt.' },
+    text:'Deals the next card, adding another bet of debt.' },
   { phase:'decide', target:'[data-act="cash"]', title:'Cash out',
-    text:'Cash out whenever you like. The button shows what you would win or lose right now.', last:true },
+    text:'Shows what you’d win or lose right now.', last:true },
 ];
 
 function tutorialActive(){ return prefs.tutDone === false; }
@@ -46,8 +46,8 @@ function tutorialTick(){
   document.querySelectorAll('.coach-on').forEach(n => { if (n !== target) n.classList.remove('coach-on'); });
   target.classList.add('coach-on');
   const n = TUT_STEPS.length;
-  c.innerHTML = `<div class="ch-step">Step ${i + 1} of ${n}</div><b>${st.title}</b><p>${st.text}</p>
-    <div class="ch-actions"><button class="ch-skip" data-act="tutorialSkip">Skip tutorial</button>
+  c.innerHTML = `<div class="ch-step">${i + 1}/${n}</div><b>${st.title}</b><p>${st.text}</p>
+    <div class="ch-actions"><button class="ch-skip" data-act="tutorialSkip">Skip</button>
     ${st.waitFor ? '' : `<button class="btn gold ch-next" data-act="tutorialNext">${st.last ? 'Got it' : 'Next'}</button>`}</div>`;
   c.hidden = false;
   // place the bubble below the target when there is room, otherwise above it

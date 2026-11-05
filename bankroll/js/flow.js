@@ -55,8 +55,7 @@ function throwAway(){
   if (S.phase !== 'bet') return;
   const thrown = S.hand.slice();
   S.throwaway.push(...thrown); S.hand = [];
-  toast('Thrown away: ' + thrown.map(cardSpan).join(' '));
-  sfx('swish');
+    sfx('swish');
   newSet();
 }
 
@@ -175,7 +174,7 @@ function pickFromDiscard(id){
   const i = S.discard.findIndex(c => c.id === id); if (i < 0) return;
   S.swapCard = S.discard.splice(i, 1)[0]; ui.modal = null;
   if (S.hand.length < capacity()){
-    S.hand.push(S.swapCard); toast(`${cardSpan(S.swapCard)} taken from the discard pile.`);
+    S.hand.push(S.swapCard);
     S.swapCard = null; S.swapTen = null; S.phase = 'idle'; sfx('place');
     settle();
   } else S.phase = 'swapPlace';
@@ -184,7 +183,6 @@ function placeSwap(id){
   if (S.phase !== 'swapPlace' || !S.swapCard) return;
   const i = S.hand.findIndex(c => c.id === id); if (i < 0) return;
   const out = S.hand[i]; S.discard.push(out); S.hand[i] = S.swapCard;
-  toast(`${cardSpan(S.swapCard)} in, ${cardSpan(out)} out.`);
   S.swapCard = null; S.swapTen = null; S.phase = 'idle'; ui.armed = null; sfx('place');
   settle();
 }
@@ -193,7 +191,7 @@ function releasePower(idx){
   if (S.phase !== 'idle' && S.phase !== 'decide') return;
   const p = S.powerups.splice(idx, 1)[0]; if (!p) return;
   S.discard.push(p.card);
-  toast(`${POWER[p.card.rank].name} released.`); sfx('swish');
+  sfx('swish');
   if (S.hand.length > capacity()){ S.phase = 'trim'; ui.armed = null; }
   else settle();
 }
@@ -201,7 +199,7 @@ function trimCard(id){
   if (S.phase !== 'trim') return;
   const i = S.hand.findIndex(c => c.id === id); if (i < 0) return;
   const out = S.hand.splice(i, 1)[0]; S.discard.push(out); S.debt += S.bet; S.stats.discards++;
-  toast(`Discarded ${cardSpan(out)}`); sfx('debt'); ui.armed = null;
+  sfx('debt'); ui.armed = null;
   if (S.hand.length <= capacity()){ S.phase = 'idle'; settle(); }
 }
 

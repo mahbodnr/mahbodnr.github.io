@@ -681,12 +681,13 @@ html.four-color .card.s-C{color:var(--c4c)}
 /* leaderboard period toggle + sign-in */
 .lbbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin:0 0 6px}
 .lbper{margin:0}
-.lbseed{display:inline-flex;align-items:center;gap:9px;border:0;background:transparent;color:var(--text);font:inherit;font-size:13px;font-weight:700;padding:4px 2px;min-height:36px;cursor:pointer}
-.lbseed .switch{display:inline-block;width:40px;height:24px}
-.lbseed .switch i{width:16px;height:16px}
-.lbseed[aria-checked="true"] .switch{background:rgba(147,231,168,.25);border-color:var(--gain)}
-.lbseed[aria-checked="true"] .switch i{transform:translateX(16px);background:var(--gain)}
-.lbseed:focus-visible{outline:2px solid var(--brass-hi);outline-offset:2px;border-radius:8px}
+.lbseed{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:600;padding:4px 2px;min-height:32px;cursor:pointer;opacity:.75}
+.lbseed:hover,.lbseed[aria-checked="true"]{opacity:1}
+.lbseed i{width:12px;height:12px;border-radius:3px;border:1.5px solid currentColor;flex:none;position:relative}
+.lbseed[aria-checked="true"]{color:var(--text)}
+.lbseed[aria-checked="true"] i{background:var(--brass);border-color:var(--brass)}
+.lbseed[aria-checked="true"] i::after{content:'';position:absolute;left:3px;top:0;width:3px;height:7px;border:solid #2b1d03;border-width:0 1.5px 1.5px 0;transform:rotate(45deg)}
+.lbseed:focus-visible{outline:2px solid var(--brass-hi);outline-offset:2px;border-radius:6px}
 .bname .bn{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .seedtag{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 6px;flex:none}
 .lbh{margin:18px 0 8px}
@@ -705,7 +706,7 @@ html.four-color .card.s-C{color:var(--c4c)}
 .hboard .hlab{color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:420px){ .hboard .brow{grid-template-columns:22px minmax(0,1fr) 52px} .hboard .hlab{display:none} }
 .lbsub{margin:0 0 10px}
-.lbsign{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:12px;border-radius:12px;border:1px dashed var(--brass-dim);font-size:13.5px;font-weight:600}
+.lbsign{display:flex;justify-content:center;margin-top:14px}
 
 /* can't pay upkeep */
 .jitter{animation:jitter .6s cubic-bezier(.36,.07,.19,.97) !important}

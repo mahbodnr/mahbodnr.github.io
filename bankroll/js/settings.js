@@ -63,11 +63,11 @@ function settingsHTML(){
     <h3>Sound</h3>
     ${toggle('sound', 'Sound effects')}
     <div class="srow"><span>Volume</span><input type="range" id="volRange" min="0" max="100" value="${Math.round((prefs.volume ?? .8) * 100)}" aria-label="Volume" ${prefs.sound ? '' : 'disabled'}></div>
-    ${toggle('haptics', 'Vibration', 'On phones that support it')}
+    ${toggle('haptics', 'Vibration')}
     <h3>Look</h3>
     <div class="srow"><span>Theme</span>${seg('theme', [['system','System'],['dark','Dark'],['light','Light']], 'Theme')}</div>
     <div class="srow"><span>Animations</span>${seg('speed', [['normal','Normal'],['fast','Fast'],['off','Off']], 'Animations')}</div>
-    ${toggle('fourColor', 'Four-colour deck', 'Diamonds blue, clubs green')}
+    ${toggle('fourColor', 'Four-colour deck')}
     <h3>Card pack</h3>
     <div class="packs">${PACKS.map(p => {
       const ok = isUnlocked(p), on = currentPack() === p.id;
@@ -76,18 +76,17 @@ function settingsHTML(){
       const back = cardHTML(null, { back:true, pack:p.id, style:`--back-hi:${p.back[0]};--back:${p.back[1]}` });
       return `<button class="pk" data-act="setPref" data-k="pack" data-v="${p.id}" ${ok ? '' : 'disabled'} aria-pressed="${on}" title="${ok ? p.name : `Reach level ${p.level} to unlock`}">
         <span class="pkcards">${demo}${back}</span>
-        <span class="pkname"><b>${p.name}</b><small>${ok ? p.note : `${LOCK_SVG}Level ${p.level}`}</small></span></button>`;
+        <span class="pkname"><b>${p.name}</b>${ok ? '' : `<small>${LOCK_SVG}Level ${p.level}</small>`}</span></button>`;
     }).join('')}</div>
     <h3>Table felt</h3>
     ${swatches('felt', FELTS, 'felt')}
-    <p class="snote">More designs unlock as your best level goes up. Your best so far: level ${bestLevel()}.</p>
-    <h3>Run seed</h3>
-    <div class="srow"><span>This run<small>The seed fixes the order of every deck in the run.</small></span><code class="seed">${S.seed}</code></div>
+    <h3>Seed</h3>
+    <div class="srow"><span>This run</span><code class="seed">${S.seed}</code></div>
     <form class="seedform" data-form="seed"><input id="seedInput" placeholder="ABCD-1234" maxlength="9" autocomplete="off" spellcheck="false" aria-label="Seed to play">
-      <button class="btn" type="submit">Start a new run with this seed</button></form>
-    <p class="snote" id="seedMsg">Starting a seeded run ends the current one. Share a seed so friends can play the same cards.</p>
+      <button class="btn" type="submit">Play</button></form>
+    <p class="snote" id="seedMsg"></p>
     <h3>Help</h3>
-    <div class="srow"><span>Tutorial<small>Walk through a hand step by step</small></span><button class="btn" data-act="replayTutorial">Replay</button></div>
-    <div class="srow kbrow"><span>Keyboard shortcuts<small>1–9 swap a card · D discard / deal · C cash out · N next card · T throw away · P power-up · W 10-swap · ↑↓ bet · K card tracker (or tap the deck) · Y history · ? help · , settings</small></span></div>
+    <div class="srow"><span>Tutorial</span><button class="btn" data-act="replayTutorial">Replay</button></div>
+    <div class="srow kbrow"><span>Keys<small>1–9 swap · D discard/deal · C cash out · N next · T throw away · P power-up · W 10-swap · ↑↓ bet · K tracker · Y history · ? help</small></span></div>
     <div class="actions"><button class="btn gold" data-act="close">Done</button></div>`;
 }
