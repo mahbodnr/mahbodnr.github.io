@@ -16,6 +16,7 @@ const LB = { kind:null, state:'off', period:'today', seeded:false, boards:{ toda
 const leaderboardAvailable = () => LB.state !== 'off';
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const todayUTC = () => new Date().toISOString().slice(0, 10);
+const telegramLaunch = () => (typeof BankrollTG !== 'undefined' && BankrollTG) || null;   // js/telegram.js, inside Telegram only
 const byScore = (a, b) => (b.level || 0) - (a.level || 0) || (b.peak || 0) - (a.peak || 0) || (b.biggestWin || 0) - (a.biggestWin || 0);
 const byMult = (a, b) => (b.mult || 0) - (a.mult || 0) || (a.at || 0) - (b.at || 0);
 function refreshBoard(){ if (ui.modal === 'history' || ui.modal === 'over') render(); const t = $('boardBtn'); if (t) t.hidden = !leaderboardAvailable(); }
@@ -96,6 +97,7 @@ const supabaseBackend = {
       LB.signedIn = !!session; LB.me = session ? session.user.id : null;
       const md = (session && session.user.user_metadata) || {};
       LB.myName = md.full_name || md.name || (session && session.user.email ? session.user.email.split('@')[0] : '');
+      LB.tgId = md.telegram_id || null;
     };
     try { const { data } = await this.client.auth.getSession(); setSession(data && data.session); } catch(e){}
     this.client.auth.onAuthStateChange((event, session) => {
@@ -103,6 +105,11 @@ const supabaseBackend = {
       if (session && !was){ this.ensureProfile(session.user); if (LB.backend) upgradeFreshRun(); }
       refreshBoard();
     });
+    // inside Telegram: sign in with the Telegram account (Google sign-in doesn't work in Telegram's browser)
+    const tg = telegramLaunch();
+    if (tg && tg.user && !(LB.signedIn && LB.tgId === tg.user.id)){
+      if (await this.telegramSignIn()){ try { const { data } = await this.client.auth.getSession(); setSession(data && data.session); } catch(e){} }
+    }
     if (LB.signedIn){ const { data } = await this.client.auth.getSession(); this.ensureProfile(data.session.user); }
     await this.refresh();
     return true;
@@ -163,8 +170,25 @@ const supabaseBackend = {
       return 'ok';
     } catch(e){ return 'error'; }
   },
+  // Telegram's signed launch data → the bankroll-telegram function → a one-time token → a Supabase session
+  async telegramSignIn(){
+    const tg = telegramLaunch();
+    if (!tg) return false;
+    try {
+      const { data, error } = await this.client.functions.invoke('bankroll-telegram', { body:{ initData:tg.initData } });
+      if (error || !data || !data.token_hash) return false;
+      const res = await this.client.auth.verifyOtp({ token_hash:data.token_hash, type:'magiclink' });
+      return !res.error;
+    } catch(e){ return false; }
+  },
   // the site's existing Google sign-in page (shared with Latent Space) sends the player back here afterwards
-  signIn(){ LB.navigate('/latent-space/login.html?next=' + encodeURIComponent(location.pathname + location.search)); },
+  async signIn(){
+    if (telegramLaunch()){
+      if (await this.telegramSignIn()) refreshBoard(); else toast('Couldn’t sign in');
+      return;
+    }
+    LB.navigate('/latent-space/login.html?next=' + encodeURIComponent(location.pathname + location.search));
+  },
 };
 
 async function initLeaderboard(){
@@ -286,7 +310,8 @@ function leaderboardHTML(){
   const toggle = `<div class="lbbar"><div class="sg lbper" role="group" aria-label="Leaderboard period">
       <button data-act="lbPeriod" data-v="today" aria-pressed="${per === 'today'}">Today</button>
       <button data-act="lbPeriod" data-v="all" aria-pressed="${per === 'all'}">All time</button></div>
-      <button class="lbseed" role="switch" data-act="lbSeeded" aria-checked="${LB.seeded}" title="Include runs where the player chose the seed"><i aria-hidden="true"></i>Seeded runs</button></div>`;
+</div>`;
+  const seeded = `<button class="lbseed" data-act="lbSeeded" aria-pressed="${LB.seeded}" title="${LB.seeded ? 'Hide' : 'Include'} runs where the player chose the seed" aria-label="${LB.seeded ? 'Hide' : 'Include'} seeded runs">${LB.seeded ? '− seeded' : '+ seeded'}</button>`;
   const sub = per === 'today' ? `<p class="snote lbsub">Resets in ${resetIn()}</p>` : '';
   let foot;
   if (LB.kind === 'supabase' && !LB.signedIn)
@@ -303,5 +328,5 @@ function leaderboardHTML(){
       ${rows.map((r, i) => `<div class="brow ${r.id === LB.me ? 'me' : ''}" role="row"><span>${i + 1}</span>${lbName(r)}
         <span>${fmt(r.level || 1)}</span><span>${fmt(r.peak || 0)}</span><span class="pos">${r.biggestWin ? '+' + fmt(r.biggestWin) : '—'}</span></div>`).join('')}
     </div>`;
-  return `${toggle}${sub}${list}${handsHTML(per)}${foot}`;
+  return `${toggle}${sub}${list}${handsHTML(per)}${foot}${seeded}`;
 }
