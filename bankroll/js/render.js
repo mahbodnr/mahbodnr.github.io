@@ -76,9 +76,18 @@ function renderLedger(){
     <div class="stat debt ${S.debt ? '' : 'zero'}" id="st-debt"><div class="k">Debt</div><div class="v">${fmt(S.debt)}</div></div>
     <div class="stat" id="st-level"><div class="k">Level</div><div class="v">${lvl()}</div></div>`);
   const L = lvl(), price = levelPrice(L), used = 54 - S.deck.length, need = price - S.coins;
+  // progress toward the next level's price: coins against the price, and what's still missing (or to spare)
+  const ok = need <= 0, pct = Math.max(0, Math.min(100, S.coins / price * 100));
   setHTML($('levelbar'), `
-    <div class="lb-track" title="${S.deck.length} cards left in level ${L}"><i style="width:${(used / 54 * 100).toFixed(1)}%"></i><span>${S.deck.length} cards left</span></div>
-    <div class="lb-price">Level ${L + 1} <b>${coin}${fmt(price)}</b> <em class="${need > 0 ? 'short' : 'ok'}">${need > 0 ? `need ${fmt(need)}` : '✓'}</em></div>`);
+    <div class="lv-goal ${ok ? 'ok' : ''}" role="meter" aria-label="Coins toward level ${L + 1}" aria-valuemin="0" aria-valuemax="${price}" aria-valuenow="${Math.max(0, Math.min(S.coins, price))}"
+      title="${ok ? `You can pay for level ${L + 1}, with ${fmt(-need)} to spare` : `${fmt(need)} more coins needed for level ${L + 1}`}">
+      <span class="lv-tag">Level ${L + 1}</span>
+      <div class="lv-track"><i style="width:${pct.toFixed(1)}%"></i>
+        <span class="lv-nums">${coin}<b>${fmt(Math.max(0, S.coins))}</b><span class="of">/ ${fmt(price)}</span></span>
+        <svg class="lv-flag" viewBox="0 0 24 24" aria-hidden="true">${ok ? '<path d="M5 12.5l4.2 4.2L19 7"/>' : '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>'}</svg>
+      </div>
+      <span class="lv-need">${ok ? `<b>+${fmt(-need)}</b> spare` : `<b>${fmt(need)}</b> to go`}</span>
+    </div>`);
   if (ui.levelUp){ ui.levelUp = false; floatDelta('st-level', 'LEVEL UP', 'coin-up', 'bump'); }
 }
 
@@ -102,7 +111,7 @@ function renderPit(){
     ? top.map((c, i) => cardHTML(c, { track:false }).replace('class="card', `style="left:${i * 14}px;transform:rotate(${(i - 1) * 6}deg)" class="card`)).join('')
     : `<div class="emptyslot" style="position:absolute;left:14px;top:0"></div>`;
   setHTML($('pit'), `
-    <div class="zone"><button class="deckbtn" data-act="viewOut" aria-label="Deck: open the card tracker" title="Card tracker">${deck}</button><div class="lbl">Deck <b>${dl}</b></div></div>
+    <div class="zone"><button class="deckbtn" data-act="viewOut" aria-label="Deck: open the card tracker" title="Card tracker">${deck}</button><div class="lbl dk"><span>Deck <b>${dl}</b></span><span class="dk-bar" aria-hidden="true"><i style="width:${(dl / 54 * 100).toFixed(1)}%"></i></span></div></div>
     <div class="zone spot"><div class="stage">${spot}</div><div class="lbl">${spotLbl}</div></div>
     <div class="zone"><button class="discardbtn" data-act="viewDiscard" ${S.discard.length ? '' : 'disabled'} aria-label="View discard pile">${dis}</button><div class="lbl">Discard <b>${S.discard.length}</b></div></div>`);
 }

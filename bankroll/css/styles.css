@@ -95,15 +95,36 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible,summary:focus-
   background:radial-gradient(circle at 35% 30%, #fff3c4 0 12%, var(--gold-1) 30%, var(--gold-2) 62%, #9b7426 100%);
   box-shadow:inset 0 0 0 1.5px rgba(120,84,20,.55), 0 1px 1px rgba(0,0,0,.4);vertical-align:-.08em}
 
-.levelbar{display:flex;align-items:center;gap:10px;min-height:20px}
-.lb-track{position:relative;flex:1 1 0;min-width:0;height:20px;border-radius:999px;background:var(--panel);border:1px solid var(--line);overflow:hidden;box-sizing:border-box}
-.lb-track i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,rgba(217,171,76,.22),rgba(245,217,140,.5));border-right:1px solid rgba(245,217,140,.55);transition:width .4s ease}
-.lb-track span{position:relative;display:block;text-align:center;font-size:11px;font-weight:700;line-height:18px;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap}
-.lb-price{flex:none;font-size:12.5px;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:6px;white-space:nowrap}
-.lb-price b{color:var(--brass-hi);display:inline-flex;align-items:center;gap:4px;font-size:15px;font-weight:900;font-variant-numeric:tabular-nums}
-.lb-price em{font-style:normal;font-weight:900;font-size:11.5px;padding:2px 8px;border-radius:999px;line-height:1.3}
-.lb-price em.ok{color:#0f3a20;background:var(--gain)}
-.lb-price em.short{color:#3a0d06;background:var(--debt)}
+.levelbar{display:flex;align-items:center;min-height:24px}
+/* the goal: coins against the next level's price */
+.lv-goal{--fill:linear-gradient(90deg,#b9862c,var(--gold-1));display:flex;align-items:center;gap:8px;width:100%;min-width:0}
+.lv-tag{flex:none;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.lv-track{position:relative;flex:1 1 0;min-width:0;height:22px;border-radius:999px;box-sizing:border-box;overflow:hidden;
+  background:var(--panel);border:1px solid var(--line);box-shadow:inset 0 1px 3px rgba(0,0,0,.3)}
+.lv-track > i{position:absolute;inset:0 auto 0 0;border-radius:999px;background:var(--fill);transition:width .6s cubic-bezier(.2,.8,.3,1);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 0 10px rgba(245,217,140,.3)}
+.lv-track > i::after{content:"";position:absolute;inset:0 0 50% 0;border-radius:999px 999px 0 0;background:linear-gradient(rgba(255,255,255,.28),transparent)}
+.lv-nums{position:relative;z-index:1;display:flex;align-items:center;gap:4px;height:100%;padding:0 30px 0 9px;font-size:12px;font-weight:700;
+  font-variant-numeric:tabular-nums;color:var(--text);text-shadow:0 1px 2px rgba(0,0,0,.55);white-space:nowrap}
+.lv-nums .coin{font-size:12px}
+.lv-nums b{font-weight:900}
+.lv-nums .of{opacity:.75}
+.lv-flag{position:absolute;z-index:1;right:4px;top:50%;width:14px;height:14px;transform:translateY(-50%);fill:none;stroke:var(--muted);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.lv-need{flex:none;font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.lv-need b{font-size:13.5px;font-weight:900;color:var(--debt)}
+/* already covered: the bar fills green, the lock turns into a tick and the spare amount shows */
+.lv-goal.ok{--fill:linear-gradient(90deg,#2f8f5b,#7ddf9a)}
+.lv-goal.ok .lv-track{border-color:rgba(147,231,168,.55)}
+.lv-goal.ok .lv-track > i{box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 0 12px rgba(147,231,168,.35)}
+.lv-goal.ok .lv-track > i::before{content:"";position:absolute;inset:0;border-radius:inherit;
+  background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.35) 45%,transparent 60%) -150% 0/60% 100% no-repeat;animation:lvShine 3.2s ease-in-out infinite}
+@keyframes lvShine{0%,55%{background-position:-150% 0}100%{background-position:250% 0}}
+.lv-goal.ok .lv-flag{stroke:#0f3a20}
+.lv-goal.ok .lv-need b{color:var(--gain)}
+/* deck: a thin bar under the count shows how much of the deck is left */
+.dk-bar{display:block;width:calc(var(--cw) * .62);height:3px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+.dk-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,rgba(245,217,140,.45),rgba(245,217,140,.8));transition:width .4s ease}
+.zone .lbl.dk{display:flex;flex-direction:column;align-items:center;gap:4px}
 
 /* ================= table ================= */
 .rail{position:relative;border-radius:26px;padding:7px;flex:1 0 auto;display:flex;flex-direction:column;
@@ -724,7 +745,6 @@ html.light .tgrid .sl{color:var(--text)}
 html.light .tgrid .sl.r{color:#c3303b}
 html.light .chip, html.light .rs-eq .combo{background:rgba(185,133,35,.1)}
 html.light .btn.power{background:linear-gradient(180deg,rgba(185,133,35,.16),rgba(185,133,35,.06))}
-html.light .lb-track i{background:linear-gradient(90deg,rgba(185,133,35,.2),rgba(185,133,35,.45))}
 html.light .callout{background:#fff1ed}
 html.light .ro-mult{text-shadow:none}
 
@@ -741,7 +761,6 @@ html.speed-fast *, html.speed-fast *::before, html.speed-fast *::after{animation
   :root{--gutter:12px}
   .stat{padding:5px 8px 6px}
   .stat .k{letter-spacing:.1em}
-  .lb-price{font-size:11.5px} .lb-price b{font-size:14px}
   .btn{padding:8px 11px;gap:7px}
   .btn .bi{width:17px;height:17px}
 }
@@ -755,9 +774,8 @@ html.speed-fast *, html.speed-fast *::before, html.speed-fast *::after{animation
   .stat{padding:8px 12px 9px}
   .stat .k{font-size:10.5px}
   .stat .v{font-size:24px}
-  .levelbar{min-height:24px}
-  .lb-track{height:24px} .lb-track span{line-height:22px;font-size:12px}
-  .lb-price{font-size:14px} .lb-price b{font-size:18px}
+  .levelbar{min-height:28px}
+  .lv-track{height:26px} .lv-nums{font-size:13.5px} .lv-tag{font-size:11px} .lv-need{font-size:13px} .lv-need b{font-size:15px}
   .rail{padding:9px;border-radius:32px}
   .felt{padding:16px 24px 14px;gap:10px;border-radius:24px}
   .felt::before{inset:7px;border-radius:18px}
@@ -876,3 +894,6 @@ html.speed-off .hand .card.toss{opacity:0}
 .ul-felt{width:96px;height:62px}
 .pb-ten{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:800 12px var(--f-card);color:#2b1d03;background:radial-gradient(circle at 35% 30%, #fff3c4 0 12%, var(--gold-1) 35%, var(--gold-2) 75%, #8c6a22)}
 .pb-list{grid-template-columns:repeat(4,minmax(0,1fr))}
+
+html.light .lv-tag, html.light .lv-need{color:var(--muted)}
+html.light .lv-nums{color:#1f2a26;text-shadow:0 1px 0 rgba(255,255,255,.6)}
