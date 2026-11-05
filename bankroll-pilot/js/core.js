@@ -10,7 +10,7 @@ const POWER = {
   2: { type:'2', cost:2, name:'Two-tone',  short:'Red/black suits' },
   5: { type:'5', cost:5, name:'Extra seat',short:'+1 seat' },
 };
-const SWAP_COST = 10, START_COINS = 10;
+const SWAP_COST = 10, START_COINS = 50;   // PILOT: start with 50 coins (live game: 10)
 // price to pass level L: 100, 200, 500, 1000, 2000, 5000, …
 const levelPrice = L => [1, 2, 5][(L - 1) % 3] * 100 * Math.pow(10, Math.floor((L - 1) / 3));
 const lvl = () => S.level || S.stats.shuffles || 1;
