@@ -90,3 +90,36 @@ function settingsHTML(){
     <div class="srow kbrow"><span>Keys<small>1–9 swap · D discard/deal · C cash out · N next · T throw away · P power-up · W 10-swap · ↑↓ bet · K tracker · Y history · ? help</small></span></div>
     <div class="actions"><button class="btn gold" data-act="close">Done</button></div>`;
 }
+
+/* ---------- unlock announcements ---------- */
+// The first time a level is reached (beyond any earlier run), the card packs and felts it unlocks are announced,
+// with a button to start using each one. prefs.unlockedUpTo remembers the highest level already announced.
+function checkUnlocks(){
+  const seen = Math.max(prefs.unlockedUpTo || 0, (prefs.record && prefs.record.level) || 1);
+  const L = lvl();
+  if (L <= seen) return;
+  prefs.unlockedUpTo = L; store(PREF_KEY, prefs);
+  const items = PACKS.filter(p => p.level > seen && p.level <= L).map(p => ({ kind:'pack', item:p }))
+    .concat(FELTS.filter(f => f.level > seen && f.level <= L).map(f => ({ kind:'felt', item:f })));
+  if (!items.length) return;
+  ui.unlocks = items; ui.modal = 'unlock';
+  sfx('power'); buzz([20, 30, 20]);
+  setTimeout(celebrate, dur(250));
+  announce('Unlocked: ' + items.map(x => x.item.name + (x.kind === 'pack' ? ' card pack' : ' table felt')).join(', '));
+}
+function unlockHTML(){
+  const list = ui.unlocks || [];
+  const tiles = list.map(({ kind, item }) => {
+    const k = kind === 'pack' ? 'pack' : 'felt', on = (kind === 'pack' ? currentPack() : (prefs.felt || 'green')) === item.id;
+    const look = kind === 'pack'
+      ? `<span class="pkcards ul-cards">${[{ rank:13, suit:'S' }, { rank:12, suit:'H' }, { rank:1, suit:'D' }].map((c, i) => cardHTML({ id:'ul-' + item.id + i, ...c }, { pack:item.id, track:false })).join('')}${cardHTML(null, { back:true, pack:item.id, style:`--back-hi:${item.back[0]};--back:${item.back[1]}` })}</span>`
+      : `<span class="swv ul-felt" style="--c1:${item.c1};--c2:${item.c2}"></span>`;
+    return `<div class="ul-item">${look}<b>${item.name}</b><small>${kind === 'pack' ? 'Card pack' : 'Table felt'}</small>
+      <button class="btn ${on ? '' : 'gold'}" data-act="setPref" data-k="${k}" data-v="${item.id}" ${on ? 'disabled' : ''}>${on ? 'In use' : 'Use it'}</button></div>`;
+  }).join('');
+  return `<div class="ul-head"><svg class="ul-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 7.6-1.7"/></svg>
+      <div class="rs-eyebrow">Level ${lvl()} reached</div><h2>Unlocked!</h2></div>
+    <div class="ul-list">${tiles}</div>
+    <p class="snote" style="text-align:center">You can switch any time in Settings.</p>
+    <div class="actions"><button class="btn" data-act="close">Continue</button></div>`;
+}

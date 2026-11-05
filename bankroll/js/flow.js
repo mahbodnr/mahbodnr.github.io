@@ -34,6 +34,7 @@ function reshuffle(){
   applyPrefs(); // a new level can unlock card packs and felts
   reportProgress();
   ui.modal = null; sfx('coin'); newSet();
+  if (typeof checkUnlocks === 'function') checkUnlocks();   // announce any card pack or felt this level unlocked
 }
 
 function gameOver(reason, extra){
@@ -157,17 +158,17 @@ function usePower(){
 }
 
 function startSwap(){
-  if (S.phase !== 'decide' || !offerIsDealt() || S.pending.rank !== 10 || S.coins < SWAP_COST || !S.discard.length) return;
+  if (S.phase !== 'decide' || !offerIsDealt() || S.pending.rank !== 10 || S.coins < swapCost() || !S.discard.length) return;
   S.swapRefund = S.pendingCharged;
   if (S.pendingCharged){ S.debt -= S.bet; S.stats.discards--; } S.pendingCharged = false;
-  coinChange(-SWAP_COST, '10 swap'); S.swapTen = S.pending; S.pending = null; S.discard.push(S.swapTen);
+  coinChange(-swapCost(), '10 swap'); S.swapTen = S.pending; S.pending = null; S.discard.push(S.swapTen);
   S.phase = 'swapPick'; ui.modal = 'pick'; ui.armed = null; sfx('coin');
 }
 function cancelSwap(){
   if (S.phase === 'swapPlace'){ S.discard.push(S.swapCard); S.swapCard = null; S.phase = 'swapPick'; ui.modal = 'pick'; ui.armed = null; return; }
   if (S.phase !== 'swapPick') return;
   S.discard = S.discard.filter(c => c.id !== S.swapTen.id);
-  S.pending = S.swapTen; S.swapTen = null; coinChange(SWAP_COST, 'refund', '10 swap'); S.phase = 'decide'; ui.modal = null;
+  S.pending = S.swapTen; S.swapTen = null; coinChange(swapCost(), 'refund', '10 swap'); S.phase = 'decide'; ui.modal = null;
   if (S.swapRefund){ S.debt += S.bet; S.stats.discards++; S.pendingCharged = true; } S.swapRefund = false;
 }
 function pickFromDiscard(id){

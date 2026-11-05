@@ -236,7 +236,7 @@ function renderDock(){
           ? `<button class="btn power grow" disabled title="Already active">${ico('power')}${bl(P.name, 'active')}</button>`
           : `<button class="btn power grow" data-act="power" ${S.coins < powerCost(c.rank) ? 'disabled' : ''} title="${P.short}">${ico('power')}${bl(P.name, `${coin}${fmt(powerCost(c.rank))} · ${P.short}`)}${kbd('P')}</button>`;
       }
-      if (dealt && c.rank === 10) btns += `<button class="btn power grow" data-act="swap" ${S.coins < SWAP_COST || !S.discard.length ? 'disabled' : ''} title="Take a card back from the discard pile">${ico('back')}${bl('Take back', `${coin}${SWAP_COST} · from discard`)}${kbd('W')}</button>`;
+      if (dealt && c.rank === 10) btns += `<button class="btn power grow" data-act="swap" ${S.coins < swapCost() || !S.discard.length ? 'disabled' : ''} title="Take a card back from the discard pile">${ico('back')}${bl('Take back', `${coin}${fmt(swapCost())} · from discard`)}${kbd('W')}</button>`;
       rows = `<div class="row">${btns}</div><div class="row">${cashBtn()}</div>`;
       break;
     }
@@ -287,9 +287,10 @@ function renderModal(){
         <div class="lv-medal"><span>Level</span><b>${L + 1}</b></div>
       </div>
       <div class="receipt"><div><span>Coins</span><b>${fmt(S.coins)}</b></div><div><span>Price</span><b class="neg">−${fmt(price)}</b></div><div class="tot"><span>Left</span><b>${fmt(S.coins - price)}</b></div></div>
-      <div class="pricebump"><div class="pb-head">Power-ups cost <b>×2</b> in level ${L + 1}</div>
+      <div class="pricebump"><div class="pb-head">Prices <b>×2</b> in level ${L + 1}</div>
         <div class="pb-list">${PU_ORDER.map(t => { const r = PU_RANK[t], now = powerCost(r);
-          return `<div class="pb-item">${puEmblem(t, 1)}<span>${Object.values(POWER).find(x => x.type === t).name}</span><b><s>${fmt(now)}</s>${coin}${fmt(now * 2)}</b></div>`; }).join('')}</div></div>
+          return `<div class="pb-item">${puEmblem(t, 1)}<span>${Object.values(POWER).find(x => x.type === t).name}</span><b><s>${fmt(now)}</s>${coin}${fmt(now * 2)}</b></div>`; }).join('')}
+          <div class="pb-item"><span class="pb-ten">10</span><span>Take back</span><b><s>${fmt(swapCost())}</s>${coin}${fmt(swapCost() * 2)}</b></div></div></div>
       <div class="actions"><button class="btn gold grow" data-act="reshuffle">Pay ${fmt(price)}</button></div>`;
   }
   else if (m === 'tracker') html = trackerHTML();
@@ -297,6 +298,7 @@ function renderModal(){
   else if (m === 'settings') html = settingsHTML();
   else if (m === 'bust') html = bustHTML();
   else if (m === 'record') html = recordHTML();
+  else if (m === 'unlock') html = unlockHTML();
   else if (m === 'release5'){
     const over = S.hand.length - (capacity() - 1);
     html = `<h2>Release Extra seat?</h2>
@@ -337,8 +339,8 @@ function renderModal(){
   }
 }
 
-const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart', 'release5', 'record'];
-const MODAL_NAMES = { help:'How to play', result:'Hand result', over:'Run over', reshuffle:'Level complete', tracker:'Card tracker', view:'Discard pile', pick:'Take a card back', history:'History', settings:'Settings', bust:'Cash-out warning', restart:'New game', release5:'Release Extra seat', record:'Top hand of the day' };
+const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart', 'release5', 'record', 'unlock'];
+const MODAL_NAMES = { help:'How to play', result:'Hand result', over:'Run over', reshuffle:'Level complete', tracker:'Card tracker', view:'Discard pile', pick:'Take a card back', history:'History', settings:'Settings', bust:'Cash-out warning', restart:'New game', release5:'Release Extra seat', record:'Top hand of the day', unlock:'Unlocked' };
 // closing a dialog that opened over another (the top-hand celebration) returns to the one underneath
 function closeModal(){ ui.modal = ui.modal === 'record' && ui.modalBack ? ui.modalBack : null; ui.modalBack = null; }
 function bustHTML(){
@@ -545,9 +547,9 @@ function helpHTML(){
       ${exHand('AS', [0])}<span>Ace boost<small>+1 to every multiplier</small></span><b class="cost">${coin}${fmt(powerCost(1))}</b>
       ${exHand('2H', [0])}<span>Two-tone<small>suits become red and black</small></span><b class="cost">${coin}${fmt(powerCost(2))}</b>
       ${exHand('5C', [0])}<span>Extra seat<small>+1 seat</small></span><b class="cost">${coin}${fmt(powerCost(5))}</b>
-      ${exHand('10D', [0])}<span>Take back<small>any card from the discard pile</small></span><b class="cost">${coin}10</b>
+      ${exHand('10D', [0])}<span>Take back<small>any card from the discard pile</small></span><b class="cost">${coin}${fmt(swapCost())}</b>
     </div>
-    <p>Power-ups cost their price again on every new card. ✕ releases one. Their prices <b>double each level</b>${lvl() > 1 ? ` (shown for level ${lvl()})` : ''}.</p>
+    <p>Power-ups cost their price again on every new card. ✕ releases one. Their prices, and the 10's fee, <b>double each level</b>${lvl() > 1 ? ` (shown for level ${lvl()})` : ''}.</p>
     <h3>Levels</h3>
     <p>When the deck runs out, pay the level price (100, 200, 500, 1,000 …) to reshuffle, or the run ends.</p>
     <div class="actions"><button class="btn" data-act="replayTutorial">Tutorial</button><button class="btn gold" data-act="close">Got it</button></div>`;

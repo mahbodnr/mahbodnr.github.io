@@ -86,6 +86,7 @@ const isRed = c => c.suit === 'H' || c.suit === 'D' || c.suit === 'JR';
 const capacity = () => 5 + S.jokerSeen.length + S.powerups.filter(p => p.type === '5').length;
 // power-up prices double with each level: level 1 = the base price, level 2 = ×2, level 3 = ×4 …
 const powerCost = rank => POWER[rank].cost * Math.pow(2, lvl() - 1);
+const swapCost = () => SWAP_COST * Math.pow(2, lvl() - 1);   // the 10 take-back fee doubles too
 const upkeep = () => S.powerups.reduce((a, p) => a + powerCost(p.card.rank), 0);
 const fmt = n => Math.round(n).toLocaleString('en-US');
 function cardName(c){
