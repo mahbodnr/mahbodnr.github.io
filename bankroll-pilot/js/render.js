@@ -317,7 +317,7 @@ function renderModal(){
   else if (m === 'release5'){
     const over = S.hand.length - (capacity() - 1);
     html = `<h2>Release Extra seat?</h2>
-      <p class="lead">Your hand has <b>${S.hand.length}</b> cards. With one seat fewer it holds <b>${capacity() - 1}</b>, so you'll have to <b>discard ${over === 1 ? 'one card' : over + ' cards'}</b> — the next costs ${coin}${fmtFit(nextCardCost())}, and each one after that doubles.</p>
+      <p class="lead">Your hand has <b>${S.hand.length}</b> cards. With one seat fewer it holds <b>${capacity() - 1}</b>, so you'll have to <b>discard ${over === 1 ? 'one card' : over + ' cards'}</b> — the next costs ${coin}${fmtFit(nextCardCost())}, and each one after that raises the card debt ×1.5.</p>
       <div class="actions"><button class="btn" data-act="close">Keep it</button><button class="btn warn" data-act="releaseConfirm">Release and discard</button></div>`;
   }
   else if (m === 'restart') html = `<h2>New game?</h2><p class="lead">This run will be lost.</p>
@@ -547,7 +547,7 @@ function helpHTML(){
     <h3>A hand</h3>
     <ul>
       <li>5 cards: 3 up, 2 down. <b>Throw away</b> is free before you bet.</li>
-      <li>Bet and <b>Deal</b>. Dealing adds <b>one extra bet</b> to the debt. Cards dealt into a full hand <b>double the card debt</b>: 1, 2, 4, 8 … bets.</li>
+      <li>Bet and <b>Deal</b>. Dealing adds <b>one extra bet</b> to the debt. Each card dealt into a full hand raises the card debt <b>×1.5</b> (rounded): 1 → 2 → 3 → 5 → 8 … bets.</li>
       <li>Tap or drag a hand card to swap it with the center card (free). <b>Discard</b> deals the next one.</li>
       <li><b>Cash out</b>: bet × multiplier − debt. Below zero ends the run.</li>
     </ul>

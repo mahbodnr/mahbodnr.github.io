@@ -4,7 +4,7 @@
 /* ================= flow ================= */
 function newSet(){
   S.handLedger = null;
-  S.bet = 0; S.debt = 0; S.cardDebt = 0; S.hand = []; S.powerups = []; S.pending = null; S.jokerSeen = []; S.faceDown = [];
+  S.bet = 0; S.debt = 0; S.cardSteps = []; S.hand = []; S.powerups = []; S.pending = null; S.jokerSeen = []; S.faceDown = [];
   S.swapTen = null; S.swapCard = null; S.result = null; S.pendingCharged = false; S.swapRefund = false; ui.armed = null;
   if (S.coins < 1) return gameOver('You have no coins left to bet.', { cause:'broke' });
   if (S.deck.length < 5) return deckOut();
@@ -65,7 +65,7 @@ function deal(){
   const bet = Math.max(1, Math.min(S.betInput, S.coins));
   S.handStart = S.coins; S.handLedger = {};
   S.bet = bet; S.lastBet = bet; coinChange(-bet, 'bet');
-  S.debt += bet; S.cardDebt = 0;   // PILOT: the ante
+  S.debt += bet; S.cardSteps = [];   // PILOT: the ante
   S.faceDown.forEach(id => ui.flips.add(id)); S.faceDown = [];
   S.hand.forEach(c => { if (isJoker(c) && !S.jokerSeen.includes(c.id)) S.jokerSeen.push(c.id); });
   S.stats.sets++; S.phase = 'idle';
@@ -120,11 +120,14 @@ function coinChange(d, label, cat){
   (ui.coinEv = ui.coinEv || []).push({ d, label });
 }
 /* PILOT rules: dealing costs one extra bet (the ante, added to the debt), and each card dealt into a full hand
-   doubles the debt from cards: the 1st adds 1 bet, the 2nd 1 more, then 2, 4, 8 … (card debt 1, 2, 4, 8, 16 … bets). */
-const nextCardCost = () => (S.cardDebt || 0) > 0 ? S.cardDebt : S.bet;
-function chargeCard(){ const inc = nextCardCost(); S.cardDebt = (S.cardDebt || 0) + inc; S.debt += inc; S.stats.discards++; return inc; }
+   raises the debt from cards ×1.5, rounded to whole coins (at least +1): the 1st card adds 1 bet, then the card
+   debt goes ×1.5 each time. With a bet of 1: 1 → 2 → 3 → 5 → 8 → 12 → 18 …; with 10: 10 → 15 → 23 → 35 → 53 …
+   Each card's charge is remembered (S.cardSteps), so refunding a card returns exactly what it added. */
+const cardDebtNow = () => (S.cardSteps || []).reduce((a, b) => a + b, 0);
+const nextCardCost = () => { const cd = cardDebtNow(); return cd > 0 ? Math.max(1, Math.round(cd * 1.5) - cd) : S.bet; };
+function chargeCard(){ const inc = nextCardCost(); (S.cardSteps = S.cardSteps || []).push(inc); S.debt += inc; S.stats.discards++; return inc; }
 // undo the most recent card's charge (a fresh card used as a power-up or for the 10 take-back)
-function refundCard(){ const cd = S.cardDebt || 0; if (!cd) return; const inc = cd > S.bet ? cd / 2 : cd; S.cardDebt = cd - inc; S.debt -= inc; S.stats.discards--; }
+function refundCard(){ const inc = (S.cardSteps || []).pop(); if (!inc) return; S.debt -= inc; S.stats.discards--; }
 function canDraw(){ return S.deck.length > 0 && S.coins >= upkeep(); }
 
 
