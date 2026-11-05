@@ -196,7 +196,7 @@ function renderValue(){
   const boosts = [ev.boost ? `<span class="chip">Ace +${ev.boost}</span>` : '', ev.twoTone ? '<span class="chip">Two-tone</span>' : ''].join('');
   const b = S.phase === 'bet' ? Math.max(1, Math.min(S.betInput, S.coins)) : S.bet;
   setHTML($('value'), `<div class="ro-mult ${ev.mult ? '' : 'zero'}" title="Multiplier"><span class="x">×</span><span id="multBig">${fmt(ev.mult)}</span></div>
-    <div class="ro-pay"><small>Pays</small><span>${coin}${fmt(b * ev.mult)} <em>bet ${fmt(b)}</em></span></div>
+    ${S.phase === 'bet' ? '' : `<div class="ro-pay"><small>Pays</small><span>${coin}${fmt(b * ev.mult)} <em>bet ${fmt(b)}</em></span></div>`}
     <div class="ro-extra">${boosts}${tip}</div>`);
   if (ui.lastMult !== undefined && ui.lastMult !== ev.mult) rollMult($('multBig'), ui.lastMult, ev.mult);
   ui.lastMult = ev.mult;
