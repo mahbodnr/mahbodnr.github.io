@@ -95,10 +95,9 @@ function setBet(v){ S.betInput = clampBet(v); render(); }
 // update the bet controls in place (no full re-render while dragging or holding)
 function updateBetUI(skip){
   const b = S.betInput;
-  const num = $('betNum'), rg = $('betRange'), deal = $('dealBtn');
+  const num = $('betNum'), rg = $('betRange');
   if (num && skip !== 'num') num.value = b;
   if (rg && skip !== 'range') rg.value = betToPos(b);
-  if (deal) deal.textContent = 'Deal · bet ' + fmt(b);
   const dn = document.querySelector('[data-hold="-1"]'), up = document.querySelector('[data-hold="1"]');
   if (dn) dn.disabled = b <= 1; if (up) up.disabled = b >= S.coins;
   renderValue();

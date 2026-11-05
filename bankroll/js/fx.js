@@ -35,18 +35,33 @@ function countUp(el, to){
 function rollMult(el, from, to){
   if (!el || reduceMotion() || from === to) return;
   const t0 = performance.now(), T = dur(480);
-  el.classList.remove('rolled'); void el.offsetWidth; el.classList.add('rolled');
+  const box = el.parentElement || el;
+  box.classList.remove('rolled'); void box.offsetWidth; box.classList.add('rolled');
   const step = t => {
     const k = Math.min(1, (t - t0) / T), e = 1 - Math.pow(1 - k, 3);
-    el.textContent = '×' + fmt(Math.round(from + (to - from) * e));
-    if (k < 1 && el.isConnected) requestAnimationFrame(step); else el.textContent = '×' + fmt(to);
+    el.textContent = fmt(Math.round(from + (to - from) * e));
+    if (k < 1 && el.isConnected) requestAnimationFrame(step); else el.textContent = fmt(to);
   };
   requestAnimationFrame(step);
+}
+
+// a number that counts from its old value to its new one (the coins in the ledger)
+function rollNumber(el, from, to){
+  if (!el || reduceMotion() || from === to) return;
+  const t0 = performance.now(), T = dur(Math.min(900, 380 + Math.abs(to - from) * 2));
+  const step = t => {
+    const k = Math.min(1, (t - t0) / T), e = 1 - Math.pow(1 - k, 3);
+    if (!el.isConnected) return;
+    el.textContent = fmt(Math.round(from + (to - from) * e));
+    if (k < 1) requestAnimationFrame(step); else el.textContent = fmt(to);
+  };
+  el.textContent = fmt(from); requestAnimationFrame(step);
 }
 
 function floatDelta(id, text, cls, shake){
   const el = $(id); if (!el) return;
   el.classList.remove('hit', 'bump'); void el.offsetWidth; el.classList.add(shake);
+  if (reduceMotion()) return;          // without motion the number just changes; a frozen float would cover it
   const r = el.getBoundingClientRect();
   const f = document.createElement('div');
   f.className = 'float ' + cls; f.setAttribute('aria-hidden', 'true');
@@ -60,7 +75,6 @@ function toast(html){
   const t = $('toast'); t.innerHTML = html; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
-function bump(which){ requestAnimationFrame(() => { const el = $('st-' + which); if (el){ el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); } }); }
 
 /* ---------- card flights ---------- */
 const deckRect = () => { const d = document.querySelector('#pit .stack .card:last-child') || document.querySelector('#pit .deckbtn'); return d && d.getBoundingClientRect(); };
@@ -96,6 +110,7 @@ function runFly(f){
       { transform:'none', opacity:1 }
     ], { duration:dur(780), easing:'cubic-bezier(.25,.8,.3,1)' });
   }
+  if (reduceMotion()) return;
   setTimeout(() => {
     const r = el.getBoundingClientRect();
     const t = document.createElement('div');
@@ -116,6 +131,18 @@ function runSwapFx(f){
       { duration:dur(380), easing:'cubic-bezier(.25,.8,.3,1)' });
   };
   fly(inEl, f.fromStage); fly(outEl, f.fromHand);
+}
+
+// a discarded card flies from where it was (the center or the hand) onto the pile
+function runDiscardFx(el, from){
+  if (reduceMotion() || !from) return;
+  const to = el.getBoundingClientRect(), end = getComputedStyle(el).transform;
+  const settled = end === 'none' ? 'none' : end;
+  el.animate([
+    { transform:`translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width})`, offset:0 },
+    { transform:`translate(${(from.left - to.left) * .35}px, ${(from.top - to.top) * .35 - 14}px) rotate(-8deg) scale(${(from.width / to.width + 1) / 2})`, offset:.5 },
+    { transform: settled }
+  ], { duration:dur(460), easing:'cubic-bezier(.3,.7,.3,1)' });
 }
 
 /* ---------- can't pay upkeep ---------- */

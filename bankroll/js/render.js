@@ -39,6 +39,24 @@ const PIPS = (() => {
     5:[[L,0],[Rr,0],[M,50],[L,100],[Rr,100]], 6:six, 7:six.concat([[M,25]]), 8:six.concat([[M,25],[M,75]]),
     9:eight.concat([[M,50]]), 10:eight.concat([[M,16.7],[M,83.3]]) };
 })();
+// Line icons for the controls (24×24, drawn with the text colour)
+const ICON = {
+  deal:'<rect x="3.5" y="5.5" width="10" height="14" rx="1.8" transform="rotate(-9 8.5 12.5)"/><rect x="10" y="4" width="10" height="14" rx="1.8" transform="rotate(7 15 11)"/>',
+  throw:'<path d="M20 12a8 8 0 1 1-2.35-5.65"/><path d="M20 4.5V9h-4.5"/>',
+  discard:'<rect x="4" y="4" width="11" height="15" rx="1.8"/><path d="M13 12h8M18 9l3 3-3 3"/>',
+  next:'<rect x="3.5" y="4" width="11" height="15" rx="1.8"/><path d="M19.5 8.5v7M16 12h7"/>',
+  cash:'<ellipse cx="12" cy="6.5" rx="7" ry="2.8"/><path d="M5 6.5v5c0 1.6 3.1 2.8 7 2.8s7-1.2 7-2.8v-5"/><path d="M5 11.5v5c0 1.6 3.1 2.8 7 2.8s7-1.2 7-2.8v-5"/>',
+  power:'<path d="M13.5 2.5 5 13.5h6l-1.5 8 8.5-11h-6z"/>',
+  back:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  cancel:'<path d="M6 6l12 12M18 6 6 18"/>',
+  pile:'<rect x="5" y="7" width="11" height="14" rx="1.8"/><path d="M8 4h9.2A1.8 1.8 0 0 1 19 5.8V18"/>',
+  up:'<path d="M12 19V5M6 11l6-6 6 6"/>',
+  replay:'<path d="M4 12a8 8 0 1 0 2.35-5.65"/><path d="M4 4.5V9h4.5"/>',
+};
+const ico = n => `<svg class="bi" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
+// a control's label: a main line and, when given, a smaller second line
+const bl = (main, sub) => `<span class="bl"><b>${main}</b>${sub ? `<small>${sub}</small>` : ''}</span>`;
+
 function suitSVG(s, cls){ return `<svg class="${cls || 'su'}" viewBox="0 0 100 100" aria-hidden="true"><use href="#su-${s}"/></svg>`; }
 
 function sortedHand(){
@@ -53,7 +71,7 @@ function sortedHand(){
 function renderLedger(){
   const ev = S.phase === 'bet' ? null : evaluate(S.hand, S.powerups);
   setHTML($('ledger'), `
-    <div class="stat" id="st-coins"><div class="k">Coins</div><div class="v">${coin}${fmt(S.coins)}</div></div>
+    <div class="stat" id="st-coins"><div class="k">Coins</div><div class="v">${coin}<span class="num">${fmt(S.coins)}</span></div></div>
     <div class="stat"><div class="k">Bet</div><div class="v">${S.bet ? fmt(S.bet) : '—'}</div></div>
     <div class="stat debt ${S.debt ? '' : 'zero'}" id="st-debt"><div class="k">Debt</div><div class="v">${fmt(S.debt)}</div></div>
     <div class="stat" id="st-level"><div class="k">Level</div><div class="v">${lvl()}</div></div>`);
@@ -66,8 +84,11 @@ function renderLedger(){
 
 function renderPit(){
   const dl = S.deck.length;
+  // the bottom card's edge shadows show the deck's depth: thicker when full, thinner as it runs down
+  const depth = Math.min(7, Math.ceil(dl / 8)), edges = Array.from({ length: depth }, (_, i) => `${-(i + 1) * 1.1}px ${(i + 1) * 1.1}px 0 ${i % 2 ? '#d8ceb3' : '#efe6cf'}`);
+  const under = cardHTML(null, { back:true, style: dl > 2 ? `box-shadow:${edges.concat('-3px 6px 14px rgba(0,0,0,.45)').join(',')}` : '' });
   const deck = dl
-    ? `<div class="stack deck ${ui.shuffleFx ? 'shuffling' : ''}">${dl > 2 ? cardHTML(null, { back:true }) : ''}${dl > 1 ? cardHTML(null, { back:true }) : ''}${cardHTML(null, { back:true })}</div>`
+    ? `<div class="stack deck ${ui.shuffleFx ? 'shuffling' : ''}">${dl > 2 ? under : ''}${dl > 1 ? cardHTML(null, { back:true }) : ''}${cardHTML(null, { back:true })}</div>`
     : `<div class="emptyslot"></div>`;
   let spot;
   if (S.pending) spot = cardHTML(S.pending, { extra:'hot' });
@@ -110,7 +131,7 @@ function renderPowers(){
   setHTML(el, PU_ORDER.filter(t => counts[t]).map(t => {
     const n = counts[t], P = Object.values(POWER).find(x => x.type === t);
     const eff = t === 'A' ? `+${n} multipliers` : t === '2' ? 'Red/black suits' : `+${n} seat${n > 1 ? 's' : ''}`;
-    return `<div class="pu pu-${t} ${n > (prev[t] || 0) ? 'pop' : ''}" data-type="${t}">
+    return `<div class="pu pu-${t} ${n > (prev[t] || 0) ? 'pop' : ''}" data-type="${t}" role="group" aria-label="${P.name}${n > 1 ? ` ×${n}` : ''}: ${eff}, upkeep ${P.cost * n} per card" title="${P.name}: ${eff}">
       ${puEmblem(t, n)}
       <div class="pu-body"><div class="pu-name">${P.name}${n > 1 ? `<span class="pu-n">×${n}</span>` : ''}</div><div class="pu-eff">${eff}</div></div>
       <div class="pu-up" title="Upkeep, paid on each new card"><span>${coin}${P.cost * n}</span><small>/card</small></div>
@@ -158,15 +179,13 @@ function renderValue(){
   const ev = evaluate(visible, S.powerups);
   let tip = '';
   const pv = S.phase === 'decide' ? swapPreview() : null;
-  if (pv){
-    if (pv.best.mult > pv.base)
-      tip = `<button class="combo tip" data-act="bestSwap" data-id="${pv.best.out.id}">Swap ${cardName(pv.best.out)} <em>→ ×${fmt(pv.best.mult)}</em></button>`;
-  }
-  const boostNote = (ev.boost || ev.twoTone) ? `<span class="combo" style="background:transparent">${[ev.boost ? `Ace boost +${ev.boost}` : '', ev.twoTone ? 'Two-tone on' : ''].filter(Boolean).join(' · ')}</span>` : '';
+  if (pv && pv.best.mult > pv.base)
+    tip = `<button class="chip tip" data-act="bestSwap" data-id="${pv.best.out.id}">Swap ${cardSpan(pv.best.out)}<em>→ ×${fmt(pv.best.mult)}</em></button>`;
+  const boosts = [ev.boost ? `<span class="chip">Ace +${ev.boost}</span>` : '', ev.twoTone ? '<span class="chip">Two-tone</span>' : ''].join('');
   const b = S.phase === 'bet' ? Math.max(1, Math.min(S.betInput, S.coins)) : S.bet;
-  const sub = `${fmt(b)} × ${fmt(ev.mult)} = <b>${fmt(b * ev.mult)}</b>`;
-  setHTML($('value'), `<div class="combos">${boostNote}${tip}</div>
-    <div class="mult"><div class="big ${ev.mult ? '' : 'zero'}" id="multBig">×${fmt(ev.mult)}</div><div class="sub">${sub}</div></div>`);
+  setHTML($('value'), `<div class="ro-mult ${ev.mult ? '' : 'zero'}" title="Multiplier"><span class="x">×</span><span id="multBig">${fmt(ev.mult)}</span></div>
+    <div class="ro-pay"><small>Pays</small><span>${coin}${fmt(b * ev.mult)} <em>bet ${fmt(b)}</em></span></div>
+    <div class="ro-extra">${boosts}${tip}</div>`);
   if (ui.lastMult !== undefined && ui.lastMult !== ev.mult) rollMult($('multBig'), ui.lastMult, ev.mult);
   ui.lastMult = ev.mult;
 }
@@ -181,7 +200,7 @@ function renderDock(){
     const start = S.handStart ?? (S.coins + S.bet);
     const net = after - start;
     const what = after < 0 ? 'ends run' : net > 0 ? `win ${fmt(net)}` : net < 0 ? `lose ${fmt(-net)}` : 'break even';
-    return `<button class="btn cash grow ${after < 0 ? 'bust' : net < 0 ? 'down' : ''}" data-act="cash">Cash out <span class="cashnet">${what}</span>${kbd('C')}</button>`;
+    return `<button class="btn cash grow ${after < 0 ? 'bust' : net < 0 ? 'down' : ''}" data-act="cash">${ico('cash')}<span class="bl"><b>Cash out</b><small class="cashnet">${what}</small></span>${kbd('C')}</button>`;
   };
   switch (S.phase){
     case 'bet': {
@@ -190,15 +209,17 @@ function renderDock(){
         .filter(([k, , v]) => v >= 1 && (k !== 'last' || v <= S.coins));
       rows = `<div class="row">
         <div class="betbox">
-          <button class="step" data-act="betKey" data-hold="-1" aria-label="Lower bet" ${b <= 1 ? 'disabled' : ''}>−</button>
-          <label class="val">${coin}<input id="betNum" type="number" inputmode="numeric" min="1" max="${S.coins}" step="1" value="${b}" aria-label="Bet amount"></label>
-          <button class="step" data-act="betKey" data-hold="1" aria-label="Raise bet" ${b >= S.coins ? 'disabled' : ''}>+</button>
+          <div class="bet-row">
+            <button class="step" data-act="betKey" data-hold="-1" aria-label="Lower bet" ${b <= 1 ? 'disabled' : ''}>−</button>
+            <label class="val">${coin}<input id="betNum" type="number" inputmode="numeric" min="1" max="${S.coins}" step="1" value="${b}" aria-label="Bet amount"></label>
+            <button class="step" data-act="betKey" data-hold="1" aria-label="Raise bet" ${b >= S.coins ? 'disabled' : ''}>+</button>
+            <div class="presets" role="group" aria-label="Quick bets">${pre.map(([k, l, v]) => `<button class="q" data-act="preset" data-v="${v}" aria-pressed="${b === v}" title="Bet ${fmt(v)}" aria-label="${k === 'last' ? 'Last bet' : k === 'max' ? 'All in' : l + ' of your coins'}: ${fmt(v)}">${l}</button>`).join('')}</div>
+          </div>
           <input type="range" id="betRange" min="0" max="${RN}" step="1" value="${betToPos(b)}" aria-label="Bet slider" ${S.coins <= 1 ? 'disabled' : ''}>
-          <div class="presets" role="group" aria-label="Quick bets">${pre.map(([k, l, v]) => `<button class="q" data-act="preset" data-v="${v}" aria-pressed="${b === v}">${l} <b>${fmt(v)}</b></button>`).join('')}</div>
         </div></div>
         <div class="row">
-          <button class="btn grow" data-act="throw">Throw away${kbd('T')}</button>
-          <button class="btn gold grow" data-act="deal"><span id="dealBtn">Deal</span>${kbd('D')}</button>
+          <button class="btn grow" data-act="throw">${ico('throw')}${bl('Throw away')}${kbd('T')}</button>
+          <button class="btn gold grow" data-act="deal">${ico('deal')}${bl('Deal')}${kbd('D')}</button>
         </div>`;
       break;
     }
@@ -208,14 +229,14 @@ function renderDock(){
       const discCost = [(!S.pendingCharged || (more && full)) ? `+${fmt(S.bet)} debt` : '', more && up ? `upkeep ${up}` : '',
         !more && S.deck.length && S.coins < up ? `upkeep ${up}` : ''].filter(Boolean).join(' · ');
       let btns = '';
-      btns += `<button class="btn warn grow" data-act="discard">Discard${discCost ? ` <small>${discCost}</small>` : ''}${kbd('D')}</button>`;
+      btns += `<button class="btn warn grow" data-act="discard">${ico('discard')}${bl('Discard', discCost)}${kbd('D')}</button>`;
       if (P){
         const dup = P.type === '2' && S.powerups.some(x => x.type === '2');
         btns += dup
-          ? `<button class="btn power grow" disabled title="Already active">${P.name} <small>active</small></button>`
-          : `<button class="btn power grow" data-act="power" ${S.coins < P.cost ? 'disabled' : ''} title="${P.short}">${P.name} <small>${coin}${P.cost}</small>${kbd('P')}</button>`;
+          ? `<button class="btn power grow" disabled title="Already active">${ico('power')}${bl(P.name, 'active')}</button>`
+          : `<button class="btn power grow" data-act="power" ${S.coins < P.cost ? 'disabled' : ''} title="${P.short}">${ico('power')}${bl(P.name, `${coin}${P.cost} · ${P.short}`)}${kbd('P')}</button>`;
       }
-      if (dealt && c.rank === 10) btns += `<button class="btn power grow" data-act="swap" ${S.coins < SWAP_COST || !S.discard.length ? 'disabled' : ''} >Swap from discard <small>${coin}${SWAP_COST}</small>${kbd('W')}</button>`;
+      if (dealt && c.rank === 10) btns += `<button class="btn power grow" data-act="swap" ${S.coins < SWAP_COST || !S.discard.length ? 'disabled' : ''} title="Take a card back from the discard pile">${ico('back')}${bl('Take back', `${coin}${SWAP_COST} · from discard`)}${kbd('W')}</button>`;
       rows = `<div class="row">${btns}</div><div class="row">${cashBtn()}</div>`;
       break;
     }
@@ -226,24 +247,24 @@ function renderDock(){
       const nextCost = [S.hand.length >= cap ? `+${fmt(S.bet)} debt` : '', up ? `upkeep ${up}` : ''].filter(Boolean).join(' · ');
       // can't pay upkeep: Deal stays pressable and answers with a shake (see input.js) and this note
       rows = (short ? `<div class="callout" id="upkeepNote" role="alert"><b>Can’t pay upkeep (${fmt(up)}).</b> Release a power-up (✕) or cash out.</div>` : '') + `<div class="row">
-        <button class="btn gold grow ${short ? 'blocked' : ''}" data-act="next" ${!dl ? 'disabled' : ''}>${dl ? 'Next card' : 'Deck empty'}${why ? ` <small>${why}</small>` : dl && nextCost ? ` <small>${nextCost}</small>` : ''}${kbd('N')}</button>
+        <button class="btn gold grow ${short ? 'blocked' : ''}" data-act="next" ${!dl ? 'disabled' : ''}>${ico('next')}${bl(dl ? 'Next card' : 'Deck empty', why || (dl ? nextCost : ''))}${kbd('N')}</button>
         ${cashBtn()}</div>`;
       break;
     }
     case 'swapPick':
-      rows = `<div class="row"><button class="btn grow" data-act="openPick">Discard pile</button><button class="btn grow" data-act="cancelSwap">Cancel</button></div>`;
+      rows = `<div class="row"><button class="btn gold grow" data-act="openPick">${ico('pile')}${bl('Pick a card')}</button><button class="btn grow" data-act="cancelSwap">${ico('cancel')}${bl('Cancel')}</button></div>`;
       break;
     case 'swapPlace':
-      rows = `<div class="row"><button class="btn grow" data-act="cancelSwap">Cancel</button></div>`;
+      rows = `<div class="row"><button class="btn grow" data-act="cancelSwap">${ico('cancel')}${bl('Cancel')}</button></div>`;
       break;
     case 'trim':
       break;
     case 'result':
-      rows = `<div class="row"><button class="btn gold grow" data-act="nextSet">Next hand${kbd('Enter')}</button></div>`; break;
+      rows = `<div class="row"><button class="btn gold grow" data-act="nextSet">${ico('deal')}${bl('Next hand')}${kbd('Enter')}</button></div>`; break;
     case 'reshuffle':
-      rows = `<div class="row"><button class="btn gold grow" data-act="openReshuffle">Next level</button></div>`; break;
+      rows = `<div class="row"><button class="btn gold grow" data-act="openReshuffle">${ico('up')}${bl('Next level')}</button></div>`; break;
     case 'over':
-      rows = `<div class="row"><button class="btn gold grow" data-act="restartNow">Play again</button></div>`; break;
+      rows = `<div class="row"><button class="btn gold grow" data-act="restartNow">${ico('replay')}${bl('Play again')}</button></div>`; break;
   }
   setHTML(d, rows);
 }
@@ -286,10 +307,11 @@ function renderModal(){
   const closable = CLOSABLE.includes(m);
   const opened = ui.modalShown !== m;
   if (opened && !ui.modalShown) ui.lastFocus = document.activeElement;
-  setHTML(root, `<div class="scrim" data-act="${closable ? 'scrimClose' : ''}"><div class="modal ${m === 'result' || m === 'over' || m === 'bust' || m === 'reshuffle' ? 'm-result' : ''} m-${m}" role="dialog" aria-modal="true" aria-label="${MODAL_NAMES[m] || 'Dialog'}">${html}</div></div>`);
+  const x = closable ? `<button class="mclose" data-act="close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>` : '';
+  setHTML(root, `<div class="scrim" data-act="${closable ? 'scrimClose' : ''}"><div class="modal ${m === 'result' || m === 'over' || m === 'bust' || m === 'reshuffle' ? 'm-result' : ''} m-${m}" role="dialog" aria-modal="true" aria-label="${MODAL_NAMES[m] || 'Dialog'}">${x}<div class="mbody">${html}</div></div></div>`);
   ui.modalShown = m;
   if (opened){
-    const f = root.querySelector('.modal .btn.gold, .modal [data-act]:not([data-act="scrimClose"]), .modal button, .modal input');
+    const f = root.querySelector('.modal .btn.gold, .modal .mbody [data-act]:not([data-act="scrimClose"]), .modal button, .modal input');
     if (f) setTimeout(() => f.focus({ preventScroll:true }), 30);
   }
 }
@@ -334,17 +356,13 @@ function trackerHTML(){
     <div class="actions"><button class="btn gold" data-act="close">Close</button></div>`;
 }
 
-function comboLines(ev){
-  if (!ev.combos.length) return `<div><span>No combos</span><b>×0</b></div>`;
-  return ev.combos.map(c => `<div><span>${c.label}${c.note ? ` (${c.note})` : ''}</span><b>×${fmt(c.factor)}</b></div>`).join('');
-}
 function handBody(r){
   const L = r.ledger || {};
   const hot = new Set(r.ev.combos.flatMap(c => c.ids));
   const cards = r.hand.map(c => cardHTML(c, { track:false, extra: r.ev.combos.length ? (hot.has(c.id) ? 'hit' : 'dim') : '' })).join('');
   const eq = r.ev.combos.length
-    ? r.ev.combos.map(c => `<span class="combo">${c.label}<em>×${fmt(c.factor)}</em></span>`).join('<span class="op">×</span>') + `<span class="op">=</span><span class="tot">×${fmt(r.ev.mult)}</span>`
-    : `<span class="combo">No pair, straight or flush</span><span class="op">=</span><span class="tot zero">×0</span>`;
+    ? r.ev.combos.map(c => `<span class="combo">${c.label}<em>×${fmt(c.factor)}</em></span>`).join('<span class="op">×</span>') + `<span class="op">=</span><span class="tot"><span class="x">×</span>${fmt(r.ev.mult)}</span>`
+    : `<span class="combo">No pair, straight or flush</span><span class="op">=</span><span class="tot zero"><span class="x">×</span>0</span>`;
   const boosts = [r.ev.boost ? `Ace boost +${r.ev.boost}` : '', r.ev.twoTone ? 'Two-tone' : ''].filter(Boolean).join(' · ');
   const lines = [
     { k:'Payout', v: r.payout, show:true },
@@ -477,6 +495,12 @@ function overHTML(){
     <p class="snote">Seed <code class="seed">${S.seed}</code></p>
     <div class="actions ro-actions">${leaderboardAvailable() ? `<button class="btn" data-act="openBoard">Leaderboard</button>` : ''}<button class="btn" data-act="replaySeed">Same cards</button><button class="btn gold grow" data-act="restartNow">Play again</button></div>`;
 }
+// a tiny example hand for the rules: 'rank+suit' codes, with the scoring cards lit
+function exHand(codes, lit){
+  const R = { A:1, J:11, Q:12, K:13 };
+  return `<div class="cx">${codes.split(' ').map((code, i) => cardHTML(code === '0R' ? { id:'exjk' + i, rank:0, suit:'JR' } : { id:'ex' + code + i, rank: R[code.slice(0, -1)] || +code.slice(0, -1), suit: code.slice(-1) },
+    { track:false, extra: lit.includes(i) ? '' : 'dim' })).join('')}</div>`;
+}
 function helpHTML(){
   return `<h2>How to play</h2>
     <h3>A hand</h3>
@@ -487,18 +511,18 @@ function helpHTML(){
       <li><b>Cash out</b>: bet × multiplier − debt. Below zero ends the run.</li>
     </ul>
     <h3>Multipliers (they multiply)</h3>
-    <div class="paytable">
-      <b>×2</b><span>each pair · trips = 2 pairs, quads = 3</span>
-      <b>×5</b><span>straight (5 in a row)</span>
-      <b>×5</b><span>flush (5+ of a suit)</span>
+    <div class="combo-ex">
+      ${exHand('7H 7S 2C 9D KS', [0, 1])}<span>Pair<small>trips = 2 pairs · quads = 3</small></span><b><span class="x">×</span>2</b>
+      ${exHand('5C 6D 7H 8S 9C', [0, 1, 2, 3, 4])}<span>Straight<small>5 in a row</small></span><b><span class="x">×</span>5</b>
+      ${exHand('2H 6H 9H JH KH', [0, 1, 2, 3, 4])}<span>Flush<small>5+ of a suit</small></span><b><span class="x">×</span>5</b>
     </div>
     <h3>Special cards</h3>
-    <div class="paytable">
-      <b>Joker</b><span>+1 seat</span>
-      <b>A</b><span>${coin}1 · +1 to every multiplier</span>
-      <b>2</b><span>${coin}2 · suits become red and black</span>
-      <b>5</b><span>${coin}5 · +1 seat</span>
-      <b>10</b><span>${coin}10 · take back a discarded card</span>
+    <div class="combo-ex specials">
+      ${exHand('0R', [0])}<span>Joker<small>+1 seat, free</small></span><b></b>
+      ${exHand('AS', [0])}<span>Ace boost<small>+1 to every multiplier</small></span><b class="cost">${coin}1</b>
+      ${exHand('2H', [0])}<span>Two-tone<small>suits become red and black</small></span><b class="cost">${coin}2</b>
+      ${exHand('5C', [0])}<span>Extra seat<small>+1 seat</small></span><b class="cost">${coin}5</b>
+      ${exHand('10D', [0])}<span>Take back<small>any card from the discard pile</small></span><b class="cost">${coin}10</b>
     </div>
     <p>Power-ups cost their price again on every new card. ✕ releases one.</p>
     <h3>Levels</h3>
@@ -507,7 +531,13 @@ function helpHTML(){
 }
 
 function render(){
+  // where each card on the table is now, so a card that lands on the discard pile can fly there
+  const was = new Map(), topBefore = (document.querySelector('#pit .discardbtn .card:last-child') || {}).dataset;
+  document.querySelectorAll('#pit .stage .card[data-cid], #hand .card[data-cid]').forEach(el => was.set(el.dataset.cid, el.getBoundingClientRect()));
   renderLedger(); renderPit(); renderPowers(); renderHand(); renderValue(); renderDock(); renderModal();
+  const top = document.querySelector('#pit .discardbtn .card:last-child');
+  if (top && was.has(top.dataset.cid) && (!topBefore || topBefore.cid !== top.dataset.cid)) runDiscardFx(top, was.get(top.dataset.cid));
+  if (ui.prev && ui.prev.coins !== S.coins) rollNumber(document.querySelector('#st-coins .num'), ui.prev.coins, S.coins);
   const netEl = document.querySelector('#modalRoot .rs-net b[data-to]');
   if (netEl && ui.counted !== S.stats.cashouts){ ui.counted = S.stats.cashouts; countUp(netEl, +netEl.dataset.to); }
   // remember which cards are already on screen so only new ones animate

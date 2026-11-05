@@ -30,3 +30,7 @@ function start(data){
   initLeaderboard();
 }
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+
+// On the website only (it has a manifest; the claude.ai page doesn't): keep a copy of the game for offline play.
+if ('serviceWorker' in navigator && window.isSecureContext && location.protocol !== 'file:' && !window.claude && document.querySelector('link[rel="manifest"]'))
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
