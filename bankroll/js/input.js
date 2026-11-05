@@ -148,6 +148,7 @@ document.addEventListener('click', e => {
     case 'bustConfirm': act('cash', 1); break;
     case 'tutorialNext': nextTutorial(); break;
     case 'tutorialSkip': endTutorial(); break;
+    case 'tipDone': tipDone(t.dataset.v); break;
     case 'replayTutorial': startTutorial(); ui.modal = null; break;
     case 'replaySeed': beginRun(S.seed); break;
     case 'sortRank': prefs.sort = 'rank'; store(PREF_KEY, prefs); break;
