@@ -81,9 +81,12 @@ function drawNext(waive, why){
   let first = true;
   ui.armed = null;
   while (S.deck.length){
-    const up = Math.max(0, upkeep() - (first ? (waive || 0) : 0));
+    // each power-up pays its current upkeep, which then doubles; a power-up just bought (waive) rides free on this card
+    const charges = S.powerups.map((p, i) => first && waive && i === S.powerups.length - 1 ? 0 : upkeepOf(p));
+    const up = charges.reduce((a, b) => a + b, 0);
     if (S.coins < up) break;
     coinChange(-up, 'upkeep');
+    S.powerups.forEach((p, i) => { if (charges[i]) p.paid = (p.paid || 0) + 1; });
     const c = S.deck.pop();
     ui.seen.add(c.id);
     if (isJoker(c)){

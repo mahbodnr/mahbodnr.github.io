@@ -928,3 +928,21 @@ html.light .ro-mult.fire,html.light .ro-mult.blaze{color:#7a2a00;text-shadow:0 0
 html.light .firecv{mix-blend-mode:multiply;filter:saturate(1.3)}
 .brow.bhead > span{white-space:normal;overflow:visible;text-overflow:clip}
 .brand .pilot{font:800 10px/1 var(--f-ui);letter-spacing:.12em;text-transform:uppercase;color:#2b1d03;background:var(--gold-1);padding:4px 7px;border-radius:999px;align-self:center;text-shadow:none}
+
+/* power-up upkeep: the next card's cost, and the doubled one after it */
+.pu-up{gap:2px}
+.pu-up .pu-now{font-size:14px;font-weight:900;transition:color .3s}
+.pu-up .pu-then{font-size:9.5px;color:var(--muted);font-weight:700;white-space:nowrap;margin-top:2px;letter-spacing:.02em}
+.pu-up .pu-then i{font-style:normal;text-transform:uppercase;letter-spacing:.08em;font-size:8.5px;opacity:.8}
+.pu-up.h1 .pu-now{color:#ffd27a}
+.pu-up.h2 .pu-now{color:#ffad5c}
+.pu-up.h3 .pu-now{color:var(--debt)}
+.pu-up.rise .pu-now{animation:upRise .7s cubic-bezier(.2,.9,.3,1.4)}
+@keyframes upRise{0%{transform:scale(1)}35%{transform:scale(1.35);text-shadow:0 0 12px rgba(255,150,80,.8)}100%{transform:scale(1)}}
+@media (max-width:560px), (orientation:landscape) and (max-height:560px){
+  .pu-up{flex-direction:column;align-items:flex-start;gap:0}
+  .pu-up .pu-now{font-size:12.5px}
+  .pu-up .pu-then{margin-top:1px;font-size:9px}
+  .pu-up .pu-then i{display:none}
+}
+@media (max-width:560px), (orientation:landscape) and (max-height:560px){ .pu{padding-right:20px} }

@@ -137,19 +137,24 @@ function renderPowers(){
   if (!S.powerups.length){ setHTML(el, ''); el.hidden = true; ui.pupPrev = {}; return; }
   el.hidden = false;
   const counts = {}; S.powerups.forEach(p => counts[p.type] = (counts[p.type] || 0) + 1);
-  const prev = ui.pupPrev || {};
+  const prev = ui.pupPrev || {}, costs = {};
   const can = S.phase === 'idle' || S.phase === 'decide';
   el.classList.toggle('short', S.phase === 'idle' && S.deck.length > 0 && S.coins < upkeep());   // point at the ✕ buttons
   setHTML(el, PU_ORDER.filter(t => counts[t]).map(t => {
-    const n = counts[t], P = Object.values(POWER).find(x => x.type === t), each = powerCost(PU_RANK[t]);
+    const n = counts[t], P = Object.values(POWER).find(x => x.type === t);
+    // upkeep for the next card (all of this type together), and the card after: it doubles with every card
+    const group = S.powerups.filter(p => p.type === t), now = group.reduce((a, p) => a + upkeepOf(p), 0);
+    const heat = Math.min(3, Math.max(...group.map(p => p.paid || 0))), rose = now > (prev['c' + t] || 0) && (prev['c' + t] || 0) > 0;
+    costs['c' + t] = now;
     const eff = t === 'A' ? `+${n} multipliers` : t === '2' ? 'Red/black suits' : `+${n} seat${n > 1 ? 's' : ''}`;
-    return `<div class="pu pu-${t} ${n > (prev[t] || 0) ? 'pop' : ''}" data-type="${t}" role="group" aria-label="${P.name}${n > 1 ? ` ×${n}` : ''}: ${eff}, upkeep ${each * n} per card" title="${P.name}: ${eff}">
+    return `<div class="pu pu-${t} ${n > (prev[t] || 0) ? 'pop' : ''}" data-type="${t}" role="group" aria-label="${P.name}${n > 1 ? ` ×${n}` : ''}: ${eff}, upkeep ${now} on the next card, then ${now * 2}" title="${P.name}: ${eff}">
       ${puEmblem(t, n)}
       <div class="pu-body"><div class="pu-name">${P.name}${n > 1 ? `<span class="pu-n">×${n}</span>` : ''}</div><div class="pu-eff">${eff}</div></div>
-      <div class="pu-up" title="Upkeep, paid on each new card"><span>${coin}${fmtFit(each * n)}</span><small>/card</small></div>
+      <div class="pu-up h${heat} ${rose ? 'rise' : ''}" title="Upkeep on the next card. It doubles with every card: then ${fmt(now * 2)}, ${fmt(now * 4)} …">
+        <span class="pu-now">${coin}${fmtFit(now)}</span><small class="pu-then"><i>next</i> → ${fmtFit(now * 2)}</small></div>
       <button class="x" data-act="release" data-type="${t}" ${can ? '' : 'disabled'} aria-label="Release one ${P.name}" title="Release one (stop paying its upkeep)">✕</button></div>`;
   }).join(''));
-  ui.pupPrev = counts;
+  ui.pupPrev = Object.assign(counts, costs);
 }
 
 function renderHand(){
@@ -565,7 +570,7 @@ function helpHTML(){
       ${exHand('5C', [0])}<span>Extra seat<small>+1 seat</small></span><b class="cost">${coin}${fmtFit(powerCost(5))}</b>
       ${exHand('10D', [0])}<span>Take back<small>any card from the discard pile</small></span><b class="cost">${coin}${fmtFit(swapCost())}</b>
     </div>
-    <p>Power-ups cost their price again on every new card. ✕ releases one. Their prices, and the 10's fee, <b>double each level</b>${lvl() > 1 ? ` (shown for level ${lvl()})` : ''}.</p>
+    <p>Power-ups charge upkeep on every new card, starting at their price and <b>doubling with each card</b>. ✕ releases one. Their prices, and the 10's fee, <b>double each level</b>${lvl() > 1 ? ` (shown for level ${lvl()})` : ''}.</p>
     <h3>Levels</h3>
     <p>When the deck runs out, pay the level price (100, 1,000, 10,000 …) to reshuffle, or the run ends.</p>
     <div class="actions"><button class="btn" data-act="replayTutorial">Tutorial</button><button class="btn gold" data-act="close">Got it</button></div>`;
