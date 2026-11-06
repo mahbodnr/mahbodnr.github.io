@@ -225,11 +225,13 @@ async function beginRun(seed){
   const chosen = cleanSeed(seed || '');
   if (!officialPossible()){ newGame(chosen || undefined); render(); return; }
   if (runStarting) return;
-  runStarting = true;
-  ui.modal = null; render();
-  let run = await LB.backend.startRun(chosen || null);
-  if (run.error === 'rate_limited'){ await new Promise(r => setTimeout(r, 2100)); run = await LB.backend.startRun(chosen || null); }
-  runStarting = false;
+  // the window stays open with its buttons busy until the server answers (or 6 seconds pass: then the run is dealt
+  // locally and simply isn't posted), so the player never sees an empty table while waiting
+  runStarting = true; ui.starting = true; render();
+  const ask = () => Promise.race([LB.backend.startRun(chosen || null), new Promise(r => setTimeout(() => r({ error:'timeout' }), 6000))]);
+  let run = await ask();
+  if (run.error === 'rate_limited'){ await new Promise(r => setTimeout(r, 2100)); run = await ask(); }
+  runStarting = false; ui.starting = false; ui.modal = null;
   if (run.run_id) useServerRun(run);
   else {
     newGame(chosen || undefined);

@@ -71,7 +71,7 @@ function sortedHand(){
 function renderLedger(){
   const ev = S.phase === 'bet' ? null : evaluate(S.hand, S.powerups);
   setHTML($('ledger'), `
-    <div class="stat" id="st-coins" title="${fmt(S.coins)} coins"><div class="k">Coins</div><div class="v ${fitCls(fmtFit(S.coins) + 'c')}">${coin}<span class="num">${fmtFit(S.coins)}</span></div></div>
+    <div class="stat" id="st-coins" title="${fmt(S.coins)} coins"><div class="k">Coins</div><div class="v ${fitCls(fmtFit(S.coins) + 'cc')}">${coin}<span class="num">${fmtFit(S.coins)}</span></div></div>
     <div class="stat" title="Bet ${fmt(S.bet)}"><div class="k">Bet</div><div class="v ${fitCls(fmtFit(S.bet))}">${S.bet ? fmtFit(S.bet) : '—'}</div></div>
     <div class="stat debt ${S.debt ? '' : 'zero'}" id="st-debt" title="Debt ${fmt(S.debt)}"><div class="k">Debt</div><div class="v ${fitCls(fmtFit(S.debt))}">${fmtFit(S.debt)}</div></div>
     <div class="stat" id="st-level"><div class="k">Level</div><div class="v ${fitCls(lvl())}">${lvl()}</div></div>`);
@@ -151,7 +151,7 @@ function renderPowers(){
       ${puEmblem(t, n)}
       <div class="pu-body"><div class="pu-name">${P.name}${n > 1 ? `<span class="pu-n">×${n}</span>` : ''}</div><div class="pu-eff">${eff}</div></div>
       <div class="pu-up h${heat} ${rose ? 'rise' : ''}" title="Upkeep on the next card. It doubles with every card: then ${fmt(now * 2)}, ${fmt(now * 4)} …">
-        <span class="pu-now">${coin}${fmtFit(now)}</span><small class="pu-then"><i>next</i> → ${fmtFit(now * 2)}</small></div>
+        <span class="pu-now ${fitCls(fmtShort(now))}">${coin}${fmtShort(now)}</span><small class="pu-then"><i>next</i> → ${fmtShort(now * 2)}</small></div>
       <button class="x" data-act="release" data-type="${t}" ${can ? '' : 'disabled'} aria-label="Release one ${P.name}" title="Release one (stop paying its upkeep)">✕</button></div>`;
   }).join(''));
   ui.pupPrev = Object.assign(counts, costs);
@@ -177,7 +177,7 @@ function renderHand(){
     const extra = [hot.has(c.id) ? 'hot' : '', picking ? 'pick' : '', armed ? 'armed' : ''].join(' ');
     let tag = '';
     if (armed){
-      tag = `Tap again · +${fmtFit(nextCardCost())} debt`;
+      tag = `Tap again<br>+${fmtFit(nextCardCost())} debt`;
     }
     const dragX = S.phase === 'decide' || S.phase === 'swapPlace' ? ' drag' : '';
     let out = cardHTML(c, { extra: extra + dragX, act: picking ? 'handPick' : null, tag });
@@ -246,8 +246,9 @@ function renderDock(){
     case 'decide': {
       const c = S.pending, full = S.hand.length >= cap, dealt = offerIsDealt(), P = dealt ? POWER[c.rank] : null;
       const more = canDraw(), up = upkeep();
-      const discCost = [(!S.pendingCharged || (more && full)) ? `+${fmtFit(nextCardCost())} debt` : '', more && up ? `upkeep ${up}` : '',
-        !more && S.deck.length && S.coins < up ? `upkeep ${up}` : ''].filter(Boolean).join(' · ');
+      // what Discard does: the next card's debt and upkeep, or that no card can come (upkeep can't be paid / deck empty)
+      const discCost = [(!S.pendingCharged || (more && full)) ? `+${fmtFit(nextCardCost())} debt` : '', more && up ? `upkeep ${fmtFit(up)}` : '',
+        !more && S.deck.length && S.coins < up ? `no next card: upkeep ${fmtFit(up)}` : '', !more && !S.deck.length ? 'deck empty' : ''].filter(Boolean).join(' · ');
       let btns = '';
       btns += `<button class="btn warn grow" data-act="discard">${ico('discard')}${bl('Discard', discCost)}${kbd('D')}</button>`;
       if (P){
@@ -309,8 +310,8 @@ function renderModal(){
       <div class="receipt"><div><span>Coins</span><b>${fmtFit(S.coins)}</b></div><div><span>Price</span><b class="neg">−${fmtFit(price)}</b></div><div class="tot"><span>Left</span><b>${fmtFit(S.coins - price)}</b></div></div>
       <div class="pricebump"><div class="pb-head">Prices <b>×2</b> in level ${L + 1}</div>
         <div class="pb-list">${PU_ORDER.map(t => { const r = PU_RANK[t], now = powerCost(r);
-          return `<div class="pb-item">${puEmblem(t, 1)}<span>${Object.values(POWER).find(x => x.type === t).name}</span><b><s>${fmtFit(now)}</s>${coin}${fmtFit(now * 2)}</b></div>`; }).join('')}
-          <div class="pb-item"><span class="pb-ten">10</span><span>Take back</span><b><s>${fmtFit(swapCost())}</s>${coin}${fmtFit(swapCost() * 2)}</b></div></div></div>
+          return `<div class="pb-item">${puEmblem(t, 1)}<span>${Object.values(POWER).find(x => x.type === t).name}</span><s>${fmtShort(now)}</s><b>${coin}${fmtShort(now * 2)}</b></div>`; }).join('')}
+          <div class="pb-item"><span class="pb-ten">10</span><span>Take back</span><s>${fmtShort(swapCost())}</s><b>${coin}${fmtShort(swapCost() * 2)}</b></div></div></div>
       <div class="actions"><button class="btn gold grow" data-act="reshuffle">Pay ${fmtFit(price)}</button></div>`;
   }
   else if (m === 'tracker') html = trackerHTML();
@@ -577,6 +578,7 @@ function helpHTML(){
 }
 
 function render(){
+  document.documentElement.classList.toggle('starting', !!ui.starting);   // a new run is on its way (leaderboard.js)
   // where each card on the table is now, so a card that lands on the discard pile can fly there
   const was = new Map(), topBefore = (document.querySelector('#pit .discardbtn .card:last-child') || {}).dataset;
   document.querySelectorAll('#pit .stage .card[data-cid], #hand .card[data-cid]').forEach(el => was.set(el.dataset.cid, el.getBoundingClientRect()));

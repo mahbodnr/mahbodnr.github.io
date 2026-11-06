@@ -105,6 +105,8 @@ const fmtFit = n => { const a = Math.abs(n), s = n < 0 ? '−' : '';
   if (a < 1e6) return fmt(n);
   const [d, u] = a >= 1e9 ? [1e9, 'B'] : [1e6, 'M'], v = a / d;
   return s + (v >= 100 ? Math.floor(v) : v >= 10 ? Math.floor(v * 10) / 10 : Math.floor(v * 100) / 100) + u; };
+// for the tightest spots (power-up chips, price lists): 10,000 and up becomes 12.8K / 1.28M / …
+const fmtShort = n => Math.abs(n) < 1e4 ? fmt(n) : Math.abs(n) < 1e6 ? (Math.floor(n / 100) / 10).toString().replace(/\.0$/, '') + 'K' : fmtFit(n);
 // a font-size step for a number box by how long its text is
 const fitCls = str => { const n = String(str).length; return n >= 8 ? 'f4' : n >= 7 ? 'f3' : n >= 6 ? 'f2' : n >= 5 ? 'f1' : ''; };
 function cardName(c){

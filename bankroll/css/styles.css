@@ -946,3 +946,24 @@ html.light .firecv{mix-blend-mode:multiply;filter:saturate(1.3)}
   .pu-up .pu-then i{display:none}
 }
 @media (max-width:560px), (orientation:landscape) and (max-height:560px){ .pu{padding-right:20px} }
+
+/* starting a run: the buttons that start one wait, with a spinner */
+html.starting [data-act="restartNow"], html.starting [data-act="replaySeed"]{pointer-events:none;opacity:.7}
+html.starting [data-act="restartNow"]::after{content:"";width:14px;height:14px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:spin .8s linear infinite;margin-left:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* the hand always stays on one row: when the cards don't fit they overlap (corner indices stay visible) */
+.hand{flex-wrap:nowrap;gap:0}
+.hand > *{--cw:max(42px, min(var(--cwh), calc((100cqw - (var(--n, 5) - 1) * var(--hg)) / var(--n, 5))))}
+.hand > * + *{margin-left:min(var(--hg), calc((100cqw - var(--n, 5) * var(--cw)) / (var(--n, 5) - 1)))}
+.hand > .links{margin:0}
+/* a lifted or hovered card sits above its neighbours, so its tags are never covered by the next card */
+.hand .card.armed, .hand .card.pick:hover{z-index:6}
+.card .tag{line-height:1.25;text-align:center}
+.hand > .card:first-child .tag{left:0;transform:none}
+.hand > .card:nth-last-child(1 of .card, .emptyslot) .tag, .hand > .card:last-of-type .tag{left:auto;right:0;transform:none}
+/* power-up costs and price lists: shorter numbers that stay inside their boxes */
+.pu-up .pu-now.f2{font-size:12.5px} .pu-up .pu-now.f3,.pu-up .pu-now.f4{font-size:11.5px}
+.pb-item{gap:2px}
+.pb-item s{display:block;font-size:11px;color:var(--muted);font-weight:600}
+.pb-item b{font-size:14px}
