@@ -65,7 +65,7 @@ function deal(){
   const bet = Math.max(1, Math.min(S.betInput, S.coins));
   S.handStart = S.coins; S.handLedger = {};
   S.bet = bet; S.lastBet = bet; coinChange(-bet, 'bet');
-  S.debt += bet; S.cardSteps = [];   // PILOT: the ante
+  S.debt += Math.ceil(bet / 2); S.cardSteps = [];   // PILOT: half a bet to deal (rounded up)
   S.faceDown.forEach(id => ui.flips.add(id)); S.faceDown = [];
   S.hand.forEach(c => { if (isJoker(c) && !S.jokerSeen.includes(c.id)) S.jokerSeen.push(c.id); });
   S.stats.sets++; S.phase = 'idle';
@@ -119,7 +119,7 @@ function coinChange(d, label, cat){
   if (S.handLedger){ const k = cat || label; S.handLedger[k] = (S.handLedger[k] || 0) + d; }
   (ui.coinEv = ui.coinEv || []).push({ d, label });
 }
-/* PILOT rules: dealing costs one extra bet (the ante, added to the debt), and each card dealt into a full hand
+/* Debt: dealing costs half a bet, rounded up (PILOT; main: one bet), added to the debt, and each card dealt into a full hand
    raises the debt from cards ×1.5, rounded to whole coins (at least +1): the 1st card adds 1 bet, then the card
    debt goes ×1.5 each time. With a bet of 1: 1 → 2 → 3 → 5 → 8 → 12 → 18 …; with 10: 10 → 15 → 23 → 35 → 53 …
    Each card's charge is remembered (S.cardSteps), so refunding a card returns exactly what it added. */

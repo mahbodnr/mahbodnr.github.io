@@ -461,7 +461,7 @@ function runTips(o, L){
   if (o.cause === 'bust') tips.push(['bet', 'A red cash-out button ends the run.']);
   if (o.cause === 'broke') tips.push(['bet', 'Keep coins back for the next bet.']);
   const debt = -(RL.debt || 0), power = -((RL.upkeep || 0) + (RL['power-up'] || 0));
-  if (debt >= 8) tips.push(['cards', `Discards cost <b>${fmtFit(debt)}</b>. Cash out sooner.`]);
+  if (debt >= 8) tips.push(['cards', `Debt cost <b>${fmtFit(debt)}</b>. Each extra card costs more: cash out sooner.`]);
   if (power >= 8) tips.push(['power', `Power-ups cost <b>${fmtFit(power)}</b>. Release them sooner.`]);
   if (st.biggestLoss >= Math.max(8, 0.4 * (st.peak || 0))) tips.push(['bet', `Biggest loss <b>${fmtFit(st.biggestLoss)}</b>. Bet smaller.`]);
   return tips.slice(0, 2);
@@ -547,7 +547,7 @@ function helpHTML(){
     <h3>A hand</h3>
     <ul>
       <li>5 cards: 3 up, 2 down. <b>Throw away</b> is free before you bet.</li>
-      <li>Bet and <b>Deal</b>. Dealing adds <b>one extra bet</b> to the debt. Each card dealt into a full hand raises the card debt <b>×1.5</b> (rounded): 1 → 2 → 3 → 5 → 8 … bets.</li>
+      <li>Bet and <b>Deal</b>. Dealing adds <b>half a bet</b> (rounded up) to the debt. Each card dealt into a full hand raises the card debt <b>×1.5</b> (rounded): 1 → 2 → 3 → 5 → 8 … bets.</li>
       <li>Tap or drag a hand card to swap it with the center card (free). <b>Discard</b> deals the next one.</li>
       <li><b>Cash out</b>: bet × multiplier − debt. Below zero ends the run.</li>
     </ul>
@@ -567,7 +567,7 @@ function helpHTML(){
     </div>
     <p>Power-ups cost their price again on every new card. ✕ releases one. Their prices, and the 10's fee, <b>double each level</b>${lvl() > 1 ? ` (shown for level ${lvl()})` : ''}.</p>
     <h3>Levels</h3>
-    <p>When the deck runs out, pay the level price (100, 200, 500, 1,000 …) to reshuffle, or the run ends.</p>
+    <p>When the deck runs out, pay the level price (100, 1,000, 10,000 …) to reshuffle, or the run ends.</p>
     <div class="actions"><button class="btn" data-act="replayTutorial">Tutorial</button><button class="btn gold" data-act="close">Got it</button></div>`;
 }
 
