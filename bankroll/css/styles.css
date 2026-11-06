@@ -931,23 +931,24 @@ html.speed-fast [data-act="restartNow"]::after{animation-duration:.8s !important
 }
 /* Phones held sideways: the table fills the left; header, ledger and controls share a column on the right. */
 @media (orientation:landscape) and (max-height:560px) and (min-width:600px){
-  :root{--chrome:228px;--uw:11vw;--umax:96px;--gutter:14px}
+  /* the table fills the left column down to the power-up tray tucked under it; header, ledger and controls on the right */
+  :root{--chrome:212px;--uw:11vw;--umax:110px;--gutter:14px}
   .app{max-width:none;display:grid;grid-template-columns:minmax(0,1fr) clamp(270px,38vw,360px);
-    grid-template-areas:"rail top" "rail ledger" "rail level" "rail side";grid-template-rows:auto auto auto 1fr;
-    column-gap:14px;row-gap:6px;align-content:start;padding-bottom:max(8px, env(safe-area-inset-bottom, 0px));min-height:auto}
+    grid-template-areas:"rail top" "rail ledger" "rail level" "rail side" "pow side";grid-template-rows:auto auto auto 1fr auto;
+    column-gap:14px;row-gap:6px;align-content:stretch;padding-bottom:max(8px, env(safe-area-inset-bottom, 0px));box-sizing:border-box;min-height:100%}
   .top{grid-area:top} .ledger{grid-area:ledger} .levelbar{grid-area:level}
-  .rail{grid-area:rail;align-self:start;padding:6px;border-radius:24px}
-  .felt{padding:8px 14px 6px;gap:5px;border-radius:19px}
+  .rail{grid-area:rail;align-self:stretch;padding:6px;border-radius:24px}
+  .felt{padding:8px 14px 6px;gap:5px;border-radius:19px;flex:1;justify-content:space-between}
   .felt::before{inset:5px;border-radius:15px}
   .brand{font-size:21px}
   .iconbtn{width:32px;height:32px} .iconbtn svg{width:15px;height:15px}
   .stat{padding:4px 8px 5px} .stat .v{--fs:17px}
-  .side{grid-area:side;display:flex;flex-direction:column;min-height:0}
-  .side .dock{position:static;margin:0;padding:0;background:none;gap:6px}
-  .side .powers{margin:0 0 6px;width:auto;padding:6px;border-radius:14px}
-  .side .pslots{gap:5px} .side .pu, .side .pslot{min-height:46px;padding:4px 5px;gap:6px}
+  .side{display:contents}
+  .side .dock{grid-area:side;align-self:start;position:static;margin:0;padding:0;background:none;gap:6px}
+  .side .powers{grid-area:pow;margin:-20px 18px 0;width:auto;padding:24px 6px 6px;border-radius:0 0 14px 14px}
+  .side .pslots{gap:6px} .side .pu, .side .pslot{min-height:42px;padding:4px 6px;gap:6px}
   .side .pu-cards{--cw:24px} .side .ps-ghost{width:24px;height:34px;font-size:13px}
-  .side .pu-name{font-size:10.5px} .side .pu-meter{display:none}
+  .side .pu-name{font-size:11px} .side .pu-meter{display:none}
   .side .pu-name .nm-l{display:none} .side .pu-name .nm-s{display:inline}
   .side .pu-eff, .side .pu-name .pu-n{display:none}
   .side .dock-in{gap:6px}
