@@ -66,7 +66,7 @@ function newGame(seed){
 /* ================= save versioning ================= */
 // Bump SAVE_VERSION when the save format changes, and teach migrate() to upgrade older saves.
 const SAVE_VERSION = 3;
-const RULES = 5;   // 5: power-up upkeep doubles with each card; 4: the Ace boost adds once to three/four of a kind; 3: half a bet to deal; 2: an extra bet to deal, card debt ×1.5 per card, level prices ×10 (bump when the rules change)
+const RULES = 6;   // 6: keeping a power-up costs 2×, 4×, 8× … its price per card; 5: upkeep doubled from 1×; 4: the Ace boost adds once to three/four of a kind; 3: half a bet to deal; 2: an extra bet to deal, card debt ×1.5 per card, level prices ×10 (bump when the rules change)
 function migrate(s){
   if (!s || !Array.isArray(s.deck) || !s.phase) return null;
   if (s.v && s.v > SAVE_VERSION) return null;            // saved by a newer version: start fresh
@@ -95,8 +95,9 @@ const capacity = () => 5 + S.jokerSeen.length + S.powerups.filter(p => p.type ==
 // power-up prices double with each level: level 1 = the base price, level 2 = ×2, level 3 = ×4 …
 const powerCost = rank => POWER[rank].cost * Math.pow(2, lvl() - 1);
 const swapCost = () => SWAP_COST * Math.pow(2, lvl() - 1);   // the 10 take-back fee doubles too
-// a power-up's upkeep doubles with every card it pays for: its price, then 2×, 4×, 8× … (p.paid = cards paid so far)
-const upkeepOf = p => powerCost(p.card.rank) * Math.pow(2, p.paid || 0);
+// a power-up costs its price (by level) to buy, and keeping it doubles that for every card: 2×, 4×, 8× its price …
+// (p.paid = cards it has paid upkeep for so far)
+const upkeepOf = p => powerCost(p.card.rank) * Math.pow(2, (p.paid || 0) + 1);
 const upkeep = () => S.powerups.reduce((a, p) => a + upkeepOf(p), 0);
 const fmt = n => Math.round(n).toLocaleString('en-US');
 // for tight boxes: a million and up becomes 1.25M / 12.5M / 125M (and B beyond), so any amount fits

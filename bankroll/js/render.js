@@ -570,7 +570,7 @@ function helpHTML(){
       ${exHand('5C', [0])}<span>Extra seat<small>+1 seat</small></span><b class="cost">${coin}${fmtFit(powerCost(5))}</b>
       ${exHand('10D', [0])}<span>Take back<small>any card from the discard pile</small></span><b class="cost">${coin}${fmtFit(swapCost())}</b>
     </div>
-    <p>Power-ups charge upkeep on every new card, starting at their price and <b>doubling with each card</b>. ✕ releases one. Their prices, and the 10's fee, <b>double each level</b>${lvl() > 1 ? ` (shown for level ${lvl()})` : ''}.</p>
+    <p>Keeping a power-up costs upkeep on every new card: <b>double its price</b>, then doubling again with each card (2×, 4×, 8× …). ✕ releases one. Their prices, and the 10's fee, <b>double each level</b>${lvl() > 1 ? ` (shown for level ${lvl()})` : ''}.</p>
     <h3>Levels</h3>
     <p>When the deck runs out, pay the level price (100, 1,000, 10,000 …) to reshuffle, or the run ends.</p>
     <div class="actions"><button class="btn" data-act="replayTutorial">Tutorial</button><button class="btn gold" data-act="close">Got it</button></div>`;
