@@ -58,6 +58,22 @@ function rollNumber(el, from, to){
   el.textContent = fmt(from); requestAnimationFrame(step);
 }
 
+/* Big screens: the desktop layout is made for about 1300×840. On a larger window the whole game (and its dialogs,
+   toasts and floating numbers) is zoomed up evenly to fill it. Positions read from the screen (getBoundingClientRect)
+   are in screen pixels, so code that turns them into lengths inside the zoomed game divides by ZK. */
+const FIT_W = 1300, FIT_H = 840;
+let ZK = 1;
+function fitScreen(){
+  const w = innerWidth, h = innerHeight;
+  const z = w >= 1080 && h > 560 ? Math.max(1, Math.min(w / FIT_W, h / FIT_H, 3)) : 1;
+  ZK = Math.floor(z * 100) / 100;
+  const r = document.documentElement;
+  r.classList.toggle('zoomed', ZK > 1);
+  r.style.setProperty('--z', String(ZK));
+}
+fitScreen();
+window.addEventListener('resize', fitScreen);
+
 function floatDelta(id, text, cls, shake){
   const el = $(id); if (!el) return;
   el.classList.remove('hit', 'bump'); void el.offsetWidth; el.classList.add(shake);
@@ -67,7 +83,7 @@ function floatDelta(id, text, cls, shake){
   f.className = 'float ' + cls; f.setAttribute('aria-hidden', 'true');
   const [num, ...label] = text.split(' ');
   f.innerHTML = `<b>${num}</b>${label.length ? `<small>${label.join(' ')}</small>` : ''}`;
-  f.style.left = (r.left + r.width * (label.length ? 0.5 : 0.66)) + 'px'; f.style.top = (r.top + r.height * 0.28) + 'px';
+  f.style.left = (r.left + r.width * (label.length ? 0.5 : 0.66)) / ZK + 'px'; f.style.top = (r.top + r.height * 0.28) / ZK + 'px';
   document.body.appendChild(f); setTimeout(() => f.remove(), 1500);
 }
 let toastTimer = null;
@@ -86,7 +102,7 @@ function runDealFx(id){
   if (!el || !a) return;
   const b = el.getBoundingClientRect();
   el.animate([
-    { transform:`translate(${a.left - b.left}px, ${a.top - b.top}px) scale(${a.width / b.width}) rotateY(90deg)`, filter:'brightness(.6)' },
+    { transform:`translate(${(a.left - b.left) / ZK}px, ${(a.top - b.top) / ZK}px) scale(${a.width / b.width}) rotateY(90deg)`, filter:'brightness(.6)' },
     { transform:'translate(0,-12px) scale(1.05) rotateY(0deg)', filter:'brightness(1)', offset:.7 },
     { transform:'none' }
   ], { duration:dur(560), easing:'cubic-bezier(.25,.8,.3,1)' });
@@ -105,7 +121,7 @@ function runFly(f){
   if (a && !reduceMotion()){
     const b = el.getBoundingClientRect();
     el.animate([
-      { transform:`translate(${a.left - b.left}px, ${a.top - b.top}px) rotate(-12deg) scale(.9)`, opacity:.3 },
+      { transform:`translate(${(a.left - b.left) / ZK}px, ${(a.top - b.top) / ZK}px) rotate(-12deg) scale(.9)`, opacity:.3 },
       { transform:'translate(0,-18px) rotate(3deg) scale(1.08)', opacity:1, offset:.72 },
       { transform:'none', opacity:1 }
     ], { duration:dur(780), easing:'cubic-bezier(.25,.8,.3,1)' });
@@ -115,7 +131,7 @@ function runFly(f){
     const r = el.getBoundingClientRect();
     const t = document.createElement('div');
     t.className = 'float seat'; t.setAttribute('aria-hidden', 'true'); t.textContent = label;
-    t.style.left = (r.left + r.width / 2) + 'px'; t.style.top = (r.top - 4) + 'px';
+    t.style.left = (r.left + r.width / 2) / ZK + 'px'; t.style.top = (r.top - 4) / ZK + 'px';
     document.body.appendChild(t); setTimeout(() => t.remove(), 1500);
   }, reduceMotion() ? 0 : dur(520));
 }
@@ -127,7 +143,7 @@ function runSwapFx(f){
   const fly = (el, from) => {
     if (!el || !from) return;
     const to = el.getBoundingClientRect();
-    el.animate([{ transform:`translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width})` }, { transform:'none' }],
+    el.animate([{ transform:`translate(${(from.left - to.left) / ZK}px, ${(from.top - to.top) / ZK}px) scale(${from.width / to.width})` }, { transform:'none' }],
       { duration:dur(380), easing:'cubic-bezier(.25,.8,.3,1)' });
   };
   fly(inEl, f.fromStage); fly(outEl, f.fromHand);
@@ -139,8 +155,8 @@ function runDiscardFx(el, from){
   const to = el.getBoundingClientRect(), end = getComputedStyle(el).transform;
   const settled = end === 'none' ? 'none' : end;
   el.animate([
-    { transform:`translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width})`, offset:0 },
-    { transform:`translate(${(from.left - to.left) * .35}px, ${(from.top - to.top) * .35 - 14}px) rotate(-8deg) scale(${(from.width / to.width + 1) / 2})`, offset:.5 },
+    { transform:`translate(${(from.left - to.left) / ZK}px, ${(from.top - to.top) / ZK}px) scale(${from.width / to.width})`, offset:0 },
+    { transform:`translate(${(from.left - to.left) * .35 / ZK}px, ${(from.top - to.top) * .35 / ZK - 14}px) rotate(-8deg) scale(${(from.width / to.width + 1) / 2})`, offset:.5 },
     { transform: settled }
   ], { duration:dur(460), easing:'cubic-bezier(.3,.7,.3,1)' });
 }
@@ -234,11 +250,11 @@ function drawComboLinks(){
   perRow.forEach((ks, r) => {
     if (!ks.length) return;
     const rowCards = [...hand.children].filter(el => el.matches('.card, .emptyslot') && rowOf(el) === r);
-    const base = Math.max(...rowCards.map(el => el.getBoundingClientRect().bottom)) - hr.top + 6;
+    const base = (Math.max(...rowCards.map(el => el.getBoundingClientRect().bottom)) - hr.top) / ZK + 6;
     ks.forEach((k, j) => {
       const it = items[k], col = LINK_COLORS[it.cb.kind] || '#f5d98c';
       const here = it.els.filter(el => rowOf(el) === r);
-      const xs = here.map(el => { const b = el.getBoundingClientRect(); return b.left - hr.left + b.width / 2; });
+      const xs = here.map(el => { const b = el.getBoundingClientRect(); return (b.left - hr.left + b.width / 2) / ZK; });
       const x1 = Math.min(...xs), x2 = Math.max(...xs), y = base + 6 + j * LINK_STEP;
       const lastRow = Math.max(...it.els.map(rowOf)) === r;
       // a combo that continues on another row gets an open end pointing that way
@@ -252,7 +268,8 @@ function drawComboLinks(){
   const H = hand.scrollHeight;
   const wrap = document.createElement('div');
   wrap.className = 'links'; wrap.setAttribute('aria-hidden', 'true');
-  wrap.innerHTML = `<svg width="${hr.width}" height="${H}" viewBox="0 0 ${hr.width} ${H}">${paths}</svg>${labels}`;
+  const HW = hr.width / ZK;
+  wrap.innerHTML = `<svg width="${HW}" height="${H}" viewBox="0 0 ${HW} ${H}">${paths}</svg>${labels}`;
   hand.appendChild(wrap);
 }
 let linkTimer = null;
@@ -291,7 +308,7 @@ function fireFrame(now){
   if (document.hidden){ fire.last = now; requestAnimationFrame(fireFrame); return; }
   const dt = Math.min(50, now - fire.last) / 16.7; fire.last = now;
   const big = cv.parentElement.classList.contains('blaze');
-  const dpr = Math.min(2, window.devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+  const dpr = Math.min(3, (window.devicePixelRatio || 1) * ZK), W = cv.clientWidth, H = cv.clientHeight;   // sharp when zoomed
   if (!W || !H){ requestAnimationFrame(fireFrame); return; }
   if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)){ cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
   const g = cv.getContext('2d');

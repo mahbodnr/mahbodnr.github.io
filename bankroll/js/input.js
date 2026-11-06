@@ -39,10 +39,10 @@ document.addEventListener('pointermove', e => {
     drag.dx = drag.x0 - r.left; drag.dy = drag.y0 - r.top;
     drag.ghost = drag.src.cloneNode(true); drag.ghost.classList.add('ghost'); drag.ghost.classList.remove('armed', 'enter', 'flip');
     drag.ghost.querySelectorAll('.tag').forEach(t => t.remove());
-    drag.ghost.style.width = r.width + 'px'; drag.ghost.style.height = r.height + 'px';
+    drag.ghost.style.width = r.width / ZK + 'px'; drag.ghost.style.height = r.height / ZK + 'px';   // zoomed like the game
     document.body.appendChild(drag.ghost); drag.src.classList.add('dragging');
   }
-  drag.ghost.style.left = (e.clientX - drag.dx) + 'px'; drag.ghost.style.top = (e.clientY - drag.dy) + 'px';
+  drag.ghost.style.left = (e.clientX - drag.dx) / ZK + 'px'; drag.ghost.style.top = (e.clientY - drag.dy) / ZK + 'px';
   const st = document.querySelector('#pit .stage');
   if (st) st.classList.toggle('droppable', overPit(e));
 });

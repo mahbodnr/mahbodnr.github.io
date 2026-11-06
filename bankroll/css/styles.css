@@ -42,6 +42,10 @@
   --gutter: 16px;
 }
 @supports (height: 100svh){ :root{ --vh: 100svh } }
+/* big screens (fitScreen in fx.js): the game and everything floating over it are zoomed by --z; the viewport sizes
+   the layout reads are divided by it, so the layout works as if on a ~1300×840 screen */
+html.zoomed{ --vh: calc(100vh / var(--z)); --uw: calc(9.5vw / var(--z)) }
+html.zoomed .app, html.zoomed #modalRoot, html.zoomed .toast, html.zoomed .float, html.zoomed .coach, html.zoomed .ghost{ zoom: var(--z) }
 
 /* ================= page ================= */
 html,body{height:100%;margin:0}

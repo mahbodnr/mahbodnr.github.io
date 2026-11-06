@@ -73,15 +73,17 @@ function placeCoach(c, target){
   document.querySelectorAll('.coach-on').forEach(n => { if (n !== target) n.classList.remove('coach-on'); });
   target.classList.add('coach-on');
   c.hidden = false;
-  const r = target.getBoundingClientRect(), cw = Math.min(320, innerWidth - 32);
-  c.style.width = cw + 'px';
-  const ch = c.offsetHeight;
+  // measured in screen pixels; the bubble is zoomed with the game on big screens, so its lengths are divided by ZK
+  const z = typeof ZK === 'number' ? ZK : 1;
+  const r = target.getBoundingClientRect(), cw = Math.min(320 * z, innerWidth - 32);
+  c.style.width = cw / z + 'px';
+  const ch = c.offsetHeight * z;
   const below = r.bottom + 12 + ch < innerHeight - 8;
   const top = below ? r.bottom + 12 : Math.max(8, r.top - ch - 12);
   const left = Math.max(16, Math.min(innerWidth - cw - 16, r.left + r.width / 2 - cw / 2));
-  c.style.top = top + 'px'; c.style.left = left + 'px';
+  c.style.top = top / z + 'px'; c.style.left = left / z + 'px';
   c.dataset.side = below ? 'below' : 'above';
-  c.style.setProperty('--ax', Math.max(18, Math.min(cw - 18, r.left + r.width / 2 - left)) + 'px');
+  c.style.setProperty('--ax', Math.max(18, Math.min(cw - 18 * z, r.left + r.width / 2 - left)) / z + 'px');
 }
 window.addEventListener('resize', () => { if (S) tutorialTick(); });
 window.addEventListener('scroll', () => { if (S && (tutorialActive() || !$('coach').hidden)) tutorialTick(); }, { passive:true });
