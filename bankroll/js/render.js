@@ -155,7 +155,8 @@ function puEmblem(type, n){
     <circle cx="27" cy="26.5" r="7" fill="#6fd3c1" stroke="#174d47" stroke-width="1.5"/><path d="M27 23v7M23.5 26.5h7" stroke="#0f2f2b" stroke-width="2.2" stroke-linecap="round"/></svg>`;
 }
 // Three slots, one per kind. A power-up shows the card(s) it was bought with, its badge, what keeping it costs on the next
-// card (a tag that warms as it doubles, a pip per card kept) and ✕ to release one. An empty slot shows which card buys it.
+// card (a tag that warms as it doubles), how long each copy has been kept with what that multiplies its price by, and ✕
+// to release one. An empty slot shows which card buys it.
 const PU_SHORT = { A:'Boost', '2':'2-tone', '5':'Seat' };   // phones: the slot is narrow
 const puName = (t, P) => `<span class="nm-l">${P.name}</span><span class="nm-s">${PU_SHORT[t]}</span>`;
 const PU_EFF = (t, n) => t === 'A' ? `+${n} to every multiplier` : t === '2' ? 'Suits count as red / black' : `+${n} seat${n > 1 ? 's' : ''}`;
@@ -176,7 +177,11 @@ function renderPowers(){
     const heat = Math.min(3, kept), rose = now > (prev['c' + t] || 0) && (prev['c' + t] || 0) > 0;
     costs['c' + t] = now;
     const cards = group.slice(-3).map(p => cardHTML(p.card, { track:false })).join('');
-    const pips = [0, 1, 2, 3].map(i => `<i class="${i < kept ? 'on' : ''}"></i>`).join('');
+    // each copy pays price × 2^(cards kept + 1); several copies add up, e.g. kept 5 and 1 → ×64 + ×4 = ×68
+    const ks = group.map(p => p.paid || 0).sort((a, b) => b - a), mult = now / powerCost(r);
+    const keptTxt = n === 1 ? (ks[0] ? `kept ${ks[0]}` : 'new') : `kept ${ks.slice(0, 3).join(', ')}${n > 3 ? '…' : ''}`;
+    const keptTip = n === 1 ? `Kept for ${ks[0]} card${ks[0] === 1 ? '' : 's'}: upkeep is ${fmt(mult)}× its price (${fmt(powerCost(r))})`
+      : `${n} copies, kept for ${ks.join(', ')} cards: upkeep is ${fmt(mult)}× the price (${fmt(powerCost(r))}) in all`;
     return `<div class="pu pu-${t} h${heat} ${n > (prev[t] || 0) ? 'pop' : ''}" data-type="${t}" role="group"
         aria-label="${P.name}${n > 1 ? ` ×${n}` : ''} from ${group.map(p => cardName(p.card)).join(', ')}: ${PU_EFF(t, n)}. Upkeep ${now} on the next card, then it doubles." title="${P.name}: ${PU_EFF(t, n)}">
       <div class="pu-cards" style="--k:${Math.min(3, n)}">${cards}${puEmblem(t, n)}</div>
@@ -184,7 +189,7 @@ function renderPowers(){
         <div class="pu-name">${puName(t, P)}${n > 1 ? `<span class="pu-n">×${n}</span>` : ''}</div>
         <div class="pu-eff">${PU_EFF(t, n)}</div>
         <div class="pu-cost"><div class="pu-up h${heat} ${rose ? 'rise' : ''}" title="Upkeep on the next card. It doubles with every card: then ${fmt(now * 2)}, ${fmt(now * 4)} …"><span class="pu-now ${fitCls(fmtShort(now))}">${coin}${fmtShort(now)}</span></div>
-          <div class="pu-meter" title="Cards kept: ${kept}">${pips}</div></div>
+          <div class="pu-kept" title="${keptTip}">${keptTxt} · <b>×${fmtShort(mult)}</b></div></div>
       </div>
       <button class="x" data-act="release" data-type="${t}" ${can ? '' : 'disabled'} aria-label="Release one ${P.name}" title="Release one (stop paying its upkeep)">✕</button></div>`;
   });

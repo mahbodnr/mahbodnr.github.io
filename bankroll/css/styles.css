@@ -191,7 +191,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible,summary:focus-
 /* ================= power-ups =================
    Their own place: on phones a tray tucked under the table's wooden rail; on desktop a panel at the top of the right-hand
    column. Three slots, one per kind. A power-up shows the card it was bought with (fanned when there are several), its
-   badge, the next card's upkeep on a tag that warms as it doubles, a pip per card kept, and ✕ to release one. */
+   badge, the next card's upkeep on a tag that warms as it doubles, how long it has been kept (×price), and ✕ to release one. */
 .rail{z-index:1}
 .powers{position:relative;z-index:0;margin:-22px 14px 0;align-self:stretch;width:auto;box-sizing:border-box;padding:28px 8px 9px;border-radius:0 0 18px 18px;
   background:
@@ -226,11 +226,10 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible,summary:focus-
 .pu-up.rise .pu-now{animation:upRise .7s cubic-bezier(.2,.9,.3,1.4)}
 @keyframes upRise{0%{transform:scale(1)}35%{transform:scale(1.35);text-shadow:0 0 12px rgba(255,150,80,.8)}100%{transform:scale(1)}}
 .pu-up .pu-now.f2{font-size:11px} .pu-up .pu-now.f3,.pu-up .pu-now.f4{font-size:10px}
-.pu-meter{display:none;gap:3px;flex:none}
+.pu-kept{display:none;font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pu-kept b{color:var(--text);font-weight:800} .pu.h2 .pu-kept b{color:#ffad5c} .pu.h3 .pu-kept b{color:var(--debt)}
 .pu-name .nm-l{display:none} .pu-name .nm-s{display:inline}
 .pu-name .pu-n{display:none}   /* phones: the badge's +n and the fanned cards show the count */
-.pu-meter i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.16)}
-.pu-meter i.on{background:#ffd27a} .pu.h2 .pu-meter i.on{background:#ffad5c} .pu.h3 .pu-meter i.on{background:var(--debt)}
 .pu .x{position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--panel-solid);
   display:grid;place-items:center;font-size:10px;color:var(--muted);padding:0;z-index:3}
 .pu .x:hover:not(:disabled){color:var(--debt);border-color:var(--debt)}
@@ -252,7 +251,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible,summary:focus-
   .powers{padding:30px 12px 11px;margin-left:22px;margin-right:22px}
   .pslots{gap:10px}
   .pu-cards{--cw:32px} .ps-ghost{width:32px;height:45px}
-  .pu-name{font-size:13px} .pu-eff{display:block} .pu-meter{display:flex}
+  .pu-name{font-size:13px} .pu-eff{display:block} .pu-kept{display:block}
   .pu-name .nm-l{display:inline} .pu-name .nm-s{display:none} .pu-name .pu-n{display:inline}
   .pu-up .pu-now{font-size:13px}
 }
@@ -924,7 +923,7 @@ html.speed-fast [data-act="restartNow"]::after{animation-duration:.8s !important
   .side .pu-cards{--cw:38px;margin-right:6px} .side .ps-ghost{width:38px;height:54px;font-size:18px}
   .side .pu-cards .pu-emb{width:26px;height:26px;right:-11px;bottom:-8px}
   .side .pu-name{font-size:14px} .side .pu-eff{display:block;font-size:12px}
-  .side .pu-cost{margin-top:5px} .side .pu-up .pu-now{font-size:14px} .side .pu-meter i{width:6px;height:6px}
+  .side .pu-cost{margin-top:5px} .side .pu-up .pu-now{font-size:14px} .side .pu-kept{font-size:12px}
   .side .pu .x{position:static;width:30px;height:30px;font-size:12px;margin-left:auto;background:rgba(0,0,0,.25)}
   .side .pslot .pu-price{margin-top:4px}
   .toast{bottom:40px}
@@ -948,7 +947,7 @@ html.speed-fast [data-act="restartNow"]::after{animation-duration:.8s !important
   .side .powers{grid-area:pow;margin:-20px 18px 0;width:auto;padding:24px 6px 6px;border-radius:0 0 14px 14px}
   .side .pslots{gap:6px} .side .pu, .side .pslot{min-height:42px;padding:4px 6px;gap:6px}
   .side .pu-cards{--cw:24px} .side .ps-ghost{width:24px;height:34px;font-size:13px}
-  .side .pu-name{font-size:11px} .side .pu-meter{display:none}
+  .side .pu-name{font-size:11px} .side .pu-kept{display:none}
   .side .pu-name .nm-l{display:none} .side .pu-name .nm-s{display:inline}
   .side .pu-eff, .side .pu-name .pu-n{display:none}
   .side .dock-in{gap:6px}
