@@ -110,10 +110,12 @@ function updateBetUI(skip){
   const b = S.betInput;
   const num = $('betNum'), rg = $('betRange');
   if (num && skip !== 'num') num.value = b;
+  if (num) num.style.width = Math.max(5, String(b).length + 1) + 'ch';
+  document.querySelectorAll('.presets .q').forEach(q => q.setAttribute('aria-pressed', String(+q.dataset.v === b)));
   if (rg && skip !== 'range') rg.value = betToPos(b);
   const dn = document.querySelector('[data-hold="-1"]'), up = document.querySelector('[data-hold="1"]');
   if (dn) dn.disabled = b <= 1; if (up) up.disabled = b >= S.coins;
-  renderValue();
+  renderValue(); renderLedger();
 }
 function stepBet(dir, big){
   let v = S.betInput;
@@ -258,10 +260,11 @@ document.addEventListener('input', e => {
     if (v >= 1 && v <= S.coins){ S.betInput = v; updateBetUI('num'); }
   }
 });
+// in place, not a full render: leaving the bet box by tapping Deal must not swap the Deal button mid-tap
 document.addEventListener('change', e => {
-  if (e.target.id === 'betRange') render();
+  if (e.target.id === 'betRange') updateBetUI();
   if (e.target.id === 'volRange') sfx('coin');
-  if (e.target.id === 'betNum') setBet(e.target.value);
+  if (e.target.id === 'betNum'){ S.betInput = clampBet(e.target.value); updateBetUI(); }
 });
 document.addEventListener('keydown', e => { if (e.target.id === 'betNum' && e.key === 'Enter') e.target.blur(); });
 

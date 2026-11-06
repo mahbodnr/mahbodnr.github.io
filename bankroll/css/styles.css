@@ -88,6 +88,17 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible,summary:focus-
 .stat.debt.zero .k{color:var(--muted)}
 .stat.debt.zero .v{color:var(--text);text-shadow:none}
 .stat.hit{animation:hit .5s ease}
+/* bet being chosen: Bet and Debt are a preview — dashed outline, hatched fill, a "?" badge, a slow breathing value */
+.stat.pending, .stat.debt.pending{border:1.5px dashed rgba(245,217,140,.55);
+  background:repeating-linear-gradient(135deg,rgba(255,255,255,.05) 0 6px,transparent 6px 12px),var(--panel);box-shadow:none}
+.stat.debt.pending{border-color:rgba(255,143,122,.75);background:repeating-linear-gradient(135deg,rgba(255,110,85,.13) 0 6px,transparent 6px 12px),var(--panel)}
+.stat.pending .k{display:flex;align-items:center;gap:4px}
+.stat.pending .k i{font-style:normal;font-size:8.5px;line-height:1;padding:1px 4px;border-radius:6px;border:1px dashed currentColor;letter-spacing:0}
+.stat.pending .v{opacity:.82;font-style:italic;animation:pendBreathe 2.2s ease-in-out infinite}
+.stat.debt.pending .k{color:#ffb4a6}
+.stat.debt.pending .v{color:var(--debt);text-shadow:none}
+@keyframes pendBreathe{50%{opacity:.5}}
+@media (prefers-reduced-motion: reduce){.stat.pending .v{animation:none}}
 @keyframes hit{20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-2px)}80%{transform:translateX(1px)}}
 .stat.bump .v{animation:bump .45s ease}
 @keyframes bump{30%{transform:scale(1.14)}}
@@ -739,6 +750,9 @@ html.light .stat.debt .k{color:#a2321f}
 html.light .stat.debt .v{text-shadow:none}
 html.light .stat.debt.zero{border-color:var(--line);background:var(--panel)}
 html.light .stat.debt.zero .k{color:var(--muted)}
+html.light .stat.pending{border-color:rgba(160,120,40,.6);background:repeating-linear-gradient(135deg,rgba(160,120,40,.08) 0 6px,transparent 6px 12px),var(--panel)}
+html.light .stat.debt.pending{border-color:rgba(194,65,45,.6);background:repeating-linear-gradient(135deg,rgba(194,65,45,.08) 0 6px,transparent 6px 12px),var(--panel)}
+html.light .stat.debt.pending .k{color:#a2321f}
 html.light .float{text-shadow:0 1px 3px rgba(255,255,255,.9)}
 html.light .scrim{background:rgba(60,50,30,.35)}
 html.light .rail{box-shadow:0 14px 34px rgba(60,40,20,.28), inset 0 1px 0 rgba(255,255,255,.2), inset 0 -2px 6px rgba(0,0,0,.45)}
@@ -753,6 +767,24 @@ html.light .ro-mult{text-shadow:none}
 /* animation speed (Settings) */
 html.speed-off *, html.speed-off *::before, html.speed-off *::after{animation:none !important;transition:none !important}
 html.speed-fast *, html.speed-fast *::before, html.speed-fast *::after{animation-duration:.22s !important;transition-duration:.1s !important}
+/* Fast speeds up motion (deals, flights, flips, tosses, dialogs) but not highlights: a Joker's pulse, glows, flashes
+   and warnings keep their normal pace, so they can still be seen */
+html.speed-fast .jpulse{animation-duration:.8s !important}
+html.speed-fast .stat.pending .v{animation-duration:2.2s !important}
+html.speed-fast .lv-goal.ok .lv-track > i::before{animation-duration:3.2s !important}
+html.speed-fast .powers.short .pu .x{animation-duration:1.3s !important}
+html.speed-fast .coach-on{animation-duration:1.6s !important}
+html.speed-fast .ro-mult.blaze{animation-duration:1.4s !important}
+html.speed-fast .g-short b{animation-duration:1.6s !important}
+html.speed-fast .callout.flash{animation-duration:.9s !important}
+html.speed-fast .hnote.trim{animation-duration:1.2s !important}
+html.speed-fast .jitter{animation-duration:.6s !important}
+html.speed-fast .stat.hit{animation-duration:.5s !important}
+html.speed-fast .stat.bump .v{animation-duration:.45s !important}
+html.speed-fast .ro-mult.rolled{animation-duration:.5s !important}
+html.speed-fast .pu-up.rise .pu-now{animation-duration:.7s !important}
+html.speed-fast .rec-rays{animation-duration:30s !important}
+html.speed-fast [data-act="restartNow"]::after{animation-duration:.8s !important}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation:none !important;transition:none !important}
 }

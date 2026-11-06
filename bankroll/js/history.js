@@ -8,9 +8,16 @@ function recordHand(res, coinsAfter){
   if (S.history.length > 300) S.history.splice(0, S.history.length - 300);
 }
 
+// short axis label: 950, 1.5K, 12K, 3.2M, 1B
+function axisNum(v){
+  const a = Math.abs(v), s = v < 0 ? '−' : '';
+  for (const [d, u] of [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']])
+    if (a >= d) return s + String(+(a / d).toFixed(a / d < 10 ? 1 : 0)) + u;
+  return s + String(Math.round(a));
+}
 // Line chart of coins after each hand, with level boundaries marked.
 function coinChart(hist, target){
-  const W = 340, H = 150, padL = 34, padR = 12, padT = 14, padB = 22;
+  const W = 340, H = 150, padR = 12, padT = 14, padB = 22;
   const pts = [{ v: hist[0].start, level: hist[0].level }].concat(hist.map(h => ({ v:h.coins, level:h.level })));
   const vals = pts.map(p => p.v);
   let lo = Math.min(0, ...vals), hi = Math.max(...vals, target ? target.v * 1.08 : 0);
@@ -18,6 +25,9 @@ function coinChart(hist, target){
   // round the top up to a tidy value: 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8 × a power of ten
   const nice = v => { const m = Math.pow(10, Math.floor(Math.log10(Math.max(1, Math.abs(v))))); return [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].map(k => k * m).find(c => c >= v); };
   hi = nice(hi);
+  // y labels at the top, middle and bottom; the left margin fits the longest one (about 6.2px a character at 10.5px)
+  const ticks = [hi, (hi + lo) / 2, lo], tl = ticks.map(axisNum);
+  const padL = Math.max(26, 10 + Math.ceil(Math.max(...tl.map(t => t.length)) * 6.2));
   const x = i => padL + (pts.length === 1 ? 0 : i * (W - padL - padR) / (pts.length - 1));
   const y = v => padT + (hi - v) * (H - padT - padB) / (hi - lo);
   const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p.v).toFixed(1)}`).join('');
@@ -30,7 +40,7 @@ function coinChart(hist, target){
     const fx = x(Math.max(0, target.from || 0)), ty = y(target.v);
     marks += `<path class="ch-target" d="M${fx.toFixed(1)} ${ty.toFixed(1)}H${W - padR}"/><text class="ch-tl" x="${W - padR}" y="${(ty - 5).toFixed(1)}" text-anchor="end">${target.label}</text>`;
   }
-  const grid = [hi, (hi + lo) / 2, lo].map(v => `<path class="ch-grid" d="M${padL} ${y(v).toFixed(1)}H${W - padR}"/><text class="ch-ax" x="${padL - 6}" y="${(y(v) + 3.5).toFixed(1)}">${fmtFit(Math.round(v))}</text>`).join('');
+  const grid = ticks.map((v, i) => `<path class="ch-grid" d="M${padL} ${y(v).toFixed(1)}H${W - padR}"/><text class="ch-ax" x="${padL - 6}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end">${tl[i]}</text>`).join('');
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Coins after each hand: from ${fmtFit(pts[0].v)} to ${fmtFit(last.v)} over ${hist.length} hands">
     <defs><linearGradient id="chFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ch-f1"/><stop offset="1" class="ch-f2"/></linearGradient></defs>
     ${grid}${lo < 0 ? `<path class="ch-zero" d="M${padL} ${y(0).toFixed(1)}H${W - padR}"/>` : ''}${marks}

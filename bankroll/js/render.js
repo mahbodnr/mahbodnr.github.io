@@ -68,12 +68,23 @@ function sortedHand(){
   return h.filter(c => !down(c)).concat(h.filter(down));
 }
 
+// Bet and Debt boxes. While the bet is being chosen they follow the slider live, drawn as a dashed preview:
+// the bet that would be placed and the debt dealing would add (half the bet rounded up, plus the bet for the
+// first card dealt), nothing charged yet.
+function betStats(){
+  if (S.phase === 'bet'){
+    const b = Math.max(1, Math.min(S.betInput, S.coins)), add = Math.ceil(b / 2) + b, d = S.debt + add;   // half a bet to deal + one bet for the first card
+    return `<div class="stat pending" id="st-bet" title="Bet ${fmt(b)} if you deal now"><div class="k">Bet<i>?</i></div><div class="v ${fitCls(fmtFit(b))}">${fmtFit(b)}</div></div>
+    <div class="stat debt pending" id="st-debt" title="Dealing adds ${fmt(add)} debt: half the bet to deal, plus the bet for the first card. Change the bet to change it."><div class="k">Debt<i>?</i></div><div class="v ${fitCls(fmtFit(d) + '+')}">+${fmtFit(d)}</div></div>`;
+  }
+  return `<div class="stat" id="st-bet" title="Bet ${fmt(S.bet)}"><div class="k">Bet</div><div class="v ${fitCls(fmtFit(S.bet))}">${S.bet ? fmtFit(S.bet) : '—'}</div></div>
+    <div class="stat debt ${S.debt ? '' : 'zero'}" id="st-debt" title="Debt ${fmt(S.debt)}"><div class="k">Debt</div><div class="v ${fitCls(fmtFit(S.debt))}">${fmtFit(S.debt)}</div></div>`;
+}
 function renderLedger(){
   const ev = S.phase === 'bet' ? null : evaluate(S.hand, S.powerups);
   setHTML($('ledger'), `
     <div class="stat" id="st-coins" title="${fmt(S.coins)} coins"><div class="k">Coins</div><div class="v ${fitCls(fmtFit(S.coins) + 'cc')}">${coin}<span class="num">${fmtFit(S.coins)}</span></div></div>
-    <div class="stat" title="Bet ${fmt(S.bet)}"><div class="k">Bet</div><div class="v ${fitCls(fmtFit(S.bet))}">${S.bet ? fmtFit(S.bet) : '—'}</div></div>
-    <div class="stat debt ${S.debt ? '' : 'zero'}" id="st-debt" title="Debt ${fmt(S.debt)}"><div class="k">Debt</div><div class="v ${fitCls(fmtFit(S.debt))}">${fmtFit(S.debt)}</div></div>
+    ${betStats()}
     <div class="stat" id="st-level"><div class="k">Level</div><div class="v ${fitCls(lvl())}">${lvl()}</div></div>`);
   const L = lvl(), price = levelPrice(L), used = 54 - S.deck.length, need = price - S.coins;
   // progress toward the next level's price: coins against the price, and what's still missing (or to spare)
