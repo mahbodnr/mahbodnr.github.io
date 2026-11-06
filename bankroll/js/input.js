@@ -89,20 +89,18 @@ function endDrag(e, cancel){
 document.addEventListener('pointerup', e => endDrag(e, false));
 document.addEventListener('pointercancel', e => endDrag(e, true));
 
-/* Bet slider: any value, with a pull toward round numbers.
-   Above 50 coins the track is curved (value ∝ position²) so low bets keep fine control.
+/* Bet slider: any value, with a pull toward round numbers. The track is linear: halfway is half your coins.
    Round numbers depend on the bet's own size: under 100 → 5s and 10s; 100–999 → 10s and 50s; 1,000+ → 100s and 500s. */
 const RN = 1000;
-const curved = () => S.coins > 50;
 function betToPos(v){
   const max = S.coins; if (max <= 1) return 0;
   const t = Math.max(0, Math.min(1, (v - 1) / (max - 1)));
-  return Math.round((curved() ? Math.sqrt(t) : t) * RN);
+  return Math.round(t * RN);
 }
 function posToBet(p){
   const max = S.coins; if (max <= 1) return 1;
   const t = p / RN;
-  return 1 + (curved() ? t * t : t) * (max - 1);
+  return 1 + t * (max - 1);
 }
 function roundUnits(v){
   const d = Math.floor(Math.log10(Math.max(v, 1)));
