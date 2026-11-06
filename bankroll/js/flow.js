@@ -8,6 +8,7 @@ function newSet(){
   S.swapTen = null; S.swapCard = null; S.result = null; S.pendingCharged = false; S.swapRefund = false; ui.armed = null;
   if (S.coins < 1) return gameOver('You have no coins left to bet.', { cause:'broke' });
   if (S.deck.length < 5) return deckOut();
+  keepBestHand();
   for (let i = 0; i < 5; i++) S.hand.push(S.deck.pop());
   S.faceDown = [S.hand[3].id, S.hand[4].id];
   S.jokerSeen = S.hand.slice(0, 3).filter(isJoker).map(c => c.id);
@@ -19,7 +20,7 @@ function newSet(){
 function deckOut(){
   S.throwaway.push(...S.deck); S.deck = [];
   const price = levelPrice(lvl());
-  if (S.coins >= price){ S.phase = 'reshuffle'; ui.modal = 'reshuffle'; sfx('win'); }
+  if (S.coins >= price){ keepBestHand(); S.phase = 'reshuffle'; ui.modal = 'reshuffle'; sfx('win'); }
   else gameOver(`You finished level ${lvl()}, but reaching level ${lvl() + 1} costs ${fmt(price)} coins and you have ${fmt(S.coins)}.`,
     { cause:'level', price, have:S.coins });
 }
@@ -37,7 +38,14 @@ function reshuffle(){
   if (typeof checkUnlocks === 'function') checkUnlocks();   // announce any card pack or felt this level unlocked
 }
 
+// the last cash-out's hand becomes the run's biggest multiplier once the run goes on past it
+function keepBestHand(){
+  const b = S.bestCandidate; S.bestCandidate = null;
+  if (b && b.mult > (S.stats.bestMult || 0)){ S.stats.bestMult = b.mult; S.bestHand = b; reportProgress(); }   // post it to the boards now
+}
+
 function gameOver(reason, extra){
+  S.bestCandidate = null;   // the hand that ended the run doesn't count as its biggest multiplier
   S.phase = 'over'; S.over = { reason, ...(extra || {}) }; ui.modal = 'over';
   // save the best record across runs
   const st = S.stats, rec = Object.assign({ level:0, biggestWin:0, biggestLoss:0, peak:0, bestPayout:0, hands:0, runs:0 }, prefs.record || {});
@@ -251,11 +259,11 @@ function cashOut(force){
   S.throwaway.push(...S.hand, ...S.powerups.map(p => p.card), ...S.discard);
   S.hand = []; S.powerups = []; S.discard = []; S.pending = null;
   S.stats.cashouts++;
-  // the biggest multiplier this run, with the hand that made it (shown on the leaderboard)
-  if (ev.mult > (S.stats.bestMult || 0)){
-    S.stats.bestMult = ev.mult;
-    S.bestHand = { cards:res.hand.map(c => [c.rank, c.suit]), labels:ev.combos.map(c => c.label), mult:ev.mult, bet:res.bet, hand:res.handNo, level:lvl() };
-  }
+  // the biggest multiplier this run, with the hand that made it (shown on the leaderboard). It only counts once the
+  // run carries on after it (see keepBestHand): a hand that busts, or ends the run right after, is not a record.
+  S.bestCandidate = ev.mult > (S.stats.bestMult || 0)
+    ? { cards:res.hand.map(c => [c.rank, c.suit]), labels:ev.combos.map(c => c.label), mult:ev.mult, bet:res.bet, hand:res.handNo, level:lvl() }
+    : null;
   coinChange(payout, 'payout'); coinChange(-S.debt, 'debt');
   res.ledger = Object.assign({}, S.handLedger || { bet:-res.bet, payout, debt:-res.debt });
   S.runLedger = S.runLedger || {};
