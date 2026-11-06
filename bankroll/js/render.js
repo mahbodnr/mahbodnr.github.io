@@ -159,6 +159,23 @@ function puEmblem(type, n){
 // to release one. An empty slot shows which card buys it.
 const PU_SHORT = { A:'Boost', '2':'2-tone', '5':'Seat' };   // phones: the slot is narrow
 const puName = (t, P) => `<span class="nm-l">${P.name}</span><span class="nm-s">${PU_SHORT[t]}</span>`;
+const PU_ABOUT = {
+  A: 'Adds +1 to the multiplier of every combo in your hand: a pair ×2 becomes ×3, three of a kind ×4 becomes ×5. Several boosts add up.',
+  '2': 'Suits only count as red or black, so any 5 red or 5 black cards make a flush (×5). Only one can be active.',
+  '5': 'Adds a seat to your hand. Buying it deals a card straight into the new seat. Needs a card left in the deck.',
+};
+function puTipHTML(t){
+  const r = PU_RANK[t], P = POWER[r], group = S ? S.powerups.filter(p => p.type === t) : [], price = powerCost(r);
+  let own = '';
+  if (group.length){
+    const now = group.reduce((a, p) => a + upkeepOf(p), 0), ks = group.map(p => p.paid || 0).sort((a, b) => b - a);
+    own = `<p class="tip-own">You have ${group.length > 1 ? `${group.length} (kept ${ks.join(', ')} cards)` : ks[0] ? `it, kept ${ks[0]} card${ks[0] > 1 ? 's' : ''}` : 'it, just bought'}.
+      Next card: ${coin}<b>${fmt(now)}</b>. ✕ releases one.</p>`;
+  }
+  return `<b class="tip-h">${puEmblem(t, Math.max(1, group.length))}${P.name}</b>
+    <p>${PU_ABOUT[t]}</p>
+    <p class="tip-cost">Buy: ${coin}<b>${fmt(price)}</b> when ${r === 1 ? 'an Ace' : 'a ' + r} is dealt to the center. Keeping it costs 2×, 4×, 8× … the price for each new card.</p>${own}`;
+}
 const PU_EFF = (t, n) => t === 'A' ? `+${n} to every multiplier` : t === '2' ? 'Suits count as red / black' : `+${n} seat${n > 1 ? 's' : ''}`;
 function renderPowers(){
   const el = $('powers');
@@ -170,7 +187,7 @@ function renderPowers(){
   const slots = PU_ORDER.map(t => {
     const r = PU_RANK[t], P = POWER[r], group = S.powerups.filter(p => p.type === t), n = group.length;
     counts[t] = n;
-    if (!n) return `<div class="pslot" data-type="${t}" title="${r === 1 ? 'An Ace' : 'A ' + r} in the center can become ${P.name}: ${PU_EFF(t, 1)}">
+    if (!n) return `<div class="pslot" data-type="${t}" data-tip="${t}" aria-label="${r === 1 ? 'An Ace' : 'A ' + r} in the center can become ${P.name}: ${PU_EFF(t, 1)}">
         <div class="ps-ghost"><b>${RANKS[r]}</b></div>
         <div class="pu-body"><div class="pu-name">${puName(t, P)}</div><div class="pu-eff">${PU_EFF(t, 1)}</div><div class="pu-price">${coin}${fmtShort(powerCost(r))}</div></div></div>`;
     const now = group.reduce((a, p) => a + upkeepOf(p), 0), kept = Math.max(...group.map(p => p.paid || 0));
@@ -182,14 +199,14 @@ function renderPowers(){
     const keptTxt = n === 1 ? (ks[0] ? `kept ${ks[0]}` : 'new') : `kept ${ks.slice(0, 3).join(', ')}${n > 3 ? '…' : ''}`;
     const keptTip = n === 1 ? `Kept for ${ks[0]} card${ks[0] === 1 ? '' : 's'}: upkeep is ${fmt(mult)}× its price (${fmt(powerCost(r))})`
       : `${n} copies, kept for ${ks.join(', ')} cards: upkeep is ${fmt(mult)}× the price (${fmt(powerCost(r))}) in all`;
-    return `<div class="pu pu-${t} h${heat} ${n > (prev[t] || 0) ? 'pop' : ''}" data-type="${t}" role="group"
-        aria-label="${P.name}${n > 1 ? ` ×${n}` : ''} from ${group.map(p => cardName(p.card)).join(', ')}: ${PU_EFF(t, n)}. Upkeep ${now} on the next card, then it doubles." title="${P.name}: ${PU_EFF(t, n)}">
+    return `<div class="pu pu-${t} h${heat} ${n > (prev[t] || 0) ? 'pop' : ''}" data-type="${t}" data-tip="${t}" role="group"
+        aria-label="${P.name}${n > 1 ? ` ×${n}` : ''} from ${group.map(p => cardName(p.card)).join(', ')}: ${PU_EFF(t, n)}. Upkeep ${now} on the next card, then it doubles.">
       <div class="pu-cards" style="--k:${Math.min(3, n)}">${cards}${puEmblem(t, n)}</div>
       <div class="pu-body">
         <div class="pu-name">${puName(t, P)}${n > 1 ? `<span class="pu-n">×${n}</span>` : ''}</div>
         <div class="pu-eff">${PU_EFF(t, n)}</div>
-        <div class="pu-cost"><div class="pu-up h${heat} ${rose ? 'rise' : ''}" title="Upkeep on the next card. It doubles with every card: then ${fmt(now * 2)}, ${fmt(now * 4)} …"><span class="pu-now ${fitCls(fmtShort(now))}">${coin}${fmtShort(now)}</span></div>
-          <div class="pu-kept" title="${keptTip}">${keptTxt} · <b>×${fmtShort(mult)}</b></div></div>
+        <div class="pu-cost"><div class="pu-up h${heat} ${rose ? 'rise' : ''}"><span class="pu-now ${fitCls(fmtShort(now))}">${coin}${fmtShort(now)}</span></div>
+          <div class="pu-kept">${keptTxt} · <b>×${fmtShort(mult)}</b></div></div>
       </div>
       <button class="x" data-act="release" data-type="${t}" ${can ? '' : 'disabled'} aria-label="Release one ${P.name}" title="Release one (stop paying its upkeep)">✕</button></div>`;
   });
@@ -298,7 +315,7 @@ function renderDock(){
           ? `<button class="btn power grow" disabled title="Already active">${ico('power')}${bl(P.name, 'active')}</button>`
           : noSeatCard
           ? `<button class="btn power grow" disabled title="The deck is empty: no card could fill the seat">${ico('power')}${bl(P.name, 'deck empty')}</button>`
-          : `<button class="btn power grow" data-act="power" ${S.coins < powerCost(c.rank) ? 'disabled' : ''} title="${P.short}">${ico('power')}${bl(P.name, `${coin}${fmtFit(powerCost(c.rank))} · ${P.short}`)}${kbd('P')}</button>`;
+          : `<button class="btn power grow" data-act="power" data-tip="${P.type}" ${S.coins < powerCost(c.rank) ? 'disabled' : ''}>${ico('power')}${bl(P.name, `${coin}${fmtFit(powerCost(c.rank))} · ${P.short}`)}${kbd('P')}</button>`;
       }
       if (dealt && c.rank === 10) btns += `<button class="btn power grow" data-act="swap" ${S.coins < swapCost() || !S.discard.length ? 'disabled' : ''} title="Take a card back from the discard pile">${ico('back')}${bl('Take back', `${coin}${fmtFit(swapCost())} · from discard`)}${kbd('W')}</button>`;
       rows = `<div class="row">${btns}</div><div class="row">${cashBtn()}</div>`;
