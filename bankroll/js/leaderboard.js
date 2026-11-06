@@ -34,6 +34,7 @@ function mergeSlot(cur, p){
 }
 // documents written before seeded runs were tracked: nearly all of those runs were fresh shuffles, so they count as both
 function readDoc(r){
+  if (r.rules !== RULES) return null;            // written under older rules: off the boards
   if (r.all) return r;
   const ever = { level:r.level || 1, peak:r.peak || 0, biggestWin:r.biggestWin || 0, hand:null };
   const slots = { ever, today:{ level:r.dayLevel || 1, peak:r.dayPeak || 0, biggestWin:r.dayWin || 0, hand:null } };
@@ -63,7 +64,7 @@ const claudeBackend = {
     if (LB.state !== 'ready') return;
     const scope = LB.seeded ? 'all' : 'open', day = todayUTC();
     const person = id => ({ id, name:(this.names[id] && this.names[id].name) || 'Player', avatar:this.names[id] && this.names[id].avatarUrl });
-    const slots = per => this.docs.map(r => { const d = readDoc(r), s = d[scope] && d[scope][per === 'today' ? 'today' : 'ever'];
+    const slots = per => this.docs.map(r => { const d = readDoc(r); if (!d) return null; const s = d[scope] && d[scope][per === 'today' ? 'today' : 'ever'];
       return per === 'today' && d.day !== day ? null : s ? { r, s } : null; }).filter(Boolean);
     for (const per of ['today', 'all']){
       const list = slots(per);
@@ -75,14 +76,14 @@ const claudeBackend = {
   },
   async submit(p){
     if (!LB.me) return 'not_signed_in';
-    const raw = this.docs.find(r => r.id === LB.me), cur = raw ? readDoc(raw) : { all:{}, open:{} };
+    const found = this.docs.find(r => r.id === LB.me), raw = found && readDoc(found) ? found : null, cur = raw ? readDoc(raw) : { all:{}, open:{} };
     const day = todayUTC(), same = cur.day === day;
     const upd = (scope, on) => ({ ever: on ? mergeSlot(scope.ever, p) : scope.ever || emptySlot(),
       today: on ? mergeSlot(same ? scope.today : null, p) : same ? scope.today || emptySlot() : emptySlot() });
-    const body = { day, runs:Math.max(cur.runs || 0, (prefs.record && prefs.record.runs) || 0, 1),
+    const body = { rules:RULES, day, runs:Math.max(cur.runs || 0, (prefs.record && prefs.record.runs) || 0, 1),
       all:upd(cur.all || {}, true), open:upd(cur.open || {}, !p.seeded) };
     const strip = o => JSON.stringify(o, (k, v) => k === 'at' ? undefined : v);
-    if (raw && raw.all && strip({ day:raw.day, runs:raw.runs, all:raw.all, open:raw.open }) === strip(body)) return 'ok';
+    if (raw && raw.all && strip({ rules:raw.rules, day:raw.day, runs:raw.runs, all:raw.all, open:raw.open }) === strip(body)) return 'ok';
     try { await this.db.doc('scores/' + LB.me).set(body); return 'ok'; }
     catch(e){ LB.writeFailed = true; return 'denied'; }
   },
@@ -94,8 +95,10 @@ const supabaseBackend = {
     if (!window.supabase || !window.supabase.createClient) return false;
     this.cfg = cfg;
     this.client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true } });
+    // an anonymous session (a player who hasn't signed in) records runs for analysis but counts as signed out
     const setSession = session => {
-      LB.signedIn = !!session; LB.me = session ? session.user.id : null;
+      LB.anon = !!(session && session.user.is_anonymous);
+      LB.signedIn = !!session && !LB.anon; LB.me = session ? session.user.id : null;
       const md = (session && session.user.user_metadata) || {};
       LB.myName = md.full_name || md.name || (session && session.user.email ? session.user.email.split('@')[0] : '');
       LB.tgId = md.telegram_id || null;
@@ -103,7 +106,7 @@ const supabaseBackend = {
     try { const { data } = await this.client.auth.getSession(); setSession(data && data.session); } catch(e){}
     this.client.auth.onAuthStateChange((event, session) => {
       const was = LB.signedIn; setSession(session);
-      if (session && !was){ this.ensureProfile(session.user); if (LB.backend) upgradeFreshRun(); }
+      if (LB.signedIn && !was){ this.ensureProfile(session.user); if (LB.backend) upgradeFreshRun(); }
       refreshBoard();
     });
     // inside Telegram: sign in with the Telegram account (Google sign-in doesn't work in Telegram's browser)
@@ -112,6 +115,11 @@ const supabaseBackend = {
       if (await this.telegramSignIn()){ try { const { data } = await this.client.auth.getSession(); setSession(data && data.session); } catch(e){} }
     }
     if (LB.signedIn){ const { data } = await this.client.auth.getSession(); this.ensureProfile(data.session.user); }
+    // not signed in: an anonymous account, so the run is still recorded (it never shows on the boards).
+    // Needs "Allow anonymous sign-ins" in Supabase; without it the player simply stays signed out.
+    else if (!LB.anon){
+      try { const { data, error } = await this.client.auth.signInAnonymously(); if (!error && data && data.session) setSession(data.session); } catch(e){}
+    }
     await this.refresh();
     return true;
   },
@@ -148,14 +156,15 @@ const supabaseBackend = {
   // asks the server for a run: it picks the seed unless the player chose one
   async startRun(seed){
     try {
-      const { data, error } = await this.client.rpc('bankroll_start_run', { p_seed:seed || null });
+      const { data, error } = await this.client.rpc('bankroll_start_run', { p_seed:seed || null,
+        p_platform: telegramLaunch() ? 'telegram' : 'web', p_client: 'rules ' + RULES });
       if (error || !data) return { error:'error' };
       return data.success ? data : { error:data.error || 'error' };
     } catch(e){ return { error:'error' }; }
   },
   // sends the run's moves; the verify function replays them and stores what the replay scored
   async submit(p){
-    if (!LB.signedIn) return 'not_signed_in';
+    if (!LB.signedIn && !LB.anon) return 'not_signed_in';
     if (!p.official) return 'unofficial';
     try {
       const { data, error } = await this.client.functions.invoke('bankroll-verify', { body:{ run_id:p.runId, moves:p.moves } });
@@ -210,7 +219,7 @@ async function initLeaderboard(){
 }
 
 /* ---------- starting runs ---------- */
-const officialPossible = () => !!(LB.backend && LB.backend.startRun && LB.signedIn);
+const officialPossible = () => !!(LB.backend && LB.backend.startRun && (LB.signedIn || LB.anon));
 const isFresh = () => !!S && !S.official && Array.isArray(S.log) && S.log.length === 0 && S.phase === 'bet' && !(S.stats.cashouts > 0);
 function useServerRun(run){
   newGame(run.seed);
@@ -264,7 +273,9 @@ function reportProgress(finished){
     biggestWin:S.stats.biggestWin || 0, bestPayout:S.stats.bestPayout || 0, bestMult:S.stats.bestMult || 0, hands:S.stats.cashouts || 0,
     hand:S.bestHand || null, finished:!!finished || S.phase === 'over' };
   const last = S.lbSent || {};
-  if (last.runId === p.runId && (last.finished || (!p.finished && SCORE_KEYS.every(k => (last[k] || 0) >= p[k])))) return;
+  if (last.runId === p.runId && last.finished) return;
+  if (LB.kind === 'supabase'){ if (last.runId === p.runId && !p.finished && last.moves === S.log.length) return; }   // every hand is recorded
+  else if (last.runId === p.runId && !p.finished && SCORE_KEYS.every(k => (last[k] || 0) >= p[k])) return;           // claude.ai: bests only
   if (LB.kind === 'supabase') p.moves = S.log.slice();
   LB.pending = p;
   flushProgress();
@@ -276,7 +287,7 @@ async function flushProgress(){
   const res = await LB.backend.submit(p);
   LB.posting = false;
   if (res === 'ok' && S && S.runId === p.runId){
-    S.lbSent = { runId:p.runId, finished:p.finished };
+    S.lbSent = { runId:p.runId, finished:p.finished, moves:p.moves ? p.moves.length : undefined };
     SCORE_KEYS.forEach(k => { S.lbSent[k] = p[k]; });
     store(SAVE_KEY, S);
   }
