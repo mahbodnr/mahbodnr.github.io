@@ -334,7 +334,10 @@ function resetIn(){
   return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`;
 }
 const lbName = r => `<span class="bname">${r.avatar ? `<img src="${esc(r.avatar)}" alt="" referrerpolicy="no-referrer">` : ''}<span class="bn">${esc(r.name || 'Player')}</span>${r.id === LB.me ? ' <em>you</em>' : ''}${r.seeded ? ' <i class="seedtag" title="The player chose this run’s seed">seeded</i>' : ''}</span>`;
-const lbCards = cards => (cards || []).filter(c => Array.isArray(c)).map(([rank, suit], i) => cardHTML({ id:'lb' + i, rank:+rank, suit:String(suit) }, { track:false })).join('');
+// a stored hand, in rank order like the hand's Rank sort: low to high, Ace high, Jokers last
+const lbRankVal = ([rank]) => +rank === 0 ? 99 : +rank === 1 ? 14 : +rank;
+const lbCards = cards => (cards || []).filter(c => Array.isArray(c)).slice().sort((a, b) => lbRankVal(a) - lbRankVal(b) || String(a[1]).localeCompare(String(b[1])))
+  .map(([rank, suit], i) => cardHTML({ id:'lb' + i, rank:+rank, suit:String(suit) }, { track:false })).join('');
 function handsHTML(per){
   const list = LB.hands[per];
   const title = `<h3 class="lbh">Top hand</h3>`;
