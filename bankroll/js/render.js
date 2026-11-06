@@ -575,7 +575,8 @@ function overHTML(){
     ${r ? `<details class="ro-hand"><summary>Last hand</summary>${handBody(r)}</details>` : ''}
     <h3>This run</h3>${stats}
     <p class="snote">Seed <code class="seed">${S.seed}</code></p>
-    <div class="actions ro-actions">${leaderboardAvailable() ? `<button class="btn" data-act="openBoard">Leaderboard</button>` : ''}<button class="btn" data-act="replaySeed">Same cards</button><button class="btn gold grow" data-act="restartNow">Play again</button></div>`;
+    <div class="ro-more">${leaderboardAvailable() ? `<button class="btn" data-act="openBoard">Leaderboard</button>` : ''}<button class="btn" data-act="replaySeed">Same cards</button></div>
+    <div class="actions ro-actions"><button class="btn gold grow" data-act="restartNow">Play again</button></div>`;
 }
 // a tiny example hand for the rules: 'rank+suit' codes, with the scoring cards lit
 function exHand(codes, lit){
