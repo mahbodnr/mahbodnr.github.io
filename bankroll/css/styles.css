@@ -188,43 +188,75 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible,summary:focus-
 .discardbtn:disabled{cursor:default}
 .discardbtn:not(:disabled):hover .card:last-child{transform:translateY(-4px) rotate(4deg)}
 
-/* ================= power-ups ================= */
-.powers{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
-.pu{--tint:217,171,76;position:relative;display:flex;align-items:center;gap:8px;padding:4px 5px 4px 4px;border-radius:999px;min-width:0;
-  background:linear-gradient(135deg, rgba(var(--tint),.24), rgba(0,0,0,.42) 72%);border:1px solid rgba(var(--tint),.55);
-  box-shadow:0 4px 12px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.08)}
+/* ================= power-ups =================
+   Their own place: on phones a tray tucked under the table's wooden rail; on desktop a panel at the top of the right-hand
+   column. Three slots, one per kind. A power-up shows the card it was bought with (fanned when there are several), its
+   badge, the next card's upkeep on a tag that warms as it doubles, a pip per card kept, and ✕ to release one. */
+.rail{z-index:1}
+.powers{position:relative;z-index:0;margin:-18px auto 0;width:calc(100% - 24px);box-sizing:border-box;padding:24px 8px 9px;border-radius:0 0 18px 18px;
+  background:
+    repeating-linear-gradient(93deg, rgba(0,0,0,.09) 0 2px, transparent 2px 7px, rgba(255,226,180,.04) 7px 8px, transparent 8px 13px),
+    linear-gradient(180deg,#1f120a,#3a2414 45%,#2a180d);
+  box-shadow:0 12px 26px rgba(0,0,0,.42), inset 0 -1px 0 rgba(255,226,180,.14), inset 0 10px 12px -8px rgba(0,0,0,.7)}
+.ptitle{display:none}
+.pslots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.pu, .pslot{position:relative;display:flex;align-items:center;gap:7px;min-width:0;padding:6px 7px;border-radius:12px;box-sizing:border-box;min-height:54px}
+.pu{--tint:217,171,76;background:linear-gradient(135deg, rgba(var(--tint),.24), rgba(0,0,0,.4) 75%);border:1px solid rgba(var(--tint),.6);
+  box-shadow:0 4px 12px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08)}
 .pu-2{--tint:240,110,120} .pu-5{--tint:111,211,193}
-.pu-emb{width:34px;height:34px;flex:none;display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45))}
-.pu-body{min-width:0}
-.pu-name{font-size:12.5px;font-weight:800;line-height:1.1;display:flex;align-items:center;gap:5px;white-space:nowrap}
-.pu-n{font-size:10px;font-weight:900;padding:1px 6px;border-radius:999px;background:rgb(var(--tint));color:#15110a}
-.pu-eff{font-size:11px;color:var(--muted);font-weight:600;margin-top:1px;white-space:nowrap}
-.pu-up{display:flex;flex-direction:column;align-items:center;line-height:1;padding:0 2px 0 8px;border-left:1px solid rgba(var(--tint),.3);font-variant-numeric:tabular-nums}
-.pu-up span{display:flex;align-items:center;gap:3px;font-size:13px;font-weight:800}
-.pu-up small{font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.04em;margin-top:3px;white-space:nowrap}
-.pu .x{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:rgba(0,0,0,.25);display:grid;place-items:center;font-size:12px;color:var(--muted);flex:none;padding:0}
+.pslot{border:1px dashed rgba(255,226,180,.22);background:rgba(0,0,0,.18);color:var(--muted)}
+.pslot .pu-name{color:rgba(233,242,235,.6)}
+.ps-ghost{flex:none;width:28px;height:40px;border-radius:5px;border:1.5px dashed rgba(255,226,180,.32);display:grid;place-items:center;
+  font-family:var(--f-card);font-weight:800;font-size:15px;color:rgba(255,226,180,.5)}
+.pu-cards{position:relative;flex:none;--cw:28px;--ch:calc(var(--cw) * 1.42);width:calc(var(--cw) + (var(--k, 1) - 1) * 6px);height:var(--ch);margin:0 4px 0 0}
+.pu-cards .card{position:absolute;top:0;left:0;margin:0;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.pu-cards .card:nth-child(2){left:6px;top:-2px} .pu-cards .card:nth-child(3){left:12px;top:-4px}
+.pu-emb{display:block;flex:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45))}
+.pu-cards .pu-emb{position:absolute;right:-9px;bottom:-7px;width:22px;height:22px;z-index:2}
+.pu-body{min-width:0;flex:1}
+.pu-name{font-size:11.5px;font-weight:800;line-height:1.15;display:flex;align-items:center;gap:4px;white-space:nowrap;overflow:hidden}
+.pu-n{font-size:9.5px;font-weight:900;padding:1px 5px;border-radius:999px;background:rgb(var(--tint));color:#15110a}
+.pu-eff{display:none;font-size:11px;color:var(--muted);font-weight:600;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pu-price{display:flex;align-items:center;gap:3px;font-size:11px;font-weight:800;margin-top:2px;color:rgba(233,242,235,.6)}
+.pu-cost{display:flex;align-items:center;gap:6px;margin-top:3px;min-width:0}
+.pu-up{display:inline-flex;align-items:center;line-height:1;padding:2px 6px 2px 4px;border-radius:6px;background:rgba(0,0,0,.4);border:1px solid rgba(var(--tint),.45);font-variant-numeric:tabular-nums}
+.pu-up .pu-now{display:flex;align-items:center;gap:3px;font-size:12px;font-weight:900;transition:color .3s}
+.pu-up.h1 .pu-now{color:#ffd27a} .pu-up.h2 .pu-now{color:#ffad5c} .pu-up.h3 .pu-now{color:var(--debt)}
+.pu-up.h3{border-color:rgba(255,143,122,.7);box-shadow:0 0 10px rgba(255,110,85,.35)}
+.pu-up.rise .pu-now{animation:upRise .7s cubic-bezier(.2,.9,.3,1.4)}
+@keyframes upRise{0%{transform:scale(1)}35%{transform:scale(1.35);text-shadow:0 0 12px rgba(255,150,80,.8)}100%{transform:scale(1)}}
+.pu-up .pu-now.f2{font-size:11px} .pu-up .pu-now.f3,.pu-up .pu-now.f4{font-size:10px}
+.pu-meter{display:none;gap:3px;flex:none}
+.pu-name .nm-l{display:none} .pu-name .nm-s{display:inline}
+.pu-name .pu-n{display:none}   /* phones: the badge's +n and the fanned cards show the count */
+.pu-meter i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.16)}
+.pu-meter i.on{background:#ffd27a} .pu.h2 .pu-meter i.on{background:#ffad5c} .pu.h3 .pu-meter i.on{background:var(--debt)}
+.pu .x{position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--panel-solid);
+  display:grid;place-items:center;font-size:10px;color:var(--muted);padding:0;z-index:3}
 .pu .x:hover:not(:disabled){color:var(--debt);border-color:var(--debt)}
 .pu .x:disabled{opacity:.35;cursor:not-allowed}
 .pu.pop{animation:puPop .6s cubic-bezier(.2,.9,.3,1.35)}
-/* a power-up just bought: its card flies in (fx.js runPowerFx), then the chip flashes gold */
+@keyframes puPop{0%{transform:scale(.5) rotate(-6deg);opacity:0}60%{opacity:1}100%{transform:none}}
+/* a power-up just bought: its card flies in (fx.js runPowerFx), then the slot flashes gold */
 .pfly{position:fixed;z-index:48;pointer-events:none}
 .pfly > .card{width:100%;height:100%;margin:0}
 .pu.pu-got{animation:puGot 1.3s ease-out}
 @keyframes puGot{0%{box-shadow:0 0 0 0 rgba(245,217,140,.95), 0 0 0 0 rgba(245,217,140,.6)}35%{box-shadow:0 0 0 6px rgba(245,217,140,.55), 0 0 34px 6px rgba(245,217,140,.65)}100%{box-shadow:0 0 0 14px rgba(245,217,140,0), 0 0 0 0 rgba(245,217,140,0)}}
 .float.pu-say{font-size:13px}
-@keyframes puPop{0%{transform:scale(.5) rotate(-6deg);opacity:0}60%{opacity:1}100%{transform:none}}
-/* phones (and phones held sideways): emblem and upkeep only; the emblem names it (title and label), the ✕ sits on the corner */
-@media (max-width:560px), (orientation:landscape) and (max-height:560px){
-  .pu{gap:5px;padding:3px 12px 3px 3px}
-  .pu-emb{width:28px;height:28px}
-  .pu-body{display:none}
-  .pu-up{border-left:0;padding:0}
-  .pu-up span{font-size:12px}
-  .pu-up small{margin-top:2px}
-  .pu .x{position:absolute;top:-8px;right:-8px;width:24px;height:24px;font-size:10px;background:var(--panel-solid)}
-}
 .powers.short .pu .x{border-color:var(--debt);color:var(--debt);animation:xPulse 1.3s ease-in-out infinite}
 @keyframes xPulse{50%{box-shadow:0 0 0 4px rgba(255,143,122,.35)}}
+/* very narrow phones: names only */
+@media (max-width:380px){ .pu, .pslot{gap:5px;padding:5px} .pu-name{font-size:10.5px} }
+/* tablets: more room, so the effect shows too */
+@media (min-width:700px){
+  .powers{padding:26px 12px 11px}
+  .pslots{gap:10px}
+  .pu-cards{--cw:32px} .ps-ghost{width:32px;height:45px}
+  .pu-name{font-size:13px} .pu-eff{display:block} .pu-meter{display:flex}
+  .pu-name .nm-l{display:inline} .pu-name .nm-s{display:none} .pu-name .pu-n{display:inline}
+  .pu-up .pu-now{font-size:13px}
+}
+html.light .pslot{background:rgba(0,0,0,.25)}
 
 /* ================= hand ================= */
 .handhead{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:26px}
@@ -878,6 +910,18 @@ html.speed-fast [data-act="restartNow"]::after{animation-duration:.8s !important
   .side .row .btn.grow{flex:1 1 auto;width:100%}
   .side .row .betbox{flex:0 0 auto}
   .side .dock-in{max-width:none}
+  /* the power-ups: a panel of their own above the controls, one row per kind */
+  .side .powers{margin:0;width:auto;padding:14px 16px 16px;border-radius:20px;background:var(--panel);border:1px solid var(--line);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+  .side .ptitle{display:flex;align-items:center;justify-content:space-between;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800;margin:0 0 10px}
+  .side .pslots{grid-template-columns:1fr;gap:9px}
+  .side .pu, .side .pslot{min-height:66px;padding:9px 12px;gap:14px}
+  .side .pu-cards{--cw:38px;margin-right:6px} .side .ps-ghost{width:38px;height:54px;font-size:18px}
+  .side .pu-cards .pu-emb{width:26px;height:26px;right:-11px;bottom:-8px}
+  .side .pu-name{font-size:14px} .side .pu-eff{display:block;font-size:12px}
+  .side .pu-cost{margin-top:5px} .side .pu-up .pu-now{font-size:14px} .side .pu-meter i{width:6px;height:6px}
+  .side .pu .x{position:static;width:30px;height:30px;font-size:12px;margin-left:auto;background:rgba(0,0,0,.25)}
+  .side .pslot .pu-price{margin-top:4px}
   .toast{bottom:40px}
 }
 /* Phones held sideways: the table fills the left; header, ledger and controls share a column on the right. */
@@ -895,6 +939,12 @@ html.speed-fast [data-act="restartNow"]::after{animation-duration:.8s !important
   .stat{padding:4px 8px 5px} .stat .v{--fs:17px}
   .side{grid-area:side;display:flex;flex-direction:column;min-height:0}
   .side .dock{position:static;margin:0;padding:0;background:none;gap:6px}
+  .side .powers{margin:0 0 6px;width:auto;padding:6px;border-radius:14px}
+  .side .pslots{gap:5px} .side .pu, .side .pslot{min-height:46px;padding:4px 5px;gap:6px}
+  .side .pu-cards{--cw:24px} .side .ps-ghost{width:24px;height:34px;font-size:13px}
+  .side .pu-name{font-size:10.5px} .side .pu-meter{display:none}
+  .side .pu-name .nm-l{display:none} .side .pu-name .nm-s{display:inline}
+  .side .pu-eff, .side .pu-name .pu-n{display:none}
   .side .dock-in{gap:6px}
   .value{min-height:28px}
   .ro-mult{font-size:26px}
@@ -999,24 +1049,6 @@ html.light .firecv{mix-blend-mode:multiply;filter:saturate(1.3)}
 .brow.bhead > span{white-space:normal;overflow:visible;text-overflow:clip}
 .brand .pilot{font:800 10px/1 var(--f-ui);letter-spacing:.12em;text-transform:uppercase;color:#2b1d03;background:var(--gold-1);padding:4px 7px;border-radius:999px;align-self:center;text-shadow:none}
 
-/* power-up upkeep: the next card's cost, and the doubled one after it */
-.pu-up{gap:2px}
-.pu-up .pu-now{font-size:14px;font-weight:900;transition:color .3s}
-.pu-up .pu-then{font-size:9.5px;color:var(--muted);font-weight:700;white-space:nowrap;margin-top:2px;letter-spacing:.02em}
-.pu-up .pu-then i{font-style:normal;text-transform:uppercase;letter-spacing:.08em;font-size:8.5px;opacity:.8}
-.pu-up.h1 .pu-now{color:#ffd27a}
-.pu-up.h2 .pu-now{color:#ffad5c}
-.pu-up.h3 .pu-now{color:var(--debt)}
-.pu-up.rise .pu-now{animation:upRise .7s cubic-bezier(.2,.9,.3,1.4)}
-@keyframes upRise{0%{transform:scale(1)}35%{transform:scale(1.35);text-shadow:0 0 12px rgba(255,150,80,.8)}100%{transform:scale(1)}}
-@media (max-width:560px), (orientation:landscape) and (max-height:560px){
-  .pu-up{flex-direction:column;align-items:flex-start;gap:0}
-  .pu-up .pu-now{font-size:12.5px}
-  .pu-up .pu-then{margin-top:1px;font-size:9px}
-  .pu-up .pu-then i{display:none}
-}
-@media (max-width:560px), (orientation:landscape) and (max-height:560px){ .pu{padding-right:20px} }
-
 /* starting a run: the buttons that start one wait, with a spinner */
 html.starting [data-act="restartNow"], html.starting [data-act="replaySeed"]{pointer-events:none;opacity:.7}
 html.starting [data-act="restartNow"]::after{content:"";width:14px;height:14px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:spin .8s linear infinite;margin-left:6px}
@@ -1032,8 +1064,7 @@ html.starting [data-act="restartNow"]::after{content:"";width:14px;height:14px;b
 .card .tag{line-height:1.25;text-align:center}
 .hand > .card:first-child .tag{left:0;transform:none}
 .hand > .card:nth-last-child(1 of .card, .emptyslot) .tag, .hand > .card:last-of-type .tag{left:auto;right:0;transform:none}
-/* power-up costs and price lists: shorter numbers that stay inside their boxes */
-.pu-up .pu-now.f2{font-size:12.5px} .pu-up .pu-now.f3,.pu-up .pu-now.f4{font-size:11.5px}
+/* price lists: shorter numbers that stay inside their boxes */
 .pb-item{gap:2px}
 .pb-item s{display:block;font-size:11px;color:var(--muted);font-weight:600}
 .pb-item b{font-size:14px}

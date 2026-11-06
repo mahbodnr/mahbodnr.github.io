@@ -102,7 +102,7 @@ const INTRO = [
   { target:'[data-act="power"]', ok:['[data-act="power"]'], hl:['#pit .stage'], title:'A power-up', until:() => S.powerups.length > 0,
     text:() => `An Ace in the center can be a power-up. <b>Ace boost</b> adds +1 to every combo's multiplier. It costs ${coin}${fmt(powerCost(1))} now, then keeping it costs 2, 4, 8 … for each new card. Buy it.` },
   { target:'#powers', title:'Upkeep', delay:true,
-    text:() => `Your Ace boost. Its chip shows what keeping it costs on the next card (${coin}${fmt(upkeep())}). ✕ releases it.` },
+    text:() => `Power-ups have their own place. Your Ace boost shows the Ace you bought it with, and what keeping it costs on the next card (${coin}${fmt(upkeep())}). ✕ releases it.` },
   { target:'#pit .stage', ok:['[data-act="discard"]'], hl:['[data-act="discard"]'], title:'Discard', until:() => centre('QD'),
     text:() => `${cn('4C')} doesn't help. Discard: the Ace boost costs ${coin}${fmt(upkeep())} and the card debt goes up again.` },
   { target:ic('JR'), ok:[ic('JR')], hl:['#pit .stage'], title:'Swap out the Joker', until:() => inHand('QD'), delay:true,

@@ -154,28 +154,41 @@ function puEmblem(type, n){
     <rect x="10.5" y="9.5" width="13.5" height="19" rx="2.2" fill="rgba(191,243,234,.12)" stroke="#bff3ea" stroke-width="1.5" stroke-dasharray="2.6 2"/>
     <circle cx="27" cy="26.5" r="7" fill="#6fd3c1" stroke="#174d47" stroke-width="1.5"/><path d="M27 23v7M23.5 26.5h7" stroke="#0f2f2b" stroke-width="2.2" stroke-linecap="round"/></svg>`;
 }
+// Three slots, one per kind. A power-up shows the card(s) it was bought with, its badge, what keeping it costs on the next
+// card (a tag that warms as it doubles, a pip per card kept) and ✕ to release one. An empty slot shows which card buys it.
+const PU_SHORT = { A:'Boost', '2':'2-tone', '5':'Seat' };   // phones: the slot is narrow
+const puName = (t, P) => `<span class="nm-l">${P.name}</span><span class="nm-s">${PU_SHORT[t]}</span>`;
+const PU_EFF = (t, n) => t === 'A' ? `+${n} to every multiplier` : t === '2' ? 'Suits count as red / black' : `+${n} seat${n > 1 ? 's' : ''}`;
 function renderPowers(){
   const el = $('powers');
-  if (!S.powerups.length){ setHTML(el, ''); el.hidden = true; ui.pupPrev = {}; return; }
   el.hidden = false;
-  const counts = {}; S.powerups.forEach(p => counts[p.type] = (counts[p.type] || 0) + 1);
-  const prev = ui.pupPrev || {}, costs = {};
+  const prev = ui.pupPrev || {}, costs = {}, counts = {};
   const can = S.phase === 'idle' || S.phase === 'decide';
   el.classList.toggle('short', S.phase === 'idle' && S.deck.length > 0 && S.coins < upkeep());   // point at the ✕ buttons
-  setHTML(el, PU_ORDER.filter(t => counts[t]).map(t => {
-    const n = counts[t], P = Object.values(POWER).find(x => x.type === t);
-    // upkeep for the next card (all of this type together), and the card after: it doubles with every card
-    const group = S.powerups.filter(p => p.type === t), now = group.reduce((a, p) => a + upkeepOf(p), 0);
-    const heat = Math.min(3, Math.max(...group.map(p => p.paid || 0))), rose = now > (prev['c' + t] || 0) && (prev['c' + t] || 0) > 0;
+  el.classList.toggle('empty', !S.powerups.length);
+  const slots = PU_ORDER.map(t => {
+    const r = PU_RANK[t], P = POWER[r], group = S.powerups.filter(p => p.type === t), n = group.length;
+    counts[t] = n;
+    if (!n) return `<div class="pslot" data-type="${t}" title="${r === 1 ? 'An Ace' : 'A ' + r} in the center can become ${P.name}: ${PU_EFF(t, 1)}">
+        <div class="ps-ghost"><b>${RANKS[r]}</b></div>
+        <div class="pu-body"><div class="pu-name">${puName(t, P)}</div><div class="pu-eff">${PU_EFF(t, 1)}</div><div class="pu-price">${coin}${fmtShort(powerCost(r))}</div></div></div>`;
+    const now = group.reduce((a, p) => a + upkeepOf(p), 0), kept = Math.max(...group.map(p => p.paid || 0));
+    const heat = Math.min(3, kept), rose = now > (prev['c' + t] || 0) && (prev['c' + t] || 0) > 0;
     costs['c' + t] = now;
-    const eff = t === 'A' ? `+${n} multipliers` : t === '2' ? 'Red/black suits' : `+${n} seat${n > 1 ? 's' : ''}`;
-    return `<div class="pu pu-${t} ${n > (prev[t] || 0) ? 'pop' : ''}" data-type="${t}" role="group" aria-label="${P.name}${n > 1 ? ` ×${n}` : ''}: ${eff}, upkeep ${now} on the next card, then ${now * 2}" title="${P.name}: ${eff}">
-      ${puEmblem(t, n)}
-      <div class="pu-body"><div class="pu-name">${P.name}${n > 1 ? `<span class="pu-n">×${n}</span>` : ''}</div><div class="pu-eff">${eff}</div></div>
-      <div class="pu-up h${heat} ${rose ? 'rise' : ''}" title="Upkeep on the next card. It doubles with every card: then ${fmt(now * 2)}, ${fmt(now * 4)} …">
-        <span class="pu-now ${fitCls(fmtShort(now))}">${coin}${fmtShort(now)}</span></div>
+    const cards = group.slice(-3).map(p => cardHTML(p.card, { track:false })).join('');
+    const pips = [0, 1, 2, 3].map(i => `<i class="${i < kept ? 'on' : ''}"></i>`).join('');
+    return `<div class="pu pu-${t} h${heat} ${n > (prev[t] || 0) ? 'pop' : ''}" data-type="${t}" role="group"
+        aria-label="${P.name}${n > 1 ? ` ×${n}` : ''} from ${group.map(p => cardName(p.card)).join(', ')}: ${PU_EFF(t, n)}. Upkeep ${now} on the next card, then it doubles." title="${P.name}: ${PU_EFF(t, n)}">
+      <div class="pu-cards" style="--k:${Math.min(3, n)}">${cards}${puEmblem(t, n)}</div>
+      <div class="pu-body">
+        <div class="pu-name">${puName(t, P)}${n > 1 ? `<span class="pu-n">×${n}</span>` : ''}</div>
+        <div class="pu-eff">${PU_EFF(t, n)}</div>
+        <div class="pu-cost"><div class="pu-up h${heat} ${rose ? 'rise' : ''}" title="Upkeep on the next card. It doubles with every card: then ${fmt(now * 2)}, ${fmt(now * 4)} …"><span class="pu-now ${fitCls(fmtShort(now))}">${coin}${fmtShort(now)}</span></div>
+          <div class="pu-meter" title="Cards kept: ${kept}">${pips}</div></div>
+      </div>
       <button class="x" data-act="release" data-type="${t}" ${can ? '' : 'disabled'} aria-label="Release one ${P.name}" title="Release one (stop paying its upkeep)">✕</button></div>`;
-  }).join(''));
+  });
+  setHTML(el, `<div class="ptitle">Power-ups</div><div class="pslots">${slots.join('')}</div>`);
   ui.pupPrev = Object.assign(counts, costs);
 }
 
@@ -603,7 +616,7 @@ function render(){
   document.documentElement.classList.toggle('starting', !!ui.starting);   // a new run is on its way (leaderboard.js)
   // where each card on the table is now, so a card that lands on the discard pile can fly there
   const was = new Map(), topBefore = (document.querySelector('#pit .discardbtn .card:last-child') || {}).dataset;
-  document.querySelectorAll('#pit .stage .card[data-cid], #hand .card[data-cid]').forEach(el => was.set(el.dataset.cid, el.getBoundingClientRect()));
+  document.querySelectorAll('#pit .stage .card[data-cid], #hand .card[data-cid], #powers .card[data-cid]').forEach(el => was.set(el.dataset.cid, el.getBoundingClientRect()));
   // the center card, so a card bought as a power-up can be seen turning into its chip
   const stageEl = document.querySelector('#pit .stage .card[data-cid]');
   const stageWas = stageEl && { id:stageEl.dataset.cid, html:stageEl.outerHTML, rect:stageEl.getBoundingClientRect() };

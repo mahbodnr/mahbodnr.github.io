@@ -157,13 +157,13 @@ function runPowerFx(from, type){
   card.classList.remove('enter', 'flip', 'coach-on', 'intro-ok', 'intro-hl');
   g.style.cssText = `left:${r.left / ZK}px;top:${r.top / ZK}px;width:${W}px;height:${H}px;--cw:${W}px;--ch:${H}px`;
   document.body.appendChild(g);
-  const em = (chip.querySelector('.pu-emb') || chip).getBoundingClientRect();
+  const em = (chip.querySelector('.pu-cards .card:last-of-type') || chip).getBoundingClientRect();
   const dx = (em.left + em.width / 2 - (r.left + r.width / 2)) / ZK, dy = (em.top + em.height / 2 - (r.top + r.height / 2)) / ZK;
   const T = dur(700);
   g.animate([
     { transform:'none', filter:'brightness(1)' },
     { transform:'translateY(-16px) scale(1.08) rotate(-4deg)', filter:'brightness(1.35) drop-shadow(0 0 16px rgba(245,217,140,.95))', offset:.28 },
-    { transform:`translate(${dx}px, ${dy}px) scale(${Math.max(.12, em.height / r.height)}) rotate(10deg)`, filter:'brightness(2) drop-shadow(0 0 16px rgba(245,217,140,1))', opacity:.2 }
+    { transform:`translate(${dx}px, ${dy}px) scale(${Math.max(.12, em.height / r.height)})`, filter:'brightness(1.6) drop-shadow(0 0 14px rgba(245,217,140,1))', opacity:.6 }
   ], { duration:T, easing:'cubic-bezier(.5,0,.25,1)', fill:'forwards' }).onfinish = () => g.remove();
   chip.animate([{ opacity:0, transform:'scale(.4)' }, { opacity:0, transform:'scale(.4)', offset:.82 }, { opacity:1, transform:'scale(1.18)', offset:.93 }, { opacity:1, transform:'none' }],
     { duration:T + dur(260), easing:'ease-out' });
