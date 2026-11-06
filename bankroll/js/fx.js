@@ -96,7 +96,7 @@ function toast(html){
 const deckRect = () => { const d = document.querySelector('#pit .stack .card:last-child') || document.querySelector('#pit .deckbtn'); return d && d.getBoundingClientRect(); };
 
 // every dealt card flies from the deck to the center, turning face up on the way
-function runDealFx(id){
+function runDealFx(id, delay = 0){
   if (reduceMotion()) return;
   const el = document.querySelector(`#pit .stage [data-cid="${id}"]`), a = deckRect();
   if (!el || !a) return;
@@ -105,26 +105,28 @@ function runDealFx(id){
     { transform:`translate(${(a.left - b.left) / ZK}px, ${(a.top - b.top) / ZK}px) scale(${a.width / b.width}) rotateY(90deg)`, filter:'brightness(.6)' },
     { transform:'translate(0,-12px) scale(1.05) rotateY(0deg)', filter:'brightness(1)', offset:.7 },
     { transform:'none' }
-  ], { duration:dur(560), easing:'cubic-bezier(.25,.8,.3,1)' });
+  ], { duration:dur(560), easing:'cubic-bezier(.25,.8,.3,1)', delay, fill:'backwards' });
 }
 
 // a card that skips the center (Joker, open seat) flies straight into the hand
-function runFly(f){
+function runFly(f, delay = 0){
   const el = document.querySelector(`#hand [data-cid="${f.id}"]`); if (!el) return;
   let sources = [], label;
   if (f.kind === 'joker'){ sources = [...document.querySelectorAll('#hand .card.joker')].filter(j => j !== el); label = '★ Joker seat'; }
   else if (f.kind === 'five'){ sources = [...document.querySelectorAll('#powers .pu[data-type="5"]')]; label = 'Extra seat'; }
   else label = '★ Joker · +1 seat';
-  sources.forEach(sv => { sv.classList.remove('jpulse'); void sv.offsetWidth; sv.classList.add('jpulse'); setTimeout(() => sv.classList.remove('jpulse'), 1700); });
-  el.classList.add('seated'); setTimeout(() => el.classList.remove('seated'), 1700);
+  setTimeout(() => {
+    sources.forEach(sv => { sv.classList.remove('jpulse'); void sv.offsetWidth; sv.classList.add('jpulse'); setTimeout(() => sv.classList.remove('jpulse'), 1700); });
+    el.classList.add('seated'); setTimeout(() => el.classList.remove('seated'), 1700);
+  }, delay);
   const a = deckRect();
   if (a && !reduceMotion()){
     const b = el.getBoundingClientRect();
     el.animate([
-      { transform:`translate(${(a.left - b.left) / ZK}px, ${(a.top - b.top) / ZK}px) rotate(-12deg) scale(.9)`, opacity:.3 },
+      { transform:`translate(${(a.left - b.left) / ZK}px, ${(a.top - b.top) / ZK}px) rotate(-12deg) scale(.9)`, opacity:delay ? 0 : .3 },
       { transform:'translate(0,-18px) rotate(3deg) scale(1.08)', opacity:1, offset:.72 },
       { transform:'none', opacity:1 }
-    ], { duration:dur(780), easing:'cubic-bezier(.25,.8,.3,1)' });
+    ], { duration:dur(780), easing:'cubic-bezier(.25,.8,.3,1)', delay, fill:'backwards' });
   }
   if (reduceMotion()) return;
   setTimeout(() => {
@@ -133,7 +135,39 @@ function runFly(f){
     t.className = 'float seat'; t.setAttribute('aria-hidden', 'true'); t.textContent = label;
     t.style.left = (r.left + r.width / 2) / ZK + 'px'; t.style.top = (r.top - 4) / ZK + 'px';
     document.body.appendChild(t); setTimeout(() => t.remove(), 1500);
-  }, reduceMotion() ? 0 : dur(520));
+  }, reduceMotion() ? 0 : delay + dur(520));
+}
+
+// A card bought as a power-up rises, glows and flies into its new chip, which then flashes and says what it does.
+const PU_SAY = { A:'Ace boost · +1 multipliers', '2':'Two-tone · red/black suits', '5':'Extra seat · +1 seat' };
+function runPowerFx(from, type){
+  const chip = document.querySelector(`#powers .pu[data-type="${type}"]`); if (!chip) return;
+  const flash = () => {
+    chip.classList.remove('pu-got'); void chip.offsetWidth; chip.classList.add('pu-got'); setTimeout(() => chip.classList.remove('pu-got'), 1400);
+    const r = chip.getBoundingClientRect(), t = document.createElement('div');
+    t.className = 'float seat pu-say'; t.setAttribute('aria-hidden', 'true'); t.textContent = PU_SAY[type] || '';
+    t.style.left = (r.left + r.width / 2) / ZK + 'px'; t.style.top = (r.top - 2) / ZK + 'px';
+    document.body.appendChild(t); setTimeout(() => t.remove(), 1500);
+  };
+  if (reduceMotion()) return flash();
+  chip.classList.remove('pop');
+  const r = from.rect, W = r.width / ZK, H = r.height / ZK;
+  const g = document.createElement('div'); g.className = 'pfly'; g.setAttribute('aria-hidden', 'true'); g.innerHTML = from.html;
+  const card = g.firstElementChild;
+  card.classList.remove('enter', 'flip', 'coach-on', 'intro-ok', 'intro-hl');
+  g.style.cssText = `left:${r.left / ZK}px;top:${r.top / ZK}px;width:${W}px;height:${H}px;--cw:${W}px;--ch:${H}px`;
+  document.body.appendChild(g);
+  const em = (chip.querySelector('.pu-emb') || chip).getBoundingClientRect();
+  const dx = (em.left + em.width / 2 - (r.left + r.width / 2)) / ZK, dy = (em.top + em.height / 2 - (r.top + r.height / 2)) / ZK;
+  const T = dur(700);
+  g.animate([
+    { transform:'none', filter:'brightness(1)' },
+    { transform:'translateY(-16px) scale(1.08) rotate(-4deg)', filter:'brightness(1.35) drop-shadow(0 0 16px rgba(245,217,140,.95))', offset:.28 },
+    { transform:`translate(${dx}px, ${dy}px) scale(${Math.max(.12, em.height / r.height)}) rotate(10deg)`, filter:'brightness(2) drop-shadow(0 0 16px rgba(245,217,140,1))', opacity:.2 }
+  ], { duration:T, easing:'cubic-bezier(.5,0,.25,1)', fill:'forwards' }).onfinish = () => g.remove();
+  chip.animate([{ opacity:0, transform:'scale(.4)' }, { opacity:0, transform:'scale(.4)', offset:.82 }, { opacity:1, transform:'scale(1.18)', offset:.93 }, { opacity:1, transform:'none' }],
+    { duration:T + dur(260), easing:'ease-out' });
+  setTimeout(flash, T);
 }
 
 // swapping trades places: the hand card goes to the center and the center card to the hand

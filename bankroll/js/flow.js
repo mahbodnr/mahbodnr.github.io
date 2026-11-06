@@ -81,16 +81,16 @@ function deal(){
   drawNext();
 }
 
-// waive: upkeep already covered this deal (a 5 bought this turn)
 // Deals until a card lands in the center: Jokers and cards that fill an open seat go straight
-// to the hand, and dealing carries on. waive: upkeep already covered for the first card (a power-up just bought)
+// to the hand, and dealing carries on. waive: a power-up was just bought; its price covers its upkeep for this deal
 function drawNext(waive, why){
   if (S.phase !== 'idle') return;
   let first = true;
   ui.armed = null;
   while (S.deck.length){
-    // each power-up pays its current upkeep, which then doubles; a power-up just bought (waive) rides free on this card
-    const charges = S.powerups.map((p, i) => first && waive && i === S.powerups.length - 1 ? 0 : upkeepOf(p));
+    // each power-up pays its current upkeep, which then doubles. A power-up just bought (waive) rides free on every card
+    // its purchase deals: an Extra seat (or a Joker) deals a card into the hand before the next one reaches the center.
+    const charges = S.powerups.map((p, i) => waive && i === S.powerups.length - 1 ? 0 : upkeepOf(p));
     const up = charges.reduce((a, b) => a + b, 0);
     if (S.coins < up) break;
     coinChange(-up, 'upkeep');

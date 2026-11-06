@@ -24,12 +24,23 @@ function throwWithReveal(){
   setTimeout(() => { ui.throwing = false; act('throw'); render(); }, show);
 }
 
-/* drag a hand card onto the table to swap it with the center card */
-const drag = { id:null, x0:0, y0:0, on:false, ghost:null, src:null };
+/* Drag a hand card: onto the table to swap it with the center card (when a swap is possible), or along the hand to
+   put it somewhere else (the hand then keeps the player's own order until the next hand or a sort button). */
+const drag = { id:null, x0:0, y0:0, on:false, ghost:null, src:null, swap:false };
 document.addEventListener('pointerdown', e => {
-  const el = e.target.closest('#hand .card.drag'); if (!el || e.button > 0 || !introAllows(el)) return;
-  drag.id = el.dataset.cid; drag.x0 = e.clientX; drag.y0 = e.clientY; drag.on = false; drag.src = el;
+  const el = e.target.closest('#hand .card.mv'); if (!el || e.button > 0 || !introAllows(el) || ui.throwing) return;
+  drag.id = el.dataset.cid || el.dataset.fd; drag.x0 = e.clientX; drag.y0 = e.clientY; drag.on = false; drag.src = el;
+  drag.swap = el.classList.contains('drag');
 });
+const handCards = () => [...document.querySelectorAll('#hand > .card')];
+// where the dragged card would go: the index among the other cards, by the pointer's x
+function dropIndex(e){
+  const others = handCards().filter(c => c !== drag.src);
+  let i = 0; others.forEach((c, k) => { const r = c.getBoundingClientRect(); if (e.clientX > r.left + r.width / 2) i = k + 1; });
+  return { i, others };
+}
+function overHand(e){ const h = $('hand'); if (!h) return false; const r = h.getBoundingClientRect(); return e.clientY > r.top - 30 && e.clientY < r.bottom + 30 && e.clientX > r.left - 30 && e.clientX < r.right + 30; }
+function clearDropMarks(){ document.querySelectorAll('#hand .drop-before, #hand .drop-after').forEach(c => c.classList.remove('drop-before', 'drop-after')); }
 document.addEventListener('pointermove', e => {
   if (!drag.id) return;
   if (!drag.on){
@@ -37,14 +48,21 @@ document.addEventListener('pointermove', e => {
     drag.on = true;
     const r = drag.src.getBoundingClientRect();
     drag.dx = drag.x0 - r.left; drag.dy = drag.y0 - r.top;
-    drag.ghost = drag.src.cloneNode(true); drag.ghost.classList.add('ghost'); drag.ghost.classList.remove('armed', 'enter', 'flip');
-    drag.ghost.querySelectorAll('.tag').forEach(t => t.remove());
+    drag.ghost = drag.src.cloneNode(true); drag.ghost.classList.add('ghost'); drag.ghost.classList.remove('armed', 'enter', 'flip', 'coach-on', 'intro-ok');
+    drag.ghost.querySelectorAll('.tag, .kc').forEach(t => t.remove());
     drag.ghost.style.width = r.width / ZK + 'px'; drag.ghost.style.height = r.height / ZK + 'px';   // zoomed like the game
+    drag.ghost.style.setProperty('--cw', r.width / ZK + 'px'); drag.ghost.style.setProperty('--ch', r.height / ZK + 'px');
     document.body.appendChild(drag.ghost); drag.src.classList.add('dragging');
   }
   drag.ghost.style.left = (e.clientX - drag.dx) / ZK + 'px'; drag.ghost.style.top = (e.clientY - drag.dy) / ZK + 'px';
+  const toPit = drag.swap && overPit(e) && !overHand(e);
   const st = document.querySelector('#pit .stage');
-  if (st) st.classList.toggle('droppable', overPit(e));
+  if (st) st.classList.toggle('droppable', toPit);
+  clearDropMarks();
+  if (!toPit && overHand(e) && !introOn()){
+    const { i, others } = dropIndex(e);
+    if (others[i]) others[i].classList.add('drop-before'); else if (others.length) others[others.length - 1].classList.add('drop-after');
+  }
 });
 function overPit(e){ const p = $('pit').getBoundingClientRect(); return e.clientY < p.bottom + 10 && e.clientY > p.top - 40; }
 function endDrag(e, cancel){
@@ -54,10 +72,17 @@ function endDrag(e, cancel){
   ui.dragEnded = Date.now();
   if (drag.ghost) drag.ghost.remove(); drag.ghost = null;
   if (drag.src) drag.src.classList.remove('dragging');
+  clearDropMarks();
   const st = document.querySelector('#pit .stage'); if (st) st.classList.remove('droppable');
-  if (!cancel && overPit(e)){
+  if (cancel) return;
+  if (drag.swap && overPit(e) && !overHand(e)){
     if (S.phase === 'decide') act('swap', id);
     else if (S.phase === 'swapPlace') act('place', id);
+    render();
+  } else if (overHand(e) && !introOn()){
+    const order = sortedHand().map(c => c.id).filter(x => x !== id);
+    order.splice(dropIndex(e).i, 0, id);
+    S.order = order;
     render();
   }
 }
@@ -168,8 +193,8 @@ document.addEventListener('click', e => {
     case 'tipDone': tipDone(t.dataset.v); break;
     case 'replayTutorial': ui.modal = null; startIntro(true); break;
     case 'replaySeed': beginRun(S.seed); break;
-    case 'sortRank': prefs.sort = 'rank'; store(PREF_KEY, prefs); break;
-    case 'sortSuit': prefs.sort = 'suit'; store(PREF_KEY, prefs); break;
+    case 'sortRank': prefs.sort = 'rank'; S.order = null; store(PREF_KEY, prefs); break;
+    case 'sortSuit': prefs.sort = 'suit'; S.order = null; store(PREF_KEY, prefs); break;
     case 'betKey': if (e.detail === 0) stepBet(+t.dataset.hold); return; // keyboard; pointer presses are handled on pointerdown
     case 'throw': throwWithReveal(); return;
     case 'deal': act('deal', S.betInput); break;

@@ -59,7 +59,18 @@ const bl = (main, sub) => `<span class="bl"><b>${main}</b>${sub ? `<small>${sub}
 
 function suitSVG(s, cls){ return `<svg class="${cls || 'su'}" viewBox="0 0 100 100" aria-hidden="true"><use href="#su-${s}"/></svg>`; }
 
+// The hand as shown: sorted by rank or suit, or in the player's own order (dragged) until the next hand or a sort button.
+// A card swapped in takes the place of the card it replaced; new cards (a seat filled) go at the end.
 function sortedHand(){
+  if (Array.isArray(S.order) && S.order.length){
+    const byId = new Map(S.hand.map(c => [c.id, c]));
+    const extra = S.hand.filter(c => !S.order.includes(c.id)).map(c => c.id);
+    if (S.order.some(id => byId.has(id))){
+      S.order = S.order.map(id => byId.has(id) ? id : extra.shift()).filter(Boolean).concat(extra);
+      return S.order.map(id => byId.get(id));
+    }
+    S.order = null;   // a new hand: back to sorting
+  }
   const h = S.hand.slice();
   const rv = c => isJoker(c) ? 99 : (c.rank === 1 ? 14 : c.rank);
   if (prefs.sort === 'rank') h.sort((a, b) => rv(a) - rv(b) || a.suit.localeCompare(b.suit));
@@ -162,7 +173,7 @@ function renderPowers(){
       ${puEmblem(t, n)}
       <div class="pu-body"><div class="pu-name">${P.name}${n > 1 ? `<span class="pu-n">×${n}</span>` : ''}</div><div class="pu-eff">${eff}</div></div>
       <div class="pu-up h${heat} ${rose ? 'rise' : ''}" title="Upkeep on the next card. It doubles with every card: then ${fmt(now * 2)}, ${fmt(now * 4)} …">
-        <span class="pu-now ${fitCls(fmtShort(now))}">${coin}${fmtShort(now)}</span><small class="pu-then"><i>next</i> → ${fmtShort(now * 2)}</small></div>
+        <span class="pu-now ${fitCls(fmtShort(now))}">${coin}${fmtShort(now)}</span></div>
       <button class="x" data-act="release" data-type="${t}" ${can ? '' : 'disabled'} aria-label="Release one ${P.name}" title="Release one (stop paying its upkeep)">✕</button></div>`;
   }).join(''));
   ui.pupPrev = Object.assign(counts, costs);
@@ -170,7 +181,7 @@ function renderPowers(){
 
 function renderHand(){
   const cap = capacity();
-  const on = k => prefs.sort === k ? 'true' : 'false';
+  const on = k => !S.order && prefs.sort === k ? 'true' : 'false';
   const note = S.phase === 'trim' ? `<div class="hnote trim">${S.hand.length} cards, ${cap} seats: tap a card to discard it <b>+${fmtFit(nextCardCost())} debt</b></div>`
     : S.phase === 'swapPlace' ? `<div class="hnote">Replace which card with ${cardName(S.swapCard)}?</div>` : '';
   setHTML($('handhead'), `${note || `<div class="lbl">Hand <b>${S.hand.length}</b>/<b>${cap}</b></div>`}
@@ -183,7 +194,7 @@ function renderHand(){
   const picking = S.phase === 'decide' || S.phase === 'trim' || S.phase === 'swapPlace';
   let keyN = 0;
   const html = sortedHand().map(c => {
-    if (S.faceDown.includes(c.id) && !ui.throwing) return cardHTML(c, { back:true, extra: ui.seen.has(c.id) ? '' : 'enter' }).replace('class="card', `data-fd="${c.id}" class="card`);
+    if (S.faceDown.includes(c.id) && !ui.throwing) return cardHTML(c, { back:true, extra: 'mv' + (ui.seen.has(c.id) ? '' : ' enter') }).replace('class="card', `data-fd="${c.id}" class="card`);
     const armed = ui.armed === c.id;
     const extra = [hot.has(c.id) ? 'hot' : '', picking ? 'pick' : '', armed ? 'armed' : ''].join(' ');
     let tag = '';
@@ -191,7 +202,7 @@ function renderHand(){
       tag = `Tap again<br>+${fmtFit(nextCardCost())} debt`;
     }
     const dragX = S.phase === 'decide' || S.phase === 'swapPlace' ? ' drag' : '';
-    let out = cardHTML(c, { extra: extra + dragX, act: picking ? 'handPick' : null, tag });
+    let out = cardHTML(c, { extra: extra + dragX + ' mv', act: picking ? 'handPick' : null, tag });
     if (picking && keyN < 9) out = out.replace(/<\/div>$/, `<kbd class="kc" aria-hidden="true">${++keyN}</kbd></div>`);
     // on hover (mouse), show what swapping this card in would score
     if (S.phase === 'decide') out = out.replace(/<\/div>$/, `<span class="tag ok peek">→ ×${fmtFit(swapMult(c.id))}</span></div>`);
@@ -593,6 +604,9 @@ function render(){
   // where each card on the table is now, so a card that lands on the discard pile can fly there
   const was = new Map(), topBefore = (document.querySelector('#pit .discardbtn .card:last-child') || {}).dataset;
   document.querySelectorAll('#pit .stage .card[data-cid], #hand .card[data-cid]').forEach(el => was.set(el.dataset.cid, el.getBoundingClientRect()));
+  // the center card, so a card bought as a power-up can be seen turning into its chip
+  const stageEl = document.querySelector('#pit .stage .card[data-cid]');
+  const stageWas = stageEl && { id:stageEl.dataset.cid, html:stageEl.outerHTML, rect:stageEl.getBoundingClientRect() };
   renderLedger(); renderPit(); renderPowers(); renderHand(); renderValue(); renderDock(); renderModal();
   const top = document.querySelector('#pit .discardbtn .card:last-child');
   if (top && was.has(top.dataset.cid) && (!topBefore || topBefore.cid !== top.dataset.cid)) runDiscardFx(top, was.get(top.dataset.cid));
@@ -614,9 +628,13 @@ function render(){
       floatDelta('st-coins', (e.d > 0 ? '+' : '−') + fmtFit(Math.abs(e.d)) + ' ' + e.label, e.d > 0 ? 'coin-up' : 'coin-down', e.d > 0 ? 'bump' : 'hit'), i * 380));
   }
   ui.prev = { debt:S.debt, coins:S.coins }; ui.coinEv = [];
-  if (ui.flies.length){ const fs = ui.flies; ui.flies = []; requestAnimationFrame(() => fs.forEach((f, i) => setTimeout(() => runFly(f), i * 260))); }
+  // a power-up just bought: its card flies into the new chip first; the cards its purchase dealt follow
+  const bought = stageWas && S.powerups.find(p => p.card.id === stageWas.id);
+  const wait = bought && !reduceMotion() ? dur(700) : 0;
+  if (bought) runPowerFx(stageWas, bought.type);
+  if (ui.flies.length){ const fs = ui.flies; ui.flies = []; requestAnimationFrame(() => fs.forEach((f, i) => runFly(f, wait + i * 260))); }
   if (ui.swapFx){ const f = ui.swapFx; ui.swapFx = null; runSwapFx(f); }
-  if (ui.dealFx){ const id = ui.dealFx; ui.dealFx = null; requestAnimationFrame(() => runDealFx(id)); }
+  if (ui.dealFx){ const id = ui.dealFx; ui.dealFx = null; requestAnimationFrame(() => runDealFx(id, wait)); }
   if (ui.shuffleFx){ ui.shuffleFx = false; setTimeout(() => { const d = document.querySelector('#pit .stack'); if (d) d.classList.remove('shuffling'); $('pit').__html = null; }, dur(1100)); }
   if (ui.celebrate){ ui.celebrate = false; setTimeout(celebrate, dur(250)); }
   if (ui.shake){ ui.shake = false; shakeApp(); }

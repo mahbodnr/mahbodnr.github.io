@@ -45,7 +45,7 @@
 /* big screens (fitScreen in fx.js): the game and everything floating over it are zoomed by --z; the viewport sizes
    the layout reads are divided by it, so the layout works as if on a ~1300×840 screen */
 html.zoomed{ --vh: calc(100vh / var(--z)); --uw: calc(9.5vw / var(--z)) }
-html.zoomed .app, html.zoomed #modalRoot, html.zoomed .toast, html.zoomed .float, html.zoomed .coach, html.zoomed .ghost{ zoom: var(--z) }
+html.zoomed .app, html.zoomed #modalRoot, html.zoomed .toast, html.zoomed .float, html.zoomed .coach, html.zoomed .ghost, html.zoomed .pfly{ zoom: var(--z) }
 
 /* ================= page ================= */
 html,body{height:100%;margin:0}
@@ -206,6 +206,12 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible,summary:focus-
 .pu .x:hover:not(:disabled){color:var(--debt);border-color:var(--debt)}
 .pu .x:disabled{opacity:.35;cursor:not-allowed}
 .pu.pop{animation:puPop .6s cubic-bezier(.2,.9,.3,1.35)}
+/* a power-up just bought: its card flies in (fx.js runPowerFx), then the chip flashes gold */
+.pfly{position:fixed;z-index:48;pointer-events:none}
+.pfly > .card{width:100%;height:100%;margin:0}
+.pu.pu-got{animation:puGot 1.3s ease-out}
+@keyframes puGot{0%{box-shadow:0 0 0 0 rgba(245,217,140,.95), 0 0 0 0 rgba(245,217,140,.6)}35%{box-shadow:0 0 0 6px rgba(245,217,140,.55), 0 0 34px 6px rgba(245,217,140,.65)}100%{box-shadow:0 0 0 14px rgba(245,217,140,0), 0 0 0 0 rgba(245,217,140,0)}}
+.float.pu-say{font-size:13px}
 @keyframes puPop{0%{transform:scale(.5) rotate(-6deg);opacity:0}60%{opacity:1}100%{transform:none}}
 /* phones (and phones held sideways): emblem and upkeep only; the emblem names it (title and label), the ✕ sits on the corner */
 @media (max-width:560px), (orientation:landscape) and (max-height:560px){
@@ -276,7 +282,10 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible,summary:focus-
 .card.hot{box-shadow:0 0 0 2px var(--brass-hi), 0 0 18px rgba(245,217,140,.55), 0 8px 18px -6px rgba(0,0,0,.55)}
 .card.pick{cursor:pointer}
 @media (hover:hover){ .card.pick:hover{transform:translateY(-6px)} }
-.card.drag{touch-action:none}
+.card.drag, .card.mv{touch-action:none}
+/* dragging a card along the hand: a gold bar shows where it will go */
+.hand > .card.drop-before{box-shadow:-7px 0 0 -2px var(--brass-hi), -7px 0 14px -2px rgba(245,217,140,.7) !important}
+.hand > .card.drop-after{box-shadow:7px 0 0 -2px var(--brass-hi), 7px 0 14px -2px rgba(245,217,140,.7) !important}
 .card.dragging{opacity:.25}
 .ghost{position:fixed;z-index:50;pointer-events:none;margin:0;transform:rotate(-4deg) scale(1.06);box-shadow:0 18px 36px rgba(0,0,0,.55)!important}
 .spot .stage.droppable{background:radial-gradient(closest-side, rgba(245,217,140,.45), transparent);outline:2px dashed var(--brass-hi);outline-offset:-2px}
@@ -798,6 +807,7 @@ html.speed-fast *, html.speed-fast *::before, html.speed-fast *::after{animation
 /* Fast speeds up motion (deals, flights, flips, tosses, dialogs) but not highlights: a Joker's pulse, glows, flashes
    and warnings keep their normal pace, so they can still be seen */
 html.speed-fast .jpulse{animation-duration:.8s !important}
+html.speed-fast .pu.pu-got{animation-duration:1.3s !important}
 html.speed-fast .stat.pending .v{animation-duration:2.2s !important}
 html.speed-fast .lv-goal.ok .lv-track > i::before{animation-duration:3.2s !important}
 html.speed-fast .powers.short .pu .x{animation-duration:1.3s !important}
