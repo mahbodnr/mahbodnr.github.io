@@ -66,7 +66,7 @@ function newGame(seed){
 /* ================= save versioning ================= */
 // Bump SAVE_VERSION when the save format changes, and teach migrate() to upgrade older saves.
 const SAVE_VERSION = 3;
-const RULES = 2;   // 2: an extra bet to deal, card debt ×1.5 per card, level prices ×10 (bump when the rules change)
+const RULES = 4;   // 4: the Ace boost adds once to three/four of a kind; 3: half a bet to deal; 2: an extra bet to deal, card debt ×1.5 per card, level prices ×10 (bump when the rules change)
 function migrate(s){
   if (!s || !Array.isArray(s.deck) || !s.phase) return null;
   if (s.v && s.v > SAVE_VERSION) return null;            // saved by a newer version: start fresh
@@ -118,13 +118,13 @@ function evaluate(cards, pups){
   const combos = [];
   const byRank = {};
   cards.forEach(c => { if (!isJoker(c)) (byRank[c.rank] = byRank[c.rank] || []).push(c); });
-  // pairs: n of a kind = n-1 pairs, each ×(2+boost)
+  // pairs: a pair ×2, three of a kind ×4, four of a kind ×8 (n of a kind = 2^(n−1)); the Ace boost adds to that once
   Object.keys(byRank).map(Number).sort((a, b) => (b === 1 ? 14 : b) - (a === 1 ? 14 : a)).forEach(r => {
     const g = byRank[r]; if (g.length < 2) return;
     const pairs = g.length - 1;
     const name = g.length === 2 ? 'Pair' : g.length === 3 ? 'Three' : g.length === 4 ? 'Four' : g.length + '×';
     combos.push({ kind:'pair', label: g.length === 2 ? `Pair of ${RANK_NAMES[r]}` : `${name} ${RANK_NAMES[r]}`,
-      note: pairs > 1 ? `${pairs} pairs` : '', factor: Math.pow(2 + boost, pairs), each: 2 + boost, count: pairs, ids: g.map(c => c.id) });
+      note: '', factor: Math.pow(2, pairs) + boost, each: Math.pow(2, pairs) + boost, count: 1, ids: g.map(c => c.id) });
   });
   // straights: every 5-long run of consecutive ranks (ace high or low)
   const has = r => !!byRank[r === 14 ? 1 : r];

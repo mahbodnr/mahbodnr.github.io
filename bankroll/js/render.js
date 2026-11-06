@@ -547,13 +547,13 @@ function helpHTML(){
     <h3>A hand</h3>
     <ul>
       <li>5 cards: 3 up, 2 down. <b>Throw away</b> is free before you bet.</li>
-      <li>Bet and <b>Deal</b>. Dealing adds <b>one extra bet</b> to the debt. Each card dealt into a full hand raises the card debt <b>×1.5</b> (rounded): 1 → 2 → 3 → 5 → 8 … bets.</li>
+      <li>Bet and <b>Deal</b>. Dealing adds <b>half a bet</b> (rounded up) to the debt. Each card dealt into a full hand raises the card debt <b>×1.5</b> (rounded): 1 → 2 → 3 → 5 → 8 … bets.</li>
       <li>Tap or drag a hand card to swap it with the center card (free). <b>Discard</b> deals the next one.</li>
       <li><b>Cash out</b>: bet × multiplier − debt. Below zero ends the run.</li>
     </ul>
     <h3>Multipliers (they multiply)</h3>
     <div class="combo-ex">
-      ${exHand('7H 7S 2C 9D KS', [0, 1])}<span>Pair<small>trips = 2 pairs · quads = 3</small></span><b><span class="x">×</span>2</b>
+      ${exHand('7H 7S 2C 9D KS', [0, 1])}<span>Pair<small>three of a kind ×4 · four ×8</small></span><b><span class="x">×</span>2</b>
       ${exHand('5C 6D 7H 8S 9C', [0, 1, 2, 3, 4])}<span>Straight<small>5 in a row</small></span><b><span class="x">×</span>5</b>
       ${exHand('2H 6H 9H JH KH', [0, 1, 2, 3, 4])}<span>Flush<small>5+ of a suit</small></span><b><span class="x">×</span>5</b>
     </div>
