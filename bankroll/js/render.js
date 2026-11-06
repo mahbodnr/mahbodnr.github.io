@@ -293,8 +293,11 @@ function renderDock(){
       btns += `<button class="btn warn grow" data-act="discard">${ico('discard')}${bl('Discard', discCost)}${kbd('D')}</button>`;
       if (P){
         const dup = P.type === '2' && S.powerups.some(x => x.type === '2');
+        const noSeatCard = P.type === '5' && !S.deck.length;            // an Extra seat with nothing left to deal into it
         btns += dup
           ? `<button class="btn power grow" disabled title="Already active">${ico('power')}${bl(P.name, 'active')}</button>`
+          : noSeatCard
+          ? `<button class="btn power grow" disabled title="The deck is empty: no card could fill the seat">${ico('power')}${bl(P.name, 'deck empty')}</button>`
           : `<button class="btn power grow" data-act="power" ${S.coins < powerCost(c.rank) ? 'disabled' : ''} title="${P.short}">${ico('power')}${bl(P.name, `${coin}${fmtFit(powerCost(c.rank))} · ${P.short}`)}${kbd('P')}</button>`;
       }
       if (dealt && c.rank === 10) btns += `<button class="btn power grow" data-act="swap" ${S.coins < swapCost() || !S.discard.length ? 'disabled' : ''} title="Take a card back from the discard pile">${ico('back')}${bl('Take back', `${coin}${fmtFit(swapCost())} · from discard`)}${kbd('W')}</button>`;
