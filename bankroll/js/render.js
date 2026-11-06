@@ -74,8 +74,8 @@ function sortedHand(){
 function betStats(){
   if (S.phase === 'bet'){
     const b = Math.max(1, Math.min(S.betInput, S.coins)), add = Math.ceil(b / 2) + b, d = S.debt + add;   // half a bet to deal + one bet for the first card
-    return `<div class="stat pending" id="st-bet" title="Bet ${fmt(b)} if you deal now"><div class="k">Bet<i>?</i></div><div class="v ${fitCls(fmtFit(b))}">${fmtFit(b)}</div></div>
-    <div class="stat debt pending" id="st-debt" title="Dealing adds ${fmt(add)} debt: half the bet to deal, plus the bet for the first card. Change the bet to change it."><div class="k">Debt<i>?</i></div><div class="v ${fitCls(fmtFit(d) + '+')}">+${fmtFit(d)}</div></div>`;
+    return `<div class="stat pending" id="st-bet" title="Bet ${fmt(b)} if you deal now"><div class="k">Bet</div><div class="v ${fitCls(fmtFit(b))}">${fmtFit(b)}</div></div>
+    <div class="stat debt pending" id="st-debt" title="Dealing adds ${fmt(add)} debt: half the bet to deal, plus the bet for the first card. Change the bet to change it."><div class="k">Debt</div><div class="v ${fitCls(fmtFit(d) + '+')}">+${fmtFit(d)}</div></div>`;
   }
   return `<div class="stat" id="st-bet" title="Bet ${fmt(S.bet)}"><div class="k">Bet</div><div class="v ${fitCls(fmtFit(S.bet))}">${S.bet ? fmtFit(S.bet) : '—'}</div></div>
     <div class="stat debt ${S.debt ? '' : 'zero'}" id="st-debt" title="Debt ${fmt(S.debt)}"><div class="k">Debt</div><div class="v ${fitCls(fmtFit(S.debt))}">${fmtFit(S.debt)}</div></div>`;

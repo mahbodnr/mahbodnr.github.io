@@ -88,13 +88,11 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible,summary:focus-
 .stat.debt.zero .k{color:var(--muted)}
 .stat.debt.zero .v{color:var(--text);text-shadow:none}
 .stat.hit{animation:hit .5s ease}
-/* bet being chosen: Bet and Debt are a preview — dashed outline, hatched fill, a "?" badge, a slow breathing value */
+/* bet being chosen: Bet and Debt are a preview — dashed outline, hatched fill, a slow breathing value */
 .stat.pending, .stat.debt.pending{border:1.5px dashed rgba(245,217,140,.55);
   background:repeating-linear-gradient(135deg,rgba(255,255,255,.05) 0 6px,transparent 6px 12px),var(--panel);box-shadow:none}
 .stat.debt.pending{border-color:rgba(255,143,122,.75);background:repeating-linear-gradient(135deg,rgba(255,110,85,.13) 0 6px,transparent 6px 12px),var(--panel)}
-.stat.pending .k{display:flex;align-items:center;gap:4px}
-.stat.pending .k i{font-style:normal;font-size:8.5px;line-height:1;padding:1px 4px;border-radius:6px;border:1px dashed currentColor;letter-spacing:0}
-.stat.pending .v{opacity:.82;font-style:italic;animation:pendBreathe 2.2s ease-in-out infinite}
+.stat.pending .v{opacity:.82;animation:pendBreathe 2.2s ease-in-out infinite}
 .stat.debt.pending .k{color:#ffb4a6}
 .stat.debt.pending .v{color:var(--debt);text-shadow:none}
 @keyframes pendBreathe{50%{opacity:.5}}
