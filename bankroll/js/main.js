@@ -20,9 +20,11 @@ function start(data){
     else if (S.phase === 'swapPick') ui.modal = 'pick';
     S.hand.forEach(c => ui.seen.add(c.id));
   } else {
-    newGame();
+    if (prefs.tutDone) newGame();
     store('bankroll-seen-help' + KEY_NS, true);
   }
+  // first visit: the introduction (three practice hands), which can't be skipped; the player's run starts after it
+  if (!prefs.tutDone) startIntro(false);
   store(PREF_KEY, prefs);
   window.claude?.hot?.snapshot?.(() => ({ S }));
   render();

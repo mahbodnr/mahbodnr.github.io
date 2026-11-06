@@ -653,13 +653,29 @@ code.seed{white-space:nowrap;font:800 14px/1 ui-monospace,SFMono-Regular,Menlo,C
 .coach[data-side="below"]::before{top:-7px;border-right:0;border-bottom:0;background:#14453c}
 .coach[data-side="above"]::before{bottom:-7px;border-left:0;border-top:0;background:#0c2f29}
 .coach .ch-step{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);font-weight:800}
-.coach b{display:block;font-size:15px;margin:2px 0 2px;color:var(--brass-hi)}
+.coach > b{display:block;font-size:15px;margin:2px 0 2px;color:var(--brass-hi)}
+.coach p b{color:var(--brass-hi)}
 .coach p{margin:0 0 8px}
 .coach .ch-actions{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .coach .ch-skip{border:0;background:none;color:var(--muted);font-size:12.5px;font-weight:700;padding:8px 0;min-height:36px}
 .coach .ch-next{min-height:38px;padding:8px 16px}
 .coach-on{outline:2px solid var(--gold-1) !important;outline-offset:4px;border-radius:12px;animation:coachGlow 1.6s ease-in-out infinite}
 @keyframes coachGlow{50%{outline-color:rgba(245,217,140,.35)}}
+/* the introduction: only the control a step asks for responds (it pulses); highlighted parts glow; the bubble sits above
+   dialogs, and a centred bubble dims the table behind it */
+html.intro-on .app, html.intro-on #modalRoot{pointer-events:none}
+html.intro-on .intro-ok, html.intro-on .intro-ok *{pointer-events:auto}
+html.intro-on #coach{z-index:42}
+.intro-ok{animation:introPulse 1.3s ease-in-out infinite;border-radius:12px}
+.card.intro-ok{animation:none;box-shadow:0 0 0 3px var(--gold-1), 0 0 22px rgba(245,217,140,.7) !important}
+@keyframes introPulse{50%{box-shadow:0 0 0 4px rgba(245,217,140,.55), 0 0 22px rgba(245,217,140,.45)}}
+.intro-hl{outline:2px solid var(--gold-1) !important;outline-offset:3px;border-radius:12px}
+html.intro-center .app{filter:brightness(.4) saturate(.8);transition:filter .3s}
+.coach.wide{padding:16px 18px 12px}
+.coach.wide::before{display:none}
+.coach.wide > b{font-size:19px;font-family:var(--f-display);font-weight:400}
+.coach .intro-combos{margin:8px 0 10px}
+html.speed-fast .intro-ok{animation-duration:1.3s !important}
 
 /* ================= effects ================= */
 .links{position:absolute;left:0;top:0;pointer-events:none;width:100%}

@@ -585,7 +585,7 @@ function helpHTML(){
     <p>Keeping a power-up costs upkeep on every new card: <b>double its price</b>, then doubling again with each card (2×, 4×, 8× …). ✕ releases one. Their prices, and the 10's fee, <b>double each level</b>${lvl() > 1 ? ` (shown for level ${lvl()})` : ''}.</p>
     <h3>Levels</h3>
     <p>When the deck runs out, pay the level price (100, 1,000, 10,000 …) to reshuffle, or the run ends.</p>
-    <div class="actions"><button class="btn" data-act="replayTutorial">Tutorial</button><button class="btn gold" data-act="close">Got it</button></div>`;
+    <div class="actions"><button class="btn" data-act="replayTutorial">Introduction</button><button class="btn gold" data-act="close">Got it</button></div>`;
 }
 
 function render(){
@@ -625,6 +625,6 @@ function render(){
   scheduleComboLinks();
   startFire();
   tutorialTick();
-  store(SAVE_KEY, S);
+  if (!S.intro) store(SAVE_KEY, S);   // the introduction's practice run is never saved
 }
 

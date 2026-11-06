@@ -27,7 +27,7 @@ function throwWithReveal(){
 /* drag a hand card onto the table to swap it with the center card */
 const drag = { id:null, x0:0, y0:0, on:false, ghost:null, src:null };
 document.addEventListener('pointerdown', e => {
-  const el = e.target.closest('#hand .card.drag'); if (!el || e.button > 0) return;
+  const el = e.target.closest('#hand .card.drag'); if (!el || e.button > 0 || !introAllows(el)) return;
   drag.id = el.dataset.cid; drag.x0 = e.clientX; drag.y0 = e.clientY; drag.on = false; drag.src = el;
 });
 document.addEventListener('pointermove', e => {
@@ -116,6 +116,7 @@ function updateBetUI(skip){
   const dn = document.querySelector('[data-hold="-1"]'), up = document.querySelector('[data-hold="1"]');
   if (dn) dn.disabled = b <= 1; if (up) up.disabled = b >= S.coins;
   renderValue(); renderLedger();
+  if (introOn()) tutorialTick();   // the introduction waits for a set bet
 }
 function stepBet(dir, big){
   let v = S.betInput;
@@ -126,7 +127,7 @@ function stepBet(dir, big){
 const hold = { t:null, n:0 };
 function stopHold(){ clearTimeout(hold.t); hold.t = null; }
 document.addEventListener('pointerdown', e => {
-  const btn = e.target.closest('[data-hold]'); if (!btn || btn.disabled) return;
+  const btn = e.target.closest('[data-hold]'); if (!btn || btn.disabled || !introAllows(btn)) return;
   e.preventDefault();
   const dir = +btn.dataset.hold; hold.n = 0; stopHold();
   stepBet(dir);
@@ -140,6 +141,7 @@ document.addEventListener('click', e => {
   if (ui.dragEnded && Date.now() - ui.dragEnded < 400) return;
   const t = e.target.closest('[data-act]');
   if (!t){ if (ui.armed){ ui.armed = null; render(); } return; }
+  if (!introAllows(t)) return;                     // the introduction: only the control it asks for works
   const action = t.dataset.act;
   if (action === 'scrimClose'){ if (e.target === t){ closeModal(); render(); } return; }
   const id = t.dataset.id;
@@ -161,10 +163,10 @@ document.addEventListener('click', e => {
     case 'setPref': setPref(t.dataset.k, t.dataset.v); break;
     case 'preset': setBet(+t.dataset.v); return;
     case 'bustConfirm': act('cash', 1); break;
-    case 'tutorialNext': nextTutorial(); break;
-    case 'tutorialSkip': endTutorial(); break;
+    case 'introNext': introNext(); if (!intro) return; break;
+    case 'introSkip': if (intro && intro.replay) endIntro(); return;
     case 'tipDone': tipDone(t.dataset.v); break;
-    case 'replayTutorial': startTutorial(); ui.modal = null; break;
+    case 'replayTutorial': ui.modal = null; startIntro(true); break;
     case 'replaySeed': beginRun(S.seed); break;
     case 'sortRank': prefs.sort = 'rank'; store(PREF_KEY, prefs); break;
     case 'sortSuit': prefs.sort = 'suit'; store(PREF_KEY, prefs); break;
@@ -202,7 +204,7 @@ document.addEventListener('click', e => {
 
 document.addEventListener('keydown', e => {
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.card[data-act]')){ e.preventDefault(); e.target.click(); return; }
-  if (e.key === 'Escape' && CLOSABLE.includes(ui.modal)){ closeModal(); render(); return; }
+  if (e.key === 'Escape' && CLOSABLE.includes(ui.modal) && !introOn()){ closeModal(); render(); return; }
   // keep keyboard focus inside an open dialog
   if (e.key === 'Tab' && ui.modal){
     const f = [...document.querySelectorAll('#modalRoot .modal button:not([disabled]), #modalRoot .modal input:not([disabled]), #modalRoot .modal [tabindex="0"]')];
@@ -216,7 +218,7 @@ document.addEventListener('keydown', e => {
 
 /* keyboard shortcuts (desktop) */
 document.addEventListener('keydown', e => {
-  if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || !S) return;
+  if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || !S || introOn()) return;   // no shortcuts in the introduction
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
   const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
@@ -250,6 +252,7 @@ document.addEventListener('keydown', e => {
 });
 
 document.addEventListener('input', e => {
+  if ((e.target.id === 'betRange' || e.target.id === 'betNum') && !introAllows(e.target)){ render(); return; }
   if (e.target.id === 'betRange'){
     const v = snapFromPos(+e.target.value, e.target.offsetWidth);
     S.betInput = v; e.target.value = betToPos(v); updateBetUI('range');
