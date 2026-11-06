@@ -675,6 +675,16 @@ html.intro-center .app{filter:brightness(.4) saturate(.8);transition:filter .3s}
 .coach.wide::before{display:none}
 .coach.wide > b{font-size:19px;font-family:var(--f-display);font-weight:400}
 .coach .intro-combos{margin:8px 0 10px}
+.intro-mix{margin:4px 0 12px;padding:12px 14px;border-radius:14px;border:1.5px solid var(--brass-hi);
+  background:radial-gradient(120% 120% at 0% 0%, rgba(245,217,140,.18), transparent 60%),rgba(2,16,13,.45);box-shadow:0 0 18px rgba(245,217,140,.18)}
+.intro-mix .im-head{font-family:var(--f-display);font-size:18px;color:var(--brass-hi);margin-bottom:8px}
+.intro-mix .im-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.intro-mix .cx{display:flex;gap:3px;--cw:34px;--ch:calc(34px * 1.42)}
+.intro-mix .im-sum{display:flex;flex-direction:column;gap:2px;font-size:14px;font-weight:700}
+.intro-mix .im-sum b{color:var(--brass-hi);margin-left:4px}
+.intro-mix .im-total{margin-top:10px;text-align:center;font-size:17px;font-weight:800;letter-spacing:.01em}
+.intro-mix .im-total b{font-family:var(--f-display);font-weight:400;font-size:30px;color:var(--brass-hi);vertical-align:-3px;margin-left:4px}
+.intro-mix .x{font-size:.7em;opacity:.85}
 html.speed-fast .intro-ok{animation-duration:1.3s !important}
 
 /* ================= effects ================= */

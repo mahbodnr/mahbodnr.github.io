@@ -62,7 +62,7 @@ function resumeModal(){
 const INTRO = [
   // ---- hand 1 ----
   { title:'Welcome to Bankroll', center:true,
-    text:() => `Three practice hands teach you the game. You start with ${coin}<b>${START_COINS}</b> coins. Bet them on poker combos and grow your bankroll.` },
+    text:() => 'Let\'s learn how to play the game.' },
   { target:'#hand', title:'Your hand',
     text:() => 'Five cards: three face up, two face down. The hidden ones flip when you deal.' },
   { title:'Combos multiply your bet', center:true, panel:() => `<div class="combo-ex intro-combos">
@@ -70,7 +70,12 @@ const INTRO = [
       ${exHand('QH QS QD 4C 9S', [0, 1, 2])}<span>Three of a kind<small>four of a kind ${X(8)}</small></span><b>${X(4)}</b>
       ${exHand('5C 6D 7H 8S 9C', [0, 1, 2, 3, 4])}<span>Straight<small>5 in a row</small></span><b>${X(5)}</b>
       ${exHand('2H 6H 9H JH KH', [0, 1, 2, 3, 4])}<span>Flush<small>5 of a suit</small></span><b>${X(5)}</b>
-      ${exHand('8D 8C 3H 3S AC', [0, 1, 2, 3])}<span>Two combos<small>multiply: ${X(2)} × ${X(2)}</small></span><b>${X(4)}</b>
+    </div>
+    <div class="intro-mix">
+      <div class="im-head">Combos multiply each other</div>
+      <div class="im-row">${exHand('KH KS KD 4C 4S', [0, 1, 2, 3, 4])}
+        <div class="im-sum"><span>Three Kings <b>${X(4)}</b></span><span>Pair of 4s <b>${X(2)}</b></span></div></div>
+      <div class="im-total">${X(4)} × ${X(2)} = <b>${X(8)}</b></div>
     </div>`,
     text:() => 'Cash out pays <b>bet × multiplier</b>. No combo pays nothing.' },
   { target:'.betbox', hl:['#st-bet', '#st-debt'], ok:['.betbox'], title:'Place a bet', until:() => S.betInput === INTRO_BET[1] || S.phase !== 'bet',
