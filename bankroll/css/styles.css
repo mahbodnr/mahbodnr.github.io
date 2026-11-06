@@ -193,7 +193,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible,summary:focus-
    column. Three slots, one per kind. A power-up shows the card it was bought with (fanned when there are several), its
    badge, the next card's upkeep on a tag that warms as it doubles, a pip per card kept, and ✕ to release one. */
 .rail{z-index:1}
-.powers{position:relative;z-index:0;margin:-18px auto 0;width:calc(100% - 24px);box-sizing:border-box;padding:24px 8px 9px;border-radius:0 0 18px 18px;
+.powers{position:relative;z-index:0;margin:-22px 14px 0;align-self:stretch;width:auto;box-sizing:border-box;padding:28px 8px 9px;border-radius:0 0 18px 18px;
   background:
     repeating-linear-gradient(93deg, rgba(0,0,0,.09) 0 2px, transparent 2px 7px, rgba(255,226,180,.04) 7px 8px, transparent 8px 13px),
     linear-gradient(180deg,#1f120a,#3a2414 45%,#2a180d);
@@ -249,7 +249,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible,summary:focus-
 @media (max-width:380px){ .pu, .pslot{gap:5px;padding:5px} .pu-name{font-size:10.5px} }
 /* tablets: more room, so the effect shows too */
 @media (min-width:700px){
-  .powers{padding:26px 12px 11px}
+  .powers{padding:30px 12px 11px;margin-left:22px;margin-right:22px}
   .pslots{gap:10px}
   .pu-cards{--cw:32px} .ps-ghost{width:32px;height:45px}
   .pu-name{font-size:13px} .pu-eff{display:block} .pu-meter{display:flex}

@@ -165,7 +165,7 @@ function renderPowers(){
   const prev = ui.pupPrev || {}, costs = {}, counts = {};
   const can = S.phase === 'idle' || S.phase === 'decide';
   el.classList.toggle('short', S.phase === 'idle' && S.deck.length > 0 && S.coins < upkeep());   // point at the ✕ buttons
-  el.classList.toggle('empty', !S.powerups.length);
+  el.classList.toggle('none-owned', !S.powerups.length);
   const slots = PU_ORDER.map(t => {
     const r = PU_RANK[t], P = POWER[r], group = S.powerups.filter(p => p.type === t), n = group.length;
     counts[t] = n;
