@@ -11,9 +11,9 @@ const TUT_STEPS = [
   { phase:'bet', target:'[data-act="deal"]', title:'Deal',
     text:'Flips your hidden cards and deals one to the center.', waitFor:'decide' },
   { phase:'decide', target:'#pit .stage', title:'The center card',
-    text:'It added your bet to the debt. Tap a hand card to swap it in, free.' },
+    text:'Dealing added your bet to the debt twice: once to deal, once for this card. Tap a hand card to swap it in, free.' },
   { phase:'decide', target:'[data-act="discard"]', title:'Discard',
-    text:'Deals the next card, adding another bet of debt.' },
+    text:'Deals the next card. Each one raises the card debt ×1.5.' },
   { phase:'decide', target:'[data-act="cash"]', title:'Cash out',
     text:'Shows what you’d win or lose right now.', last:true },
 ];

@@ -4,7 +4,7 @@
 /* ================= flow ================= */
 function newSet(){
   S.handLedger = null;
-  S.bet = 0; S.debt = 0; S.hand = []; S.powerups = []; S.pending = null; S.jokerSeen = []; S.faceDown = [];
+  S.bet = 0; S.debt = 0; S.cardSteps = []; S.hand = []; S.powerups = []; S.pending = null; S.jokerSeen = []; S.faceDown = [];
   S.swapTen = null; S.swapCard = null; S.result = null; S.pendingCharged = false; S.swapRefund = false; ui.armed = null;
   if (S.coins < 1) return gameOver('You have no coins left to bet.', { cause:'broke' });
   if (S.deck.length < 5) return deckOut();
@@ -65,6 +65,7 @@ function deal(){
   const bet = Math.max(1, Math.min(S.betInput, S.coins));
   S.handStart = S.coins; S.handLedger = {};
   S.bet = bet; S.lastBet = bet; coinChange(-bet, 'bet');
+  S.debt += bet; S.cardSteps = [];   // the extra bet to deal
   S.faceDown.forEach(id => ui.flips.add(id)); S.faceDown = [];
   S.hand.forEach(c => { if (isJoker(c) && !S.jokerSeen.includes(c.id)) S.jokerSeen.push(c.id); });
   S.stats.sets++; S.phase = 'idle';
@@ -95,7 +96,7 @@ function drawNext(waive, why){
     } else {
       // with a full hand, the new card counts as a discard the moment it is dealt
       S.pending = c; S.dealtId = c.id; S.phase = 'decide'; sfx('deal');
-      S.pendingCharged = true; S.debt += S.bet; S.stats.discards++;
+      S.pendingCharged = true; chargeCard();
       ui.dealFx = c.id;
       buzz(8);
       ui.say = `New card in the center: ${cardName(c)}. Debt is now ${fmt(S.debt)}.`;
@@ -118,13 +119,22 @@ function coinChange(d, label, cat){
   if (S.handLedger){ const k = cat || label; S.handLedger[k] = (S.handLedger[k] || 0) + d; }
   (ui.coinEv = ui.coinEv || []).push({ d, label });
 }
+/* Debt: dealing costs one extra bet (the ante, added to the debt), and each card dealt into a full hand
+   raises the debt from cards ×1.5, rounded to whole coins (at least +1): the 1st card adds 1 bet, then the card
+   debt goes ×1.5 each time. With a bet of 1: 1 → 2 → 3 → 5 → 8 → 12 → 18 …; with 10: 10 → 15 → 23 → 35 → 53 …
+   Each card's charge is remembered (S.cardSteps), so refunding a card returns exactly what it added. */
+const cardDebtNow = () => (S.cardSteps || []).reduce((a, b) => a + b, 0);
+const nextCardCost = () => { const cd = cardDebtNow(); return cd > 0 ? Math.max(1, Math.round(cd * 1.5) - cd) : S.bet; };
+function chargeCard(){ const inc = nextCardCost(); (S.cardSteps = S.cardSteps || []).push(inc); S.debt += inc; S.stats.discards++; return inc; }
+// undo the most recent card's charge (a fresh card used as a power-up or for the 10 take-back)
+function refundCard(){ const inc = (S.cardSteps || []).pop(); if (!inc) return; S.debt -= inc; S.stats.discards--; }
 function canDraw(){ return S.deck.length > 0 && S.coins >= upkeep(); }
 
 
 function discardPending(){
   if (S.phase !== 'decide') return;
   const c = S.pending; S.discard.push(c); S.pending = null;
-  if (!S.pendingCharged){ S.debt += S.bet; S.stats.discards++; }
+  if (!S.pendingCharged) chargeCard();
   S.pendingCharged = false; S.phase = 'idle'; ui.armed = null;
   sfx('swish');
   settle();
@@ -149,7 +159,7 @@ function usePower(){
   const p = POWER[S.pending.rank]; if (!p) return;
   const cost = powerCost(S.pending.rank); if (S.coins < cost) return;
   if (p.type === '2' && S.powerups.some(x => x.type === '2')) return; // Two-tone doesn't stack
-  if (S.pendingCharged){ S.debt -= S.bet; S.stats.discards--; } S.pendingCharged = false;
+  if (S.pendingCharged) refundCard(); S.pendingCharged = false;
   coinChange(-cost, 'power-up'); S.powerups.push({ card:S.pending, type:p.type }); S.pending = null; S.phase = 'idle'; ui.armed = null;
   sfx('power');
   ui.say = `${p.name} active.`;
@@ -160,7 +170,7 @@ function usePower(){
 function startSwap(){
   if (S.phase !== 'decide' || !offerIsDealt() || S.pending.rank !== 10 || S.coins < swapCost() || !S.discard.length) return;
   S.swapRefund = S.pendingCharged;
-  if (S.pendingCharged){ S.debt -= S.bet; S.stats.discards--; } S.pendingCharged = false;
+  if (S.pendingCharged) refundCard(); S.pendingCharged = false;
   coinChange(-swapCost(), '10 swap'); S.swapTen = S.pending; S.pending = null; S.discard.push(S.swapTen);
   S.phase = 'swapPick'; ui.modal = 'pick'; ui.armed = null; sfx('coin');
 }
@@ -169,7 +179,7 @@ function cancelSwap(){
   if (S.phase !== 'swapPick') return;
   S.discard = S.discard.filter(c => c.id !== S.swapTen.id);
   S.pending = S.swapTen; S.swapTen = null; coinChange(swapCost(), 'refund', '10 swap'); S.phase = 'decide'; ui.modal = null;
-  if (S.swapRefund){ S.debt += S.bet; S.stats.discards++; S.pendingCharged = true; } S.swapRefund = false;
+  if (S.swapRefund){ chargeCard(); S.pendingCharged = true; } S.swapRefund = false;
 }
 function pickFromDiscard(id){
   if (S.phase !== 'swapPick' || id === S.swapTen.id) return;
@@ -200,7 +210,7 @@ function releasePower(idx){
 function trimCard(id){
   if (S.phase !== 'trim') return;
   const i = S.hand.findIndex(c => c.id === id); if (i < 0) return;
-  const out = S.hand.splice(i, 1)[0]; S.discard.push(out); S.debt += S.bet; S.stats.discards++;
+  const out = S.hand.splice(i, 1)[0]; S.discard.push(out); chargeCard();
   sfx('debt'); ui.armed = null;
   if (S.hand.length <= capacity()){ S.phase = 'idle'; settle(); }
 }

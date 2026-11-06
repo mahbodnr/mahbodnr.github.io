@@ -10,11 +10,14 @@ const POWER = {
   2: { type:'2', cost:2, name:'Two-tone',  short:'Red/black suits' },
   5: { type:'5', cost:5, name:'Extra seat',short:'+1 seat' },
 };
-const SWAP_COST = 10, START_COINS = 10;
+const SWAP_COST = 10, START_COINS = 50;
 // price to pass level L: 100, 200, 500, 1000, 2000, 5000, …
-const levelPrice = L => [1, 2, 5][(L - 1) % 3] * 100 * Math.pow(10, Math.floor((L - 1) / 3));
+const levelPrice = L => 100 * Math.pow(10, L - 1);   // 100, 1,000, 10,000, 100,000 …
 const lvl = () => S.level || S.stats.shuffles || 1;
-const SAVE_KEY = 'bankroll-save-v1', PREF_KEY = 'bankroll-prefs-v1';
+// A pilot build served from /bankroll-pilot/ (for trying rule changes) keeps its own save and settings, so it never
+// touches the live game's. See README: Pilot builds.
+const KEY_NS = typeof location !== 'undefined' && /\/bankroll-pilot\//.test(location.pathname || '') ? '-pilot' : '';
+const SAVE_KEY = 'bankroll-save-v1' + KEY_NS, PREF_KEY = 'bankroll-prefs-v1' + KEY_NS;
 
 /* ================= state ================= */
 let S = null;
@@ -51,6 +54,7 @@ function newGame(seed){
         level:1, stats:{ sets:0, cashouts:0, bestPayout:0, peak:START_COINS, shuffles:1, discards:0, biggestWin:0, biggestLoss:0, bestMult:0 }, bestHand:null };
   S.rng = seedState(S.seed);
   S.runId = S.seed + '-' + Date.now().toString(36);   // identifies this run on the leaderboard
+  S.rules = RULES;
   S.seedChosen = !!cleanSeed(seed);                   // the player picked this seed (a "seeded" run)
   S.official = null;                                  // set when the website's server issued this run
   S.log = [];                                         // every move, so the run can be replayed and verified
@@ -62,10 +66,14 @@ function newGame(seed){
 /* ================= save versioning ================= */
 // Bump SAVE_VERSION when the save format changes, and teach migrate() to upgrade older saves.
 const SAVE_VERSION = 3;
+const RULES = 2;   // 2: an extra bet to deal, card debt ×1.5 per card, level prices ×10 (bump when the rules change)
 function migrate(s){
   if (!s || !Array.isArray(s.deck) || !s.phase) return null;
   if (s.v && s.v > SAVE_VERSION) return null;            // saved by a newer version: start fresh
   ['throwaway','discard','hand','faceDown','powerups','jokerSeen'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
+  // saved under the old debt rules (no extra bet to deal, 1 bet per card): carry on from the debt as card debt, and
+  // keep the run off the leaderboard, since the server replays every run under the current rules
+  if (s.rules !== RULES){ if (!Array.isArray(s.cardSteps)) s.cardSteps = s.phase !== 'bet' && s.debt > 0 ? [s.debt] : []; s.official = null; s.rules = RULES; }
   s.stats = Object.assign({ sets:0, cashouts:0, bestPayout:0, peak:s.coins || 0, shuffles:1, discards:0, biggestWin:0, biggestLoss:0 }, s.stats || {});
   s.level = s.level || s.stats.shuffles || 1;
   if (s.handStart == null && s.phase !== 'bet') s.handStart = s.coins + (s.bet || 0);

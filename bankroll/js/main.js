@@ -9,7 +9,7 @@ function start(data){
   if (!prefs.themeChosen) prefs.theme = 'dark';   // dark unless the player picked a theme
   if (!savedPrefs.pack && savedPrefs.back) prefs.pack = BACK_TO_PACK[savedPrefs.back] || 'classic';   // older saves chose a card back
   // first visit: a guided first hand instead of the rules page; returning players skip it
-  if (prefs.tutDone === undefined) prefs.tutDone = !!load('bankroll-seen-help');
+  if (prefs.tutDone === undefined) prefs.tutDone = !!load('bankroll-seen-help' + KEY_NS);
   applyPrefs();
   const saved = migrate((data && data.S) || load(SAVE_KEY));
   if (saved){
@@ -21,7 +21,7 @@ function start(data){
     S.hand.forEach(c => ui.seen.add(c.id));
   } else {
     newGame();
-    store('bankroll-seen-help', true);
+    store('bankroll-seen-help' + KEY_NS, true);
   }
   store(PREF_KEY, prefs);
   window.claude?.hot?.snapshot?.(() => ({ S }));

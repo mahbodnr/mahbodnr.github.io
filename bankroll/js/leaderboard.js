@@ -351,7 +351,7 @@ function leaderboardHTML(){
   if (LB.kind === 'supabase' && !LB.signedIn)
     foot = `<div class="lbsign"><button class="btn gold" data-act="lbSignIn">Sign in to post scores</button></div>`;
   else if (LB.kind === 'supabase'){
-    const note = !S.official ? 'This run isn’t posted (started signed out)' : LB.closedRun === S.runId ? 'This run can’t be posted' : '';
+    const note = !S.official ? 'This run isn’t posted (started signed out, or under older rules)' : LB.closedRun === S.runId ? 'This run can’t be posted' : '';
     foot = note ? `<p class="snote">${note}</p>` : '';
   }
   else foot = `<p class="snote">Unverified scores${!LB.me ? ' · sign in to post' : LB.writeFailed ? ' · view only' : ''}</p>`;
