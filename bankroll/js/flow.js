@@ -45,7 +45,7 @@ function keepBestHand(){
 }
 
 function gameOver(reason, extra){
-  S.bestCandidate = null;   // the hand that ended the run doesn't count as its biggest multiplier
+  if (!(extra && extra.won)) S.bestCandidate = null;   // the hand that ended the run doesn't count as its biggest multiplier (unless it won it)
   S.phase = 'over'; S.over = { reason, ...(extra || {}) }; ui.modal = 'over';
   // save the best record across runs
   const st = S.stats, rec = Object.assign({ level:0, biggestWin:0, biggestLoss:0, peak:0, bestPayout:0, hands:0, runs:0 }, prefs.record || {});
@@ -253,7 +253,9 @@ function cashOut(force){
   if (!force && S.coins + payout - S.debt < 0){ ui.modal = 'bust'; return; }
   ui.modal = null;
   const before = S.coins;
-  const total = S.coins + payout - S.debt;
+  let total = S.coins + payout - S.debt;
+  // past the largest number the game can hold (about 1.8e308) a win is infinite: the bank is broken (see below)
+  if (Number.isNaN(total) && payout === Infinity) total = Infinity;
   const res = { hand:S.hand.slice(), powerups:S.powerups.slice(), ev, bet:S.bet, payout, debt:S.debt, before, total, deckLeft:S.deck.length,
     start: S.handStart ?? (before + S.bet), discards: S.bet ? Math.round(S.debt / S.bet) : 0, handNo: S.stats.sets };
   if (S.pending) S.throwaway.push(S.pending);
@@ -273,6 +275,15 @@ function cashOut(force){
   if (res.net > 0) S.stats.biggestWin = Math.max(S.stats.biggestWin || 0, res.net);
   if (res.net < 0) S.stats.biggestLoss = Math.max(S.stats.biggestLoss || 0, -res.net);
   recordHand(res, S.coins);
+  // Infinity: the coins can't be counted any more. The level is won and the run ends there, a win.
+  if (!(S.coins < Infinity) || total === Infinity){
+    S.coins = Infinity; S.debt = 0; res.net = Infinity;
+    S.stats.peak = Infinity; S.stats.biggestWin = Infinity; S.stats.bestPayout = Math.max(S.stats.bestPayout || 0, payout);
+    S.infinite = true;
+    keepBestHand();                       // the hand that broke the bank counts: the run is won, not lost
+    ui.celebrate = true; buzz([25, 40, 25, 40, 60, 40, 120]);
+    return gameOver('Your coins went past anything that can be counted: infinity. The bank is broken.', { res, cause:'infinite', won:true });
+  }
   if (total < 0){
     S.debt = 0; ui.shake = true; buzz([80, 50, 120]);
     return gameOver(`Your coins plus the payout (${fmt(before + payout)}) couldn’t cover a debt of ${fmt(res.debt)}.`,

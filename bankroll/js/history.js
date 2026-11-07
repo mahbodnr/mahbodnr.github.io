@@ -19,8 +19,10 @@ function axisNum(v){
 // Line chart of coins after each hand, with level boundaries marked.
 function coinChart(hist, target){
   const W = 340, H = 150, padR = 12, padT = 14, padB = 22;
+  // an infinite amount (saved as null: JSON has no Infinity) is drawn at the top of the chart
+  const inf = v => v == null || v === Infinity;
   const pts = [{ v: hist[0].start, level: hist[0].level }].concat(hist.map(h => ({ v:h.coins, level:h.level })));
-  const vals = pts.map(p => p.v);
+  const vals = pts.map(p => p.v).filter(v => !inf(v));
   let lo = Math.min(0, ...vals), hi = Math.max(...vals, target ? target.v * 1.08 : 0);
   if (hi === lo) hi = lo + 10;
   // round the top up to a tidy value: 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8 × a power of ten
@@ -30,7 +32,7 @@ function coinChart(hist, target){
   const ticks = [hi, (hi + lo) / 2, lo], tl = ticks.map(axisNum);
   const padL = Math.max(26, 10 + Math.ceil(Math.max(...tl.map(t => t.length)) * 6.2));
   const x = i => padL + (pts.length === 1 ? 0 : i * (W - padL - padR) / (pts.length - 1));
-  const y = v => padT + (hi - v) * (H - padT - padB) / (hi - lo);
+  const y = v => inf(v) ? padT : padT + (hi - v) * (H - padT - padB) / (hi - lo);
   const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p.v).toFixed(1)}`).join('');
   const area = `${line}L${x(pts.length - 1).toFixed(1)} ${y(lo).toFixed(1)}L${x(0).toFixed(1)} ${y(lo).toFixed(1)}Z`;
   let marks = '';

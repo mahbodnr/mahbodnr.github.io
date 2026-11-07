@@ -12,6 +12,7 @@ function cardHTML(c, opts = {}){
   if (opts.back){ cls.push('back'); if (opts.extra) cls.push(opts.extra); return `<div class="${cls.join(' ')}"${opts.style ? ` style="${opts.style}"` : ''} aria-label="Face-down card"></div>`; }
   if (isRed(c)) cls.push('red');
   cls.push('s-' + c.suit);
+  if (c.rank === 10) cls.push('r10');
   if (opts.track !== false){
     if (!ui.seen.has(c.id)) cls.push('enter');
     else if (ui.flips.has(c.id)) cls.push('flip');
@@ -215,6 +216,16 @@ function renderPowers(){
   ui.pupPrev = Object.assign(counts, costs);
 }
 
+// The hand's cards are too small to read comfortably: narrower than 56px, or overlapped so that less than 34px of each shows.
+// (Card sizes come from the layout, not the pack, so switching packs can't change the answer.)
+function handIsSmall(){
+  const cards = document.querySelectorAll('#hand > .card'); if (!cards.length) return false;
+  const z = typeof ZK === 'number' ? ZK : 1, a = cards[0].getBoundingClientRect(), w = a.width / z;
+  const step = cards.length > 1 ? (cards[1].getBoundingClientRect().left - a.left) / z : w;
+  return w < 56 || step < 34;
+}
+let resizeFrame = 0;
+window.addEventListener('resize', () => { cancelAnimationFrame(resizeFrame); resizeFrame = requestAnimationFrame(() => { if (S) render(); }); });
 function renderHand(){
   const cap = capacity();
   const on = k => !S.order && prefs.sort === k ? 'true' : 'false';
@@ -238,7 +249,7 @@ function renderHand(){
       tag = `Tap again<br>+${fmtFit(nextCardCost())} debt`;
     }
     const dragX = S.phase === 'decide' || S.phase === 'swapPlace' ? ' drag' : '';
-    let out = cardHTML(c, { extra: extra + dragX + ' mv', act: picking ? 'handPick' : null, tag });
+    let out = cardHTML(c, { extra: extra + dragX + ' mv', act: picking ? 'handPick' : null, tag, pack: ui.handClear ? 'clear' : undefined });
     if (picking && keyN < 9) out = out.replace(/<\/div>$/, `<kbd class="kc" aria-hidden="true">${++keyN}</kbd></div>`);
     // on hover (mouse), show what swapping this card in would score
     if (S.phase === 'decide') out = out.replace(/<\/div>$/, `<span class="tag ok peek">→ ×${fmtFit(swapMult(c.id))}</span></div>`);
@@ -517,6 +528,7 @@ const TIP_ICONS = {
   idea:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/>',
 };
 function runTips(o, L){
+  if (o.cause === 'infinite') return [];                     // a won run needs no advice
   const h = Array.isArray(S.history) ? S.history : [], RL = S.runLedger || {}, st = S.stats;
   const tips = [];
   if (o.cause === 'level'){
@@ -549,6 +561,7 @@ function overHTML(){
 
   // 1. headline: what ended the run, in one line
   const head = {
+    infinite:{ title:'You broke the bank!' },
     level:{ title:`Couldn’t pay for level ${L + 1}` },
     bust: { title:'Debt bigger than coins' },
     broke:{ title:'Out of coins' },
@@ -556,7 +569,8 @@ function overHTML(){
 
   // 2. gauge: what you had against what you needed
   let gauge = '';
-  if (cause !== 'broke'){
+  if (cause === 'infinite') gauge = `<div class="inf-win" role="img" aria-label="Infinite coins"><b>∞</b><span>coins: more than can be counted</span></div>`;
+  else if (cause !== 'broke'){
     const have = Math.max(0, o.have ?? 0), need = cause === 'level' ? (o.price || levelPrice(L)) : (o.need || 1);
     const pct = Math.max(2, Math.min(100, have / need * 100));
     gauge = `<div class="gauge" role="img" aria-label="You had ${fmtFit(have)} of the ${fmtFit(need)} you needed; short by ${fmtFit(need - have)}">
@@ -569,8 +583,9 @@ function overHTML(){
   const first = Math.max(1, L - 3), nodes = [];
   for (let i = first; i <= L; i++) nodes.push(i < L
     ? `<li class="done"><span class="jn">${i}</span><small>paid ${fmtFit(levelPrice(i))}</small></li>`
+    : cause === 'infinite' ? `<li class="done won"><span class="jn">${i}</span><small>won</small></li>`
     : `<li class="end"><span class="jn">${i}</span><small>ended</small></li>`);
-  nodes.push(`<li class="lock"><span class="jn">${LOCK_SVG}</span><small>${L + 1}: ${fmtFit(levelPrice(L))}</small></li>`);
+  if (cause !== 'infinite') nodes.push(`<li class="lock"><span class="jn">${LOCK_SVG}</span><small>${L + 1}: ${fmtFit(levelPrice(L))}</small></li>`);
   const journey = `<ol class="journey" aria-label="Levels">${first > 1 ? '<li class="more">…</li>' : ''}${nodes.join('')}</ol>`;
 
   // 4. coins over the run, with the price you had to reach
@@ -650,6 +665,9 @@ function render(){
   const stageEl = document.querySelector('#pit .stage .card[data-cid]');
   const stageWas = stageEl && { id:stageEl.dataset.cid, html:stageEl.outerHTML, rect:stageEl.getBoundingClientRect() };
   renderLedger(); renderPit(); renderPowers(); renderHand(); renderValue(); renderDock(); renderModal();
+  // small cards (many in a row on a narrow screen): the hand switches to the easy-to-read Clear pack until there's room again
+  const small = handIsSmall();
+  if (small !== !!ui.handClear){ ui.handClear = small; renderHand(); }
   const top = document.querySelector('#pit .discardbtn .card:last-child');
   if (top && was.has(top.dataset.cid) && (!topBefore || topBefore.cid !== top.dataset.cid)) runDiscardFx(top, was.get(top.dataset.cid));
   if (ui.prev && ui.prev.coins !== S.coins && Math.max(ui.prev.coins, S.coins) < 1e6) rollNumber(document.querySelector('#st-coins .num'), ui.prev.coins, S.coins);

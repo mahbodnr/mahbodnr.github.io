@@ -11,7 +11,8 @@ function dailySeed(d = new Date()){
   return cleanSeed('DY' + p(d.getUTCFullYear() % 100) + p(d.getUTCMonth() + 1) + p(d.getUTCDate()));
 }
 const isDaily = seed => !!seed && seed === dailySeed();
-function playDaily(){ ui.modal = null; beginRun(dailySeed()); }
+// mid-run the player is asked first (their run would end); on a fresh table or after a run it starts straight away
+function playDaily(){ ui.modal = null; offerChallenge(dailySeed()); render(); }
 
 /* ---------- sharing a run ---------- */
 // A link that opens the game on this run's cards: inside Telegram the Mini App link, otherwise this page with ?seed=
@@ -80,7 +81,10 @@ function offerChallenge(seed){
 }
 function challengeHTML(){
   const seed = ui.challengeSeed || '';
-  return `<h2>${isDaily(seed) ? 'Today\'s challenge' : 'A challenge'}</h2>
-    <p class="lead">Play the cards someone shared with you (seed <code class="seed">${esc(seed)}</code>)? Your current run ends.</p>
+  return isDaily(seed) ? `<h2>Today's challenge</h2>
+    <p class="lead">Start today's deck (<code class="seed">${esc(seed)}</code>)? <b>Your current run ends</b> here.</p>
+    <div class="actions"><button class="btn" data-act="close">Keep playing</button><button class="btn gold" data-act="acceptChallenge">Start the challenge</button></div>`
+    : `<h2>A challenge</h2>
+    <p class="lead">Play the cards someone shared with you (seed <code class="seed">${esc(seed)}</code>)? <b>Your current run ends</b> here.</p>
     <div class="actions"><button class="btn" data-act="close">Not now</button><button class="btn gold" data-act="acceptChallenge">Play these cards</button></div>`;
 }

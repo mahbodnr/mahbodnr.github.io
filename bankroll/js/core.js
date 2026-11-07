@@ -84,6 +84,7 @@ function migrate(s){
   s.runLedger = s.runLedger || {};
   if (!Array.isArray(s.log)) s.log = null;            // runs from before move logging can't be verified
   s.stats.bestMult = s.stats.bestMult || 0;
+  if (s.infinite){ s.coins = Infinity; s.stats.peak = Infinity; s.stats.biggestWin = Infinity; }   // JSON stores Infinity as null
   s.v = SAVE_VERSION;
   return s;
 }

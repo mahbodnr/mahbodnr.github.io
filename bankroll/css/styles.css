@@ -686,6 +686,10 @@ code.seed{white-space:nowrap;font:800 14px/1 ui-monospace,SFMono-Regular,Menlo,C
 .th-mult small{font-family:var(--f-ui);font-size:.62em;font-weight:700;margin-right:1px;vertical-align:.12em}
 .th-head .bname{font-size:14.5px}
 .th-cards{--cw:clamp(42px,11.5vw,54px);gap:5px;margin:10px 0 6px}
+/* the top hand: one row, slightly overlapping, with its combo brackets above and below (leaderboard.js lbHandHTML) */
+.th-hand{position:relative;margin:12px auto 8px}
+.th-hand > .card{position:absolute;margin:0;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.th-hand .links{position:absolute;inset:0;width:auto}
 .th-labels{margin:0;text-align:center;font-size:13px;font-weight:700;color:var(--muted)}
 .th-labels span{color:var(--brass)}
 .hboard{margin-top:8px}
@@ -1093,19 +1097,19 @@ input, textarea{user-select:text;-webkit-user-select:text}
 html.zoomed .putip{zoom:var(--z)}
 
 /* ---------- Clear pack: made to be read at a glance on small screens ----------
-   a big, heavy corner index (rank over suit) that stays visible when cards overlap, one large suit in place of pips or
-   court art, white paper and strong inks; court cards are marked with a small gold crown */
+   the rank, as large as the card allows, with its suit once under it, both in the top-left corner so they stay visible
+   when cards overlap; white paper and strong inks; court cards carry a small gold crown */
 .card.pk-clear{--idx-font:var(--f-ui); --paper:#ffffff; --paper-hi:#ffffff; --paper-lo:#f1f1ee; --ink:#111216; --suit-red:#d3121f;
   --c4d:#e06a00; --c4c:#0f7a35; --gold:#d3a43c}
-.card.pk-clear::before{border-color:rgba(0,0,0,.08)}
-.card.pk-clear .ix{width:calc(var(--cw)*.4);align-items:flex-start;gap:calc(var(--cw)*.02)}
-.card.pk-clear .ix.tl{left:calc(var(--cw)*.07);top:calc(var(--cw)*.06)}
-.card.pk-clear .ix b{font-family:var(--f-ui);font-weight:900;font-size:calc(var(--cw)*.38);letter-spacing:-.07em;line-height:.82}
-.card.pk-clear .ix .su{width:calc(var(--cw)*.24);height:calc(var(--cw)*.24)}
+.card.pk-clear::before{display:none}
+.card.pk-clear:not(.back) .ix{background:transparent}
+.card.pk-clear .ix.tl{left:calc(var(--cw)*.07);top:calc(var(--cw)*.04);width:auto;align-items:flex-start;gap:calc(var(--cw)*.03)}
+.card.pk-clear .ix b{font-family:var(--f-ui);font-weight:900;font-size:calc(var(--cw)*.66);letter-spacing:-.09em;line-height:.8;margin-left:-.03em}
+.card.pk-clear.r10 .ix b{font-size:calc(var(--cw)*.56);letter-spacing:-.12em}
+.card.pk-clear .ix .su{width:calc(var(--cw)*.42);height:calc(var(--cw)*.42)}
 .card.pk-clear .ix.br{display:none}
-.card.pk-clear .cl-mid{position:absolute;right:calc(var(--cw)*.08);bottom:calc(var(--cw)*.09);width:calc(var(--cw)*.5);display:flex;flex-direction:column;align-items:center;gap:calc(var(--cw)*.02)}
-.card.pk-clear .cl-mid .pp{width:calc(var(--cw)*.5);height:calc(var(--cw)*.5);display:block}
-.card.pk-clear .cl-crown{width:calc(var(--cw)*.3);height:calc(var(--cw)*.18);fill:var(--gold);display:block}
+.card.pk-clear .cl-mid{position:absolute;right:calc(var(--cw)*.08);bottom:calc(var(--cw)*.08)}
+.card.pk-clear .cl-crown{width:calc(var(--cw)*.36);height:calc(var(--cw)*.22);fill:var(--gold);display:block}
 
 /* seed with a copy button (run over, settings) */
 .seedline{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -1113,3 +1117,9 @@ html.zoomed .putip{zoom:var(--z)}
 .seedcopy:hover{color:var(--brass-hi);border-color:var(--brass-hi)}
 .seedcopy svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
 .lbdaily{display:flex;flex-direction:column;align-items:center;gap:8px;margin:2px 0 10px}
+
+/* the bank is broken: coins went to infinity */
+.inf-win{display:flex;flex-direction:column;align-items:center;gap:2px;margin:6px 0 4px}
+.inf-win b{font-family:var(--f-display);font-weight:400;font-size:88px;line-height:1;color:var(--brass-hi);text-shadow:0 0 28px rgba(245,217,140,.7), 0 4px 0 rgba(90,60,10,.5)}
+.inf-win span{font-size:13px;color:var(--muted);font-weight:700;letter-spacing:.04em}
+.journey li.won .jn{border-color:var(--gain);color:var(--gain)}

@@ -39,7 +39,10 @@ window.addEventListener('unhandledrejection', e => { const r = e.reason; reportE
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const todayUTC = () => new Date().toISOString().slice(0, 10);
 const telegramLaunch = () => (typeof BankrollTG !== 'undefined' && BankrollTG) || null;   // js/telegram.js, inside Telegram only
-const byScore = (a, b) => (b.level || 0) - (a.level || 0) || (b.peak || 0) - (a.peak || 0) || (b.biggestWin || 0) - (a.biggestWin || 0);
+// infinite coins first (stored as the text 'Infinity': JSON can't hold the number), then level, coins, biggest win
+const isInf = v => +v === Infinity;
+const cmpNum = (x, y) => { x = +x || 0; y = +y || 0; return x === y ? 0 : x > y ? 1 : -1; };
+const byScore = (a, b) => (isInf(b.peak) - isInf(a.peak)) || cmpNum(b.level, a.level) || cmpNum(b.peak, a.peak) || cmpNum(b.biggestWin, a.biggestWin);
 const byMult = (a, b) => (b.mult || 0) - (a.mult || 0) || (a.at || 0) - (b.at || 0);
 function refreshBoard(){ if (ui.modal === 'history' || ui.modal === 'over') render(); const t = $('boardBtn'); if (t) t.hidden = !leaderboardAvailable(); }
 
@@ -90,7 +93,7 @@ const claudeBackend = {
       return per === 'today' && d.day !== day ? null : s ? { r, s } : null; }).filter(Boolean);
     for (const per of ['today', 'all']){
       const list = slots(per);
-      LB.boards[per] = list.filter(x => x.s.level > 0).map(({ r, s }) => ({ ...person(r.id), level:s.level || 1, peak:s.peak || 0, biggestWin:s.biggestWin || 0 })).sort(byScore).slice(0, 50);
+      LB.boards[per] = list.filter(x => x.s.level > 0).map(({ r, s }) => ({ ...person(r.id), level:s.level || 1, peak:+s.peak || 0, biggestWin:+s.biggestWin || 0 })).sort(byScore).slice(0, 50);
       LB.hands[per] = list.filter(x => x.s.hand && x.s.hand.mult > 0).map(({ r, s }) => ({ ...person(r.id), ...s.hand })).sort(byMult).slice(0, 10);
     }
     checkTopHand();
@@ -106,7 +109,7 @@ const claudeBackend = {
       all:upd(cur.all || {}, true), open:upd(cur.open || {}, !p.seeded) };
     const strip = o => JSON.stringify(o, (k, v) => k === 'at' ? undefined : v);
     if (raw && raw.all && strip({ rules:raw.rules, day:raw.day, runs:raw.runs, all:raw.all, open:raw.open }) === strip(body)) return 'ok';
-    try { await this.db.doc('scores/' + LB.me).set(body); return 'ok'; }
+    try { await this.db.doc('scores/' + LB.me).set(JSON.parse(JSON.stringify(body, (k, v) => v === Infinity ? 'Infinity' : v))); return 'ok'; }
     catch(e){ LB.writeFailed = true; return 'denied'; }
   },
 };
@@ -386,6 +389,39 @@ function resetIn(){
 const lbName = r => `<span class="bname">${r.avatar ? `<img src="${esc(r.avatar)}" alt="" referrerpolicy="no-referrer">` : ''}<span class="bn">${esc(r.name || 'Player')}</span>${r.id === LB.me ? ' <em>you</em>' : ''}${r.seeded ? ' <i class="seedtag" title="The player chose this run’s seed">seeded</i>' : ''}</span>`;
 // a stored hand, in rank order like the hand's Rank sort: low to high, Ace high, Jokers last
 const lbRankVal = ([rank]) => +rank === 0 ? 99 : +rank === 1 ? 14 : +rank;
+// The top hand in one row, cards slightly overlapping, with the game's combo brackets: the first combo below the cards,
+// the next above, and so on outwards. Its combos are worked out again from the cards (Two-tone from its flush label).
+// When the cards would be too small to read, they're drawn in the Clear pack.
+function lbHandHTML(cards, labels){
+  const list = (cards || []).filter(c => Array.isArray(c)).slice().sort((a, b) => lbRankVal(a) - lbRankVal(b) || String(a[1]).localeCompare(String(b[1])));
+  if (!list.length) return '';
+  const objs = list.map(([rank, suit], i) => ({ id:'lh' + i, rank:+rank, suit:String(suit) }));
+  const twoTone = (labels || []).some(l => /^(Red|Black) flush/.test(l));
+  const ev = evaluate(objs, twoTone ? [{ type:'2' }] : []);
+  const combos = ev.combos.filter(c => c.ids.length > 1 && (!labels || !labels.length || labels.includes(c.label)));
+  const n = objs.length, STEP = .8;                                  // each card shows 80% of its width
+  const z = typeof ZK === 'number' ? ZK : 1;
+  const avail = Math.min(560, innerWidth / z - 32) - 2 * 26 - 28;  // the dialog's width, less its padding and the panel's
+  const cw = Math.max(26, Math.min(58, avail / (1 + (n - 1) * STEP))), ch = cw * 1.42, step = cw * STEP;
+  const pack = cw < 46 ? 'clear' : undefined;
+  const W = cw + (n - 1) * step, ROW = 19, GAP = 15;
+  const below = combos.filter((_, i) => i % 2 === 0), above = combos.filter((_, i) => i % 2 === 1);
+  const padTop = above.length ? GAP + above.length * ROW + 4 : 0, padBot = below.length ? GAP + below.length * ROW + 4 : 0;
+  const cx = id => { const i = objs.findIndex(o => o.id === id); return i * step + cw / 2; };
+  let paths = '', tags = '';
+  const draw = (cb, k, up) => {
+    const col = (typeof LINK_COLORS !== 'undefined' && LINK_COLORS[cb.kind]) || '#f5d98c';
+    const xs = cb.ids.map(cx), x1 = Math.min(...xs), x2 = Math.max(...xs);
+    const edge = up ? padTop - 2 : padTop + ch + 2, y = up ? padTop - GAP - k * ROW : padTop + ch + GAP + k * ROW;
+    paths += `<path d="M${x1} ${y}H${x2}" style="stroke:${col}"/>` + xs.map(x => `<path d="M${x} ${edge}V${y}" style="stroke:${col}"/><circle cx="${x}" cy="${edge}" r="2" style="fill:${col}"/>`).join('');
+    tags += `<span class="lk" style="left:${(x1 + x2) / 2}px;top:${y}px;--lc:${col}">${esc(cb.label)}</span>`;
+  };
+  below.forEach((cb, k) => draw(cb, k, false)); above.forEach((cb, k) => draw(cb, k, true));
+  const H = padTop + ch + padBot;
+  return `<div class="th-hand" style="width:${W}px;height:${H}px;--cw:${cw}px;--ch:${ch}px">
+      ${objs.map((o, i) => cardHTML(o, { track:false, pack, style:'' }).replace('class="card', `style="left:${i * step}px;top:${padTop}px" class="card`)).join('')}
+      <div class="links" aria-hidden="true"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${paths}</svg>${tags}</div></div>`;
+}
 const lbCards = cards => (cards || []).filter(c => Array.isArray(c)).slice().sort((a, b) => lbRankVal(a) - lbRankVal(b) || String(a[1]).localeCompare(String(b[1])))
   .map(([rank, suit], i) => cardHTML({ id:'lb' + i, rank:+rank, suit:String(suit) }, { track:false })).join('');
 function handsHTML(per){
@@ -395,7 +431,7 @@ function handsHTML(per){
   const [top, ...rest] = list;
   const best = `<div class="tophand ${top.id === LB.me ? 'me' : ''}">
       <div class="th-head"><b class="th-mult"><small>×</small>${fmtFit(top.mult)}</b>${lbName(top)}</div>
-      <div class="minihand th-cards">${lbCards(top.cards)}</div>
+      ${lbHandHTML(top.cards, top.labels)}
       <p class="th-labels">${top.labels.map(esc).join(' <span>×</span> ')}</p></div>`;
   const others = rest.length ? `<div class="board hboard" role="table" aria-label="Runner-up hands">${rest.map((r, i) => `<div class="brow ${r.id === LB.me ? 'me' : ''}" role="row">
       <span>${i + 2}</span>${lbName(r)}<span class="hm">×${fmtFit(r.mult)}</span><span class="hlab">${r.labels.map(esc).join(' + ')}</span></div>`).join('')}</div>` : '';
