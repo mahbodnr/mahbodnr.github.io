@@ -97,19 +97,25 @@ function renderLedger(){
   const ev = S.phase === 'bet' ? null : evaluate(S.hand, S.powerups);
   setHTML($('ledger'), `
     <div class="stat" id="st-coins" title="${fmt(S.coins)} coins"><div class="k">Coins</div><div class="v ${fitCls(fmtFit(S.coins) + 'cc')}">${coin}<span class="num">${fmtFit(S.coins)}</span></div></div>
-    ${betStats()}
-    <div class="stat" id="st-level"><div class="k">Level</div><div class="v ${fitCls(lvl())}">${lvl()}</div></div>`);
-  const L = lvl(), price = levelPrice(L), used = 54 - S.deck.length, need = price - S.coins;
-  // progress toward the next level's price: coins against the price, and what's still missing (or to spare)
-  const ok = need <= 0, pct = Math.max(0, Math.min(100, S.coins / price * 100));
+    ${betStats()}`);
+  // The level bar: this level's medallion, the coins filling toward the next level's price, and the next level's
+  // medallion, locked until the coins cover its price (then the lock opens). A thin strip under the coins shows how
+  // much of the deck is left: the level ends when it runs out.
+  const L = lvl(), price = levelPrice(L), need = price - S.coins, left = S.deck.length;
+  const ok = need <= 0, pct = Math.max(0, Math.min(100, S.coins / price * 100)), deckPct = Math.max(0, Math.min(100, left / 54 * 100));
+  const opened = ok && ui.lvOk === false; ui.lvOk = ok;            // the lock opens now: a little celebration
+  const medal = (n, cls, inner, tip) => `<span class="lv-med ${cls} ${String(n).length > 2 ? 'long' : ''}" title="${tip}"${cls === 'cur' ? ' id="st-level"' : ''}>${inner}<b>${n}</b></span>`;
+  const lock = ok ? '<path d="M8 11V7.5a4 4 0 0 1 7.6-1.7"/><rect x="5" y="11" width="14" height="10" rx="2"/>' : '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>';
   setHTML($('levelbar'), `
-    <div class="lv-goal ${ok ? 'ok' : ''}" role="meter" aria-label="Coins toward level ${L + 1}" aria-valuemin="0" aria-valuemax="${price}" aria-valuenow="${Math.max(0, Math.min(S.coins, price))}"
-      title="${ok ? `You can pay for level ${L + 1}, with ${fmtFit(-need)} to spare` : `${fmtFit(need)} more coins needed for level ${L + 1}`}">
-      <span class="lv-tag">Level ${L + 1}</span>
-      <div class="lv-track"><i style="width:${pct.toFixed(1)}%"></i>
-        <span class="lv-nums">${coin}<b>${fmtFit(Math.max(0, S.coins))}</b><span class="of">/ ${fmtFit(price)}</span></span>
-        <svg class="lv-flag" viewBox="0 0 24 24" aria-hidden="true">${ok ? '<path d="M5 12.5l4.2 4.2L19 7"/>' : '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>'}</svg>
+    <div class="lv-goal ${ok ? 'ok' : ''} ${opened ? 'opened' : ''}" role="meter" aria-label="Level ${L}. Coins toward level ${L + 1}" aria-valuemin="0" aria-valuemax="${price}" aria-valuenow="${Math.max(0, Math.min(S.coins, price))}">
+      ${medal(L, 'cur', '', `Level ${L}`)}
+      <div class="lv-mid" title="${ok ? `You can pay for level ${L + 1}, with ${fmtFit(-need)} to spare` : `${fmtFit(need)} more coins needed for level ${L + 1}`}">
+        <div class="lv-track"><i style="width:${pct.toFixed(1)}%"></i>
+          <span class="lv-nums">${coin}<b>${fmtFit(Math.max(0, S.coins))}</b><span class="of">/ ${fmtFit(price)}</span></span>
+        </div>
+        <div class="lv-deck" title="${left} card${left === 1 ? '' : 's'} left in this level's deck"><i style="width:${deckPct.toFixed(1)}%"></i></div>
       </div>
+      ${medal(L + 1, 'next', `<svg class="lv-lock" viewBox="0 0 24 24" aria-hidden="true">${lock}</svg>`, ok ? `Level ${L + 1}: you can pay its price` : `Level ${L + 1} costs ${fmtFit(price)}`)}
       <span class="lv-need">${ok ? `<b>+${fmtFit(-need)}</b> spare` : `<b>${fmtFit(need)}</b> to go`}</span>
     </div>`);
   if (ui.levelUp){ ui.levelUp = false; floatDelta('st-level', 'LEVEL UP', 'coin-up', 'bump'); }
