@@ -48,6 +48,8 @@ function endIntro(){
   const saved = migrate(load(SAVE_KEY));
   ui.modal = null; ui.prev = null; ui.seen.clear();
   const seed = ui.afterIntroSeed; ui.afterIntroSeed = null;            // opened from a challenge link
+  const group = ui.afterIntroGroup; ui.afterIntroGroup = null;          // or a group challenge link
+  if (group) setTimeout(() => { if (groupsOn()) offerGroup(group); else ui.pendingGroup = group; }, 0);
   if (saved && saved.phase !== 'over'){ S = saved; resumeModal(); render(); if (seed) offerChallenge(seed); }   // asks: a run is in progress
   else beginRun(seed || undefined);
 }

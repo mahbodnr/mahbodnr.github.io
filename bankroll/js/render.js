@@ -216,13 +216,14 @@ function renderPowers(){
   ui.pupPrev = Object.assign(counts, costs);
 }
 
-// The hand's cards are too small to read comfortably: narrower than 56px, or overlapped so that less than 34px of each shows.
+// The hand's cards are too small to read: so many cards that they overlap until less than 26px of each shows, or the
+// cards themselves are under 40px wide.
 // (Card sizes come from the layout, not the pack, so switching packs can't change the answer.)
 function handIsSmall(){
   const cards = document.querySelectorAll('#hand > .card'); if (!cards.length) return false;
   const z = typeof ZK === 'number' ? ZK : 1, a = cards[0].getBoundingClientRect(), w = a.width / z;
   const step = cards.length > 1 ? (cards[1].getBoundingClientRect().left - a.left) / z : w;
-  return w < 56 || step < 34;
+  return w < 40 || step < 26;
 }
 let resizeFrame = 0;
 window.addEventListener('resize', () => { cancelAnimationFrame(resizeFrame); resizeFrame = requestAnimationFrame(() => { if (S) render(); }); });
@@ -399,6 +400,8 @@ function renderModal(){
       <div class="actions"><button class="btn" data-act="close">Keep it</button><button class="btn warn" data-act="releaseConfirm">Release and discard</button></div>`;
   }
   else if (m === 'challenge') html = challengeHTML();
+  else if (m === 'group') html = groupHTML();
+  else if (m === 'joinGroup') html = joinGroupHTML();
   else if (m === 'restart') html = `<h2>New game?</h2><p class="lead">This run will be lost.</p>
     <div class="actions"><button class="btn" data-act="close">Cancel</button><button class="btn gold" data-act="restartNow">New game</button></div>`;
   else if (m === 'pick' || m === 'view'){
@@ -434,7 +437,7 @@ function renderModal(){
   }
 }
 
-const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart', 'release5', 'record', 'unlock', 'challenge'];
+const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart', 'release5', 'record', 'unlock', 'challenge', 'group', 'joinGroup'];
 const MODAL_NAMES = { help:'How to play', result:'Hand result', over:'Run over', reshuffle:'Level complete', tracker:'Card tracker', view:'Discard pile', pick:'Take a card back', history:'History', settings:'Settings', bust:'Cash-out warning', restart:'New game', release5:'Release Extra seat', record:'Top hand of the day', unlock:'Unlocked' };
 // closing a dialog that opened over another (the top-hand celebration) returns to the one underneath
 function closeModal(){ ui.modal = ui.modal === 'record' && ui.modalBack ? ui.modalBack : null; ui.modalBack = null; }
@@ -616,8 +619,9 @@ function overHTML(){
     ${tips ? `<h3>Tips</h3><ul class="tips">${tips}</ul>` : ''}
     ${r ? `<details class="ro-hand"><summary>Last hand</summary>${handBody(r)}</details>` : ''}
     <h3>This run</h3>${stats}
-    <p class="snote seedline">Seed ${seedHTML()}${isDaily(S.seed) ? ' · today\'s challenge' : ''}</p>
-    <div class="ro-more"><button class="btn gold-line" data-act="shareRun">Challenge a friend</button><button class="btn" data-act="playDaily">${isDaily(S.seed) ? 'Daily again' : 'Daily challenge'}</button>
+    <p class="snote seedline">Seed ${seedHTML()}${DAILY_ON && isDaily(S.seed) ? ' · today\'s challenge' : ''}</p>
+    ${S.challenge ? `<div class="ro-group"><button class="btn gold" data-act="groupResults">Group challenge results</button></div>` : ''}
+    <div class="ro-more"><button class="btn gold-line" data-act="createGroup" data-v="run">${S.challenge ? 'Invite more friends' : 'Challenge friends'}</button>${DAILY_ON ? `<button class="btn" data-act="playDaily">${isDaily(S.seed) ? 'Daily again' : 'Daily challenge'}</button>` : ''}
       ${leaderboardAvailable() ? `<button class="btn" data-act="openBoard">Leaderboard</button>` : ''}<button class="btn" data-act="replaySeed">Same cards</button></div>
     <div class="actions ro-actions"><button class="btn gold grow" data-act="restartNow">Play again</button></div>`;
 }
@@ -652,7 +656,7 @@ function helpHTML(){
     </div>
     <p>Keeping a power-up costs upkeep on every new card: <b>double its price</b>, then doubling again with each card (2×, 4×, 8× …). ✕ releases one. Their prices, and the 10's fee, <b>double each level</b>${lvl() > 1 ? ` (shown for level ${lvl()})` : ''}.</p>
     <h3>Levels</h3>
-    <p>When the deck runs out, pay the level price (100, 1,000, 10,000 …) to reshuffle, or the run ends.</p>
+    <p>When the deck runs out, pay the level price to reshuffle, or the run ends. It goes up ×10 a level (100, 1,000, 10,000 …) until level 5, then ×100 a level, and the step grows tenfold every five levels.</p>
     <div class="actions"><button class="btn" data-act="replayTutorial">Introduction</button><button class="btn gold" data-act="close">Got it</button></div>`;
 }
 

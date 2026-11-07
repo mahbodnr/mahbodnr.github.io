@@ -11,8 +11,10 @@ const POWER = {
   5: { type:'5', cost:5, name:'Extra seat',short:'+1 seat' },
 };
 const SWAP_COST = 10, START_COINS = 50;
-// price to pass level L: 100, 200, 500, 1000, 2000, 5000, …
-const levelPrice = L => 100 * Math.pow(10, L - 1);   // 100, 1,000, 10,000, 100,000 …
+// price to pass level L:
+// Levels 1–5 each cost ×10 more (100, 1,000 … 1,000,000); from level 6 the step itself grows tenfold every five levels:
+// levels 6–10 cost ×100 each (1e8 … 1e16), 11–15 ×1,000 (1e19 … 1e31), 16–20 ×10,000, and so on.
+const levelPrice = L => { let e = 2; for (let j = 2; j <= L; j++) e += Math.floor((j - 1) / 5) + 1; return Math.pow(10, e); };
 const lvl = () => S.level || S.stats.shuffles || 1;
 // A pilot build served from /bankroll-pilot/ (for trying rule changes) keeps its own save and settings, so it never
 // touches the live game's. See README: Pilot builds.

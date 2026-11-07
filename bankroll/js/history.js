@@ -17,6 +17,7 @@ function axisNum(v){
   return s + String(Math.round(a));
 }
 // Line chart of coins after each hand, with level boundaries marked.
+const LOG_FROM = 100000;   // from 100,000 coins the chart's y-axis is logarithmic
 function coinChart(hist, target){
   const W = 340, H = 150, padR = 12, padT = 14, padB = 22;
   // an infinite amount (saved as null: JSON has no Infinity) is drawn at the top of the chart
@@ -27,12 +28,25 @@ function coinChart(hist, target){
   if (hi === lo) hi = lo + 10;
   // round the top up to a tidy value: 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8 × a power of ten
   const nice = v => { const m = Math.pow(10, Math.floor(Math.log10(Math.max(1, Math.abs(v))))); return [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].map(k => k * m).find(c => c >= v); };
-  hi = nice(hi);
-  // y labels at the top, middle and bottom; the left margin fits the longest one (about 6.2px a character at 10.5px)
-  const ticks = [hi, (hi + lo) / 2, lo], tl = ticks.map(axisNum);
+  // Past LOG_FROM coins the y-axis turns logarithmic, so the early hands don't flatten into the bottom edge.
+  // (log10 of coins + 1, so 0 stays at the bottom; anything below 0 is drawn at 0 there.)
+  const logScale = hi >= LOG_FROM;
+  let ticks, y;
+  if (logScale){
+    const L = v => Math.log10(Math.max(0, v) + 1), top = Math.ceil(L(hi)), step = Math.max(1, Math.ceil(top / 3));
+    lo = 0; hi = Math.pow(10, top);
+    ticks = []; for (let k = top; k >= 0; k -= step) ticks.push(k ? Math.pow(10, k) : 0);
+    if (ticks[ticks.length - 1] !== 0) ticks.push(0);
+    y = v => inf(v) ? padT : padT + (top - L(v)) * (H - padT - padB) / top;
+  } else {
+    hi = nice(hi);
+    ticks = [hi, (hi + lo) / 2, lo];
+    y = v => inf(v) ? padT : padT + (hi - v) * (H - padT - padB) / (hi - lo);
+  }
+  // y labels; the left margin fits the longest one (about 6.2px a character at 10.5px)
+  const tl = ticks.map(axisNum);
   const padL = Math.max(26, 10 + Math.ceil(Math.max(...tl.map(t => t.length)) * 6.2));
   const x = i => padL + (pts.length === 1 ? 0 : i * (W - padL - padR) / (pts.length - 1));
-  const y = v => inf(v) ? padT : padT + (hi - v) * (H - padT - padB) / (hi - lo);
   const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p.v).toFixed(1)}`).join('');
   const area = `${line}L${x(pts.length - 1).toFixed(1)} ${y(lo).toFixed(1)}L${x(0).toFixed(1)} ${y(lo).toFixed(1)}Z`;
   let marks = '';
@@ -44,9 +58,10 @@ function coinChart(hist, target){
     marks += `<path class="ch-target" d="M${fx.toFixed(1)} ${ty.toFixed(1)}H${W - padR}"/><text class="ch-tl" x="${W - padR}" y="${(ty - 5).toFixed(1)}" text-anchor="end">${target.label}</text>`;
   }
   const grid = ticks.map((v, i) => `<path class="ch-grid" d="M${padL} ${y(v).toFixed(1)}H${W - padR}"/><text class="ch-ax" x="${padL - 6}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end">${tl[i]}</text>`).join('');
+  const scaleTag = logScale ? `<text class="ch-lt" x="${W - padR}" y="${padT - 4}" text-anchor="end">log scale</text>` : '';
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Coins after each hand: from ${fmtFit(pts[0].v)} to ${fmtFit(last.v)} over ${hist.length} hands">
     <defs><linearGradient id="chFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ch-f1"/><stop offset="1" class="ch-f2"/></linearGradient></defs>
-    ${grid}${lo < 0 ? `<path class="ch-zero" d="M${padL} ${y(0).toFixed(1)}H${W - padR}"/>` : ''}${marks}
+    ${grid}${scaleTag}${lo < 0 ? `<path class="ch-zero" d="M${padL} ${y(0).toFixed(1)}H${W - padR}"/>` : ''}${marks}
     <path class="ch-area" d="${area}" fill="url(#chFill)"/><path class="ch-line" d="${line}"/>
     <circle class="ch-end ${target && last.v < target.v ? 'short' : ''}" cx="${x(pts.length - 1).toFixed(1)}" cy="${y(last.v).toFixed(1)}" r="4"/>
     <text class="ch-ax" x="${padL}" y="${H - 6}" text-anchor="start">Start</text><text class="ch-ax" x="${W - padR}" y="${H - 6}" text-anchor="end">Hand ${hist[hist.length - 1].n}</text>

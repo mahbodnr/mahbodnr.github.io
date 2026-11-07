@@ -189,9 +189,11 @@ const supabaseBackend = {
         calls.push(this.client.rpc('bankroll_leaderboard', { p_period:p, p_include_seeded:seeded, p_limit:50 }));
         calls.push(this.client.rpc('bankroll_top_hands', { p_period:p, p_include_seeded:seeded, p_limit:10 }));
       }
-      calls.push(this.client.rpc('bankroll_leaderboard', { p_period:'all', p_include_seeded:true, p_limit:50, p_seed:dailySeed() }));
-      calls.push(this.client.rpc('bankroll_top_hands', { p_period:'all', p_include_seeded:true, p_limit:10, p_seed:dailySeed() }));
-      const [today, todayHands, all, allHands, daily, dailyHands] = await Promise.all(calls);
+      if (DAILY_ON){
+        calls.push(this.client.rpc('bankroll_leaderboard', { p_period:'all', p_include_seeded:true, p_limit:50, p_seed:dailySeed() }));
+        calls.push(this.client.rpc('bankroll_top_hands', { p_period:'all', p_include_seeded:true, p_limit:10, p_seed:dailySeed() }));
+      }
+      const [today, todayHands, all, allHands, daily = {}, dailyHands = {}] = await Promise.all(calls);
       const bad = [today, todayHands, all, allHands, daily, dailyHands].find(r => r.error);
       if (bad) throw bad.error;
       if (seeded !== LB.seeded) return;                       // the toggle changed while this was loading
@@ -207,13 +209,22 @@ const supabaseBackend = {
     refreshBoard();
   },
   // asks the server for a run: it picks the seed unless the player chose one
-  async startRun(seed){
+  async startRun(seed, challenge){
     try {
-      const { data, error } = await this.client.rpc('bankroll_start_run', { p_seed:seed || null,
-        p_platform: telegramLaunch() ? 'telegram' : 'web', p_client: 'rules ' + RULES });
+      const args = { p_seed:seed || null, p_platform: telegramLaunch() ? 'telegram' : 'web', p_client: 'rules ' + RULES };
+      if (challenge) args.p_challenge = challenge;
+      const { data, error } = await this.client.rpc('bankroll_start_run', args);
       if (error || !data) return { error:'error' };
-      return data.success ? data : { error:data.error || 'error' };
+      return data.success ? data : { error:data.error || 'error', challenge:data.challenge };
     } catch(e){ return { error:'error' }; }
+  },
+  async createChallenge(runId){
+    try { const { data, error } = await this.client.rpc('bankroll_create_challenge', { p_run_id:runId || null }); return error || !data ? { error:'error' } : data; }
+    catch(e){ return { error:'error' }; }
+  },
+  async challengeBoard(code){
+    try { const { data, error } = await this.client.rpc('bankroll_challenge_board', { p_code:code }); return error || !data ? { error:'error' } : data; }
+    catch(e){ return { error:'error' }; }
   },
   // sends the run's moves; the verify function replays them and stores what the replay scored
   async submit(p){
@@ -269,6 +280,7 @@ async function initLeaderboard(){
   if (ok) LB.backend = backend; else LB.state = 'off';
   refreshBoard();
   if (LB.backend){ await upgradeFreshRun(); reportProgress(); }
+  if (ui.pendingGroup){ const c = ui.pendingGroup; ui.pendingGroup = null; offerGroup(c); }
 }
 
 /* ---------- starting runs ---------- */
@@ -279,21 +291,28 @@ function useServerRun(run){
   S.seedChosen = !!run.seeded;
   S.official = { runId:run.run_id, seeded:!!run.seeded };
   S.runId = run.run_id;
+  S.challenge = run.challenge || null;             // a group challenge (js/social.js)
 }
 // Every new run goes through here. Signed in on the website, the server issues the run first so it can be
 // verified later; if the server can't be reached, the run is dealt locally and simply isn't posted.
 let runStarting = false;
-async function beginRun(seed){
+async function beginRun(seed, challenge){
   const chosen = cleanSeed(seed || '');
+  if (challenge && !officialPossible()){ toast('Group challenges need a connection to the server'); return; }
   if (!officialPossible()){ newGame(chosen || undefined); render(); return; }
   if (runStarting) return;
   // the window stays open with its buttons busy until the server answers (or 6 seconds pass: then the run is dealt
   // locally and simply isn't posted), so the player never sees an empty table while waiting
   runStarting = true; ui.starting = true; render();
-  const ask = () => Promise.race([LB.backend.startRun(chosen || null), new Promise(r => setTimeout(() => r({ error:'timeout' }), 6000))]);
+  const ask = () => Promise.race([LB.backend.startRun(chosen || null, challenge), new Promise(r => setTimeout(() => r({ error:'timeout' }), 6000))]);
   let run = await ask();
   if (run.error === 'rate_limited'){ await new Promise(r => setTimeout(r, 2100)); run = await ask(); }
   runStarting = false; ui.starting = false; ui.modal = null;
+  if (challenge && !run.run_id){                    // a challenge is played on the server or not at all
+    if (run.error === 'already_played'){ openGroup(run.challenge || challenge); toast('You\'ve played this challenge'); }
+    else toast(run.error === 'unknown_challenge' ? 'That challenge doesn\'t exist' : 'Couldn\'t start the challenge. Try again in a moment');
+    render(); return;
+  }
   if (run.run_id) useServerRun(run);
   else {
     newGame(chosen || undefined);
@@ -389,8 +408,8 @@ function resetIn(){
 const lbName = r => `<span class="bname">${r.avatar ? `<img src="${esc(r.avatar)}" alt="" referrerpolicy="no-referrer">` : ''}<span class="bn">${esc(r.name || 'Player')}</span>${r.id === LB.me ? ' <em>you</em>' : ''}${r.seeded ? ' <i class="seedtag" title="The player chose this run’s seed">seeded</i>' : ''}</span>`;
 // a stored hand, in rank order like the hand's Rank sort: low to high, Ace high, Jokers last
 const lbRankVal = ([rank]) => +rank === 0 ? 99 : +rank === 1 ? 14 : +rank;
-// The top hand in one row, cards slightly overlapping, with the game's combo brackets: the first combo below the cards,
-// the next above, and so on outwards. Its combos are worked out again from the cards (Two-tone from its flush label).
+// The top hand in one row, cards slightly overlapping, with the game's combo brackets: straights above the cards,
+// pairs and flushes below. Its combos are worked out again from the cards (Two-tone from its flush label).
 // When the cards would be too small to read, they're drawn in the Clear pack.
 function lbHandHTML(cards, labels){
   const list = (cards || []).filter(c => Array.isArray(c)).slice().sort((a, b) => lbRankVal(a) - lbRankVal(b) || String(a[1]).localeCompare(String(b[1])));
@@ -405,7 +424,7 @@ function lbHandHTML(cards, labels){
   const cw = Math.max(26, Math.min(58, avail / (1 + (n - 1) * STEP))), ch = cw * 1.42, step = cw * STEP;
   const pack = cw < 46 ? 'clear' : undefined;
   const W = cw + (n - 1) * step, ROW = 19, GAP = 15;
-  const below = combos.filter((_, i) => i % 2 === 0), above = combos.filter((_, i) => i % 2 === 1);
+  const above = combos.filter(c => c.kind === 'straight'), below = combos.filter(c => c.kind !== 'straight');   // straights on top; pairs and flushes below
   const padTop = above.length ? GAP + above.length * ROW + 4 : 0, padBot = below.length ? GAP + below.length * ROW + 4 : 0;
   const cx = id => { const i = objs.findIndex(o => o.id === id); return i * step + cw / 2; };
   let paths = '', tags = '';
@@ -441,7 +460,7 @@ function leaderboardHTML(){
   if (LB.state === 'loading') return `<p class="empty">Loading the leaderboard…</p>`;
   if (LB.state === 'slow') return `<p class="empty">The leaderboard can't be reached right now. It will appear once it loads.</p>`;
   if (LB.state === 'error') return `<p class="empty">The leaderboard isn't available right now. Try again in a moment.</p>`;
-  const hasDaily = LB.kind === 'supabase';                     // the daily board needs the website's server
+  const hasDaily = DAILY_ON && LB.kind === 'supabase';         // the daily board needs the website's server (and is off for now)
   const per = LB.period === 'all' ? 'all' : LB.period === 'daily' && hasDaily ? 'daily' : 'today';
   const rows = LB.boards[per];
   const toggle = `<div class="lbbar"><div class="sg lbper" role="group" aria-label="Leaderboard period">

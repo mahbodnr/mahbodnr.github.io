@@ -171,9 +171,9 @@ const RANK_LETTER = { 11:'J', 12:'Q', 13:'K' };
 
 // The centre panel of a J, Q or K in the given pack. The panel is 100 × 176 (it matches the card's centre area),
 // split into two mirrored halves of 100 × 88 for the double-headed designs.
-// Clear: the rank, very large, with its suit once under it (the corner index does it all); court cards add a small crown
+// Clear: the rank, very large, with its suit once under it: the corner index does it all
 const CROWN = '<svg class="cl-crown" viewBox="0 0 40 24" aria-hidden="true"><path d="M3 20 L1 5 L11 12 L20 1 L29 12 L39 5 L37 20 Z"/><rect x="3" y="20" width="34" height="4" rx="1"/></svg>';
-function clearMid(c){ return c.rank >= 11 ? `<div class="cl-mid">${CROWN}</div>` : ''; }
+function clearMid(c){ return ''; }                                   // (the crown on court cards was dropped: the big J/Q/K says it)
 function courtHTML(c, pk){
   if (pk === 'clear') return clearMid(c);
   const R = RANK_LETTER[c.rank], suit = `<use href="#su-${c.suit}"`;
