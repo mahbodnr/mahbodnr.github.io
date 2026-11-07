@@ -12,9 +12,8 @@ const POWER = {
 };
 const SWAP_COST = 10, START_COINS = 50;
 // price to pass level L:
-// Levels 1–5 each cost ×10 more (100, 1,000 … 1,000,000); from level 6 the step itself grows tenfold every five levels:
-// levels 6–10 cost ×100 each (1e8 … 1e16), 11–15 ×1,000 (1e19 … 1e31), 16–20 ×10,000, and so on.
-const levelPrice = L => { let e = 2; for (let j = 2; j <= L; j++) e += Math.floor((j - 1) / 5) + 1; return Math.pow(10, e); };
+// Level 1 costs 100; each level after costs the previous price ×10, ×20, ×30 …: 100, 1,000, 20,000, 600,000, 24M …
+const levelPrice = L => { let p = 100; for (let k = 1; k < L; k++) p *= 10 * k; return p; };
 const lvl = () => S.level || S.stats.shuffles || 1;
 // A pilot build served from /bankroll-pilot/ (for trying rule changes) keeps its own save and settings, so it never
 // touches the live game's. See README: Pilot builds.
@@ -68,7 +67,7 @@ function newGame(seed){
 /* ================= save versioning ================= */
 // Bump SAVE_VERSION when the save format changes, and teach migrate() to upgrade older saves.
 const SAVE_VERSION = 3;
-const RULES = 6;   // 6: keeping a power-up costs 2×, 4×, 8× … its price per card; 5: upkeep doubled from 1×; 4: the Ace boost adds once to three/four of a kind; 3: half a bet to deal; 2: an extra bet to deal, card debt ×1.5 per card, level prices ×10 (bump when the rules change)
+const RULES = 7;   // 7: level prices ×10, ×20, ×30 …, power-up prices and the 10's fee ×10 a level; 6: keeping a power-up costs 2×, 4×, 8× … its price per card; 5: upkeep doubled from 1×; 4: the Ace boost adds once to three/four of a kind; 3: half a bet to deal; 2: an extra bet to deal, card debt ×1.5 per card, level prices ×10 (bump when the rules change)
 function migrate(s){
   if (!s || !Array.isArray(s.deck) || !s.phase) return null;
   if (s.v && s.v > SAVE_VERSION) return null;            // saved by a newer version: start fresh
@@ -95,9 +94,9 @@ function migrate(s){
 const isJoker = c => c.rank === 0;
 const isRed = c => c.suit === 'H' || c.suit === 'D' || c.suit === 'JR';
 const capacity = () => 5 + S.jokerSeen.length + S.powerups.filter(p => p.type === '5').length;
-// power-up prices double with each level: level 1 = the base price, level 2 = ×2, level 3 = ×4 …
-const powerCost = rank => POWER[rank].cost * Math.pow(2, lvl() - 1);
-const swapCost = () => SWAP_COST * Math.pow(2, lvl() - 1);   // the 10 take-back fee doubles too
+// power-up prices go up ×10 with each level: level 1 = the base price, level 2 = ×10, level 3 = ×100 …
+const powerCost = rank => POWER[rank].cost * Math.pow(10, lvl() - 1);
+const swapCost = () => SWAP_COST * Math.pow(10, lvl() - 1);  // the 10 take-back fee goes up ×10 too
 // a power-up costs its price (by level) to buy, and keeping it doubles that for every card: 2×, 4×, 8× its price …
 // (p.paid = cards it has paid upkeep for so far)
 const upkeepOf = p => powerCost(p.card.rank) * Math.pow(2, (p.paid || 0) + 1);

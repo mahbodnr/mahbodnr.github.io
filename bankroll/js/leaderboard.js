@@ -424,16 +424,22 @@ function lbHandHTML(cards, labels){
   const cw = Math.max(26, Math.min(58, avail / (1 + (n - 1) * STEP))), ch = cw * 1.42, step = cw * STEP;
   const pack = cw < 46 ? 'clear' : undefined;
   const W = cw + (n - 1) * step, ROW = 19, GAP = 15;
-  const above = combos.filter(c => c.kind === 'straight'), below = combos.filter(c => c.kind !== 'straight');   // straights on top; pairs and flushes below
+  // straights on top; pairs and flushes below. Wider combos nearest the cards (they have room to place their label
+  // between the lines passing through), short ones further out.
+  const wide = (a, b) => b.ids.length - a.ids.length;
+  const above = combos.filter(c => c.kind === 'straight').sort(wide), below = combos.filter(c => c.kind !== 'straight').sort(wide);
   const padTop = above.length ? GAP + above.length * ROW + 4 : 0, padBot = below.length ? GAP + below.length * ROW + 4 : 0;
   const cx = id => { const i = objs.findIndex(o => o.id === id); return i * step + cw / 2; };
   let paths = '', tags = '';
+  // a card in several combos on the same side gets one line per combo, side by side
+  const nudge = (id, cb, side) => { const list = side.filter(c => c.ids.includes(id)); return (list.indexOf(cb) - (list.length - 1) / 2) * 6; };
   const draw = (cb, k, up) => {
     const col = (typeof LINK_COLORS !== 'undefined' && LINK_COLORS[cb.kind]) || '#f5d98c';
-    const xs = cb.ids.map(cx), x1 = Math.min(...xs), x2 = Math.max(...xs);
+    const xs = cb.ids.map(id => cx(id) + nudge(id, cb, up ? above : below)), x1 = Math.min(...xs), x2 = Math.max(...xs);
     const edge = up ? padTop - 2 : padTop + ch + 2, y = up ? padTop - GAP - k * ROW : padTop + ch + GAP + k * ROW;
     paths += `<path d="M${x1} ${y}H${x2}" style="stroke:${col}"/>` + xs.map(x => `<path d="M${x} ${edge}V${y}" style="stroke:${col}"/><circle cx="${x}" cy="${edge}" r="2" style="fill:${col}"/>`).join('');
-    tags += `<span class="lk" style="left:${(x1 + x2) / 2}px;top:${y}px;--lc:${col}">${esc(cb.label)}</span>`;
+    const outer = (up ? above : below).slice(k + 1).flatMap(c => c.ids.map(id => cx(id) + nudge(id, c, up ? above : below)));
+    tags += `<span class="lk" style="left:${labelSpot(x1, x2, outer, cb.label, W)}px;top:${y}px;--lc:${col}">${esc(cb.label)}</span>`;
   };
   below.forEach((cb, k) => draw(cb, k, false)); above.forEach((cb, k) => draw(cb, k, true));
   const H = padTop + ch + padBot;

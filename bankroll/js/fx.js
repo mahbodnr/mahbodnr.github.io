@@ -252,6 +252,20 @@ function shakeApp(){
 // a combo split across rows is drawn on every row it touches, and labelled on its last one.
 const LINK_COLORS = { pair:'#f5d98c', straight:'#6fd3c1', flush:'#ff9aa2' };
 const LINK_STEP = 17;
+// Where a bracket's label goes: on its line, as near its middle as it can be without covering the lines of brackets
+// further out (which pass through this one's row). avoid: those lines' x positions; W: the width available.
+function labelSpot(x1, x2, avoid, text, W){
+  const w = String(text).length * 6.2 + 18, mid = (x1 + x2) / 2;
+  const pts = [0].concat(avoid.filter(x => x > 0 && x < W).sort((a, b) => a - b), [W]);
+  let best = null;
+  for (let i = 0; i < pts.length - 1; i++){
+    const a = pts[i] + 4, b = pts[i + 1] - 4;
+    if (b - a < w) continue;
+    const c = Math.min(Math.max(mid, a + w / 2), b - w / 2), d = Math.abs(c - mid);
+    if (!best || d < best.d) best = { c, d };
+  }
+  return best ? best.c : mid;
+}
 function drawComboLinks(){
   const hand = $('hand'); if (!hand) return;
   hand.querySelectorAll('.links').forEach(n => n.remove());
@@ -272,6 +286,9 @@ function drawComboLinks(){
   const nRows = Math.max(...[...hand.children].filter(el => el.matches('.card, .emptyslot')).map(rowOf)) + 1;
   const perRow = Array.from({ length: nRows }, () => []);
   items.forEach((it, k) => new Set(it.els.map(rowOf)).forEach(r => perRow[r].push(k)));
+  // wide combos (more cards) nearest the cards, short ones further out: a wide bracket has room to set its label between
+  // the lines passing through it, and nothing passes through the outermost one
+  perRow.forEach(ks => ks.sort((a, b) => items[b].els.length - items[a].els.length));
   const room = n => (n ? n * LINK_STEP + 12 : 0);
   // make room under the upper rows, then measure again (the layout moved)
   const upper = Math.max(0, ...perRow.slice(0, -1).map(a => room(a.length)));
@@ -285,10 +302,14 @@ function drawComboLinks(){
     if (!ks.length) return;
     const rowCards = [...hand.children].filter(el => el.matches('.card, .emptyslot') && rowOf(el) === r);
     const base = (Math.max(...rowCards.map(el => el.getBoundingClientRect().bottom)) - hr.top) / ZK + 6;
+    // a card in several combos gets one line per combo, side by side (not on top of each other)
+    const shared = new Map();
+    ks.forEach(k => items[k].els.forEach(el => { if (rowOf(el) === r) shared.set(el, (shared.get(el) || []).concat(k)); }));
+    const nudge = (el, k) => { const list = shared.get(el) || [k]; return (list.indexOf(k) - (list.length - 1) / 2) * 6; };
+    const allXs = ks.map(k => items[k].els.filter(el => rowOf(el) === r).map(el => { const b = el.getBoundingClientRect(); return (b.left - hr.left + b.width / 2) / ZK + nudge(el, k); }));
     ks.forEach((k, j) => {
       const it = items[k], col = LINK_COLORS[it.cb.kind] || '#f5d98c';
-      const here = it.els.filter(el => rowOf(el) === r);
-      const xs = here.map(el => { const b = el.getBoundingClientRect(); return (b.left - hr.left + b.width / 2) / ZK; });
+      const xs = allXs[j];
       const x1 = Math.min(...xs), x2 = Math.max(...xs), y = base + 6 + j * LINK_STEP;
       const lastRow = Math.max(...it.els.map(rowOf)) === r;
       // a combo that continues on another row gets an open end pointing that way
@@ -296,7 +317,8 @@ function drawComboLinks(){
       const lead = Math.min(...it.els.map(rowOf)) < r ? `<path d="M${x1 - 7} ${y}h7" style="stroke:${col};stroke-dasharray:2 3"/>` : '';
       paths += `<path d="M${x1} ${y}H${x2}" style="stroke:${col}"/>${cont}${lead}` +
         xs.map(x => `<path d="M${x} ${base - 2}V${y}" style="stroke:${col}"/><circle cx="${x}" cy="${base - 2}" r="2.2" style="fill:${col}"/>`).join('');
-      if (lastRow) labels += `<span class="lk" style="left:${(x1 + x2) / 2}px;top:${y}px;--lc:${col}">${it.cb.label} ×${fmt(it.cb.factor)}</span>`;
+      const text = `${it.cb.label} ×${fmt(it.cb.factor)}`;
+      if (lastRow) labels += `<span class="lk" style="left:${labelSpot(x1, x2, allXs.slice(j + 1).flat(), text, hr.width / ZK)}px;top:${y}px;--lc:${col}">${text}</span>`;
     });
   });
   const H = hand.scrollHeight;

@@ -381,10 +381,10 @@ function renderModal(){
         <div class="lv-medal"><span>Level</span><b>${L + 1}</b></div>
       </div>
       <div class="receipt"><div><span>Coins</span><b>${fmtFit(S.coins)}</b></div><div><span>Price</span><b class="neg">−${fmtFit(price)}</b></div><div class="tot"><span>Left</span><b>${fmtFit(S.coins - price)}</b></div></div>
-      <div class="pricebump"><div class="pb-head">Prices <b>×2</b> in level ${L + 1}</div>
+      <div class="pricebump"><div class="pb-head">Prices <b>×10</b> in level ${L + 1}</div>
         <div class="pb-list">${PU_ORDER.map(t => { const r = PU_RANK[t], now = powerCost(r);
-          return `<div class="pb-item">${puEmblem(t, 1)}<span>${Object.values(POWER).find(x => x.type === t).name}</span><s>${fmtShort(now)}</s><b>${coin}${fmtShort(now * 2)}</b></div>`; }).join('')}
-          <div class="pb-item"><span class="pb-ten">10</span><span>Take back</span><s>${fmtShort(swapCost())}</s><b>${coin}${fmtShort(swapCost() * 2)}</b></div></div></div>
+          return `<div class="pb-item">${puEmblem(t, 1)}<span>${Object.values(POWER).find(x => x.type === t).name}</span><s>${fmtShort(now)}</s><b>${coin}${fmtShort(now * 10)}</b></div>`; }).join('')}
+          <div class="pb-item"><span class="pb-ten">10</span><span>Take back</span><s>${fmtShort(swapCost())}</s><b>${coin}${fmtShort(swapCost() * 10)}</b></div></div></div>
       <div class="actions"><button class="btn gold grow" data-act="reshuffle">Pay ${fmtFit(price)}</button></div>`;
   }
   else if (m === 'tracker') html = trackerHTML();
@@ -654,9 +654,9 @@ function helpHTML(){
       ${exHand('5C', [0])}<span>Extra seat<small>+1 seat</small></span><b class="cost">${coin}${fmtFit(powerCost(5))}</b>
       ${exHand('10D', [0])}<span>Take back<small>any card from the discard pile</small></span><b class="cost">${coin}${fmtFit(swapCost())}</b>
     </div>
-    <p>Keeping a power-up costs upkeep on every new card: <b>double its price</b>, then doubling again with each card (2×, 4×, 8× …). ✕ releases one. Their prices, and the 10's fee, <b>double each level</b>${lvl() > 1 ? ` (shown for level ${lvl()})` : ''}.</p>
+    <p>Keeping a power-up costs upkeep on every new card: <b>double its price</b>, then doubling again with each card (2×, 4×, 8× …). ✕ releases one. Their prices, and the 10's fee, go up <b>×10 each level</b>${lvl() > 1 ? ` (shown for level ${lvl()})` : ''}.</p>
     <h3>Levels</h3>
-    <p>When the deck runs out, pay the level price to reshuffle, or the run ends. It goes up ×10 a level (100, 1,000, 10,000 …) until level 5, then ×100 a level, and the step grows tenfold every five levels.</p>
+    <p>When the deck runs out, pay the level price to reshuffle, or the run ends. Each level costs the last one ×10, then ×20, ×30 … (100, 1,000, 20,000, 600,000 …).</p>
     <div class="actions"><button class="btn" data-act="replayTutorial">Introduction</button><button class="btn gold" data-act="close">Got it</button></div>`;
 }
 

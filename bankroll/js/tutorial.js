@@ -127,7 +127,7 @@ const INTRO = [
   { target:'#modalRoot [data-act="bustConfirm"]', ok:['#modalRoot [data-act="bustConfirm"]'], title:'Busted', until:() => S.phase === 'over',
     text:() => 'A cash-out that can\'t cover the debt ends the run.' },
   { target:'#st-debt', title:'Run over', text:() => 'A big bet, then chasing cards, ran the debt past what the hand could pay. Keep coins back, and cash out a good hand.' },
-  { target:'#levelbar', title:'Levels', text:() => `The other way to lose: each deck is a level. When it runs out, pay the level price to reshuffle: ${coin}<b>100</b> for level 2, then 1,000, 10,000 … Short of it, the run ends. This bar shows how close you are.` },
+  { target:'#levelbar', title:'Levels', text:() => `The other way to lose: each deck is a level. When it runs out, pay the level price to reshuffle: ${coin}<b>100</b> for level 2, then 1,000, 20,000 … Short of it, the run ends. This bar shows how close you are.` },
   { title:'You\'re ready', center:true, done:true,
     text:() => `That's the game. You start with ${coin}<b>${START_COINS}</b>. Help (?) has the rules any time. Good luck!` },
 ];

@@ -58,10 +58,9 @@ function coinChart(hist, target){
     marks += `<path class="ch-target" d="M${fx.toFixed(1)} ${ty.toFixed(1)}H${W - padR}"/><text class="ch-tl" x="${W - padR}" y="${(ty - 5).toFixed(1)}" text-anchor="end">${target.label}</text>`;
   }
   const grid = ticks.map((v, i) => `<path class="ch-grid" d="M${padL} ${y(v).toFixed(1)}H${W - padR}"/><text class="ch-ax" x="${padL - 6}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end">${tl[i]}</text>`).join('');
-  const scaleTag = logScale ? `<text class="ch-lt" x="${W - padR}" y="${padT - 4}" text-anchor="end">log scale</text>` : '';
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Coins after each hand: from ${fmtFit(pts[0].v)} to ${fmtFit(last.v)} over ${hist.length} hands">
     <defs><linearGradient id="chFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ch-f1"/><stop offset="1" class="ch-f2"/></linearGradient></defs>
-    ${grid}${scaleTag}${lo < 0 ? `<path class="ch-zero" d="M${padL} ${y(0).toFixed(1)}H${W - padR}"/>` : ''}${marks}
+    ${grid}${lo < 0 ? `<path class="ch-zero" d="M${padL} ${y(0).toFixed(1)}H${W - padR}"/>` : ''}${marks}
     <path class="ch-area" d="${area}" fill="url(#chFill)"/><path class="ch-line" d="${line}"/>
     <circle class="ch-end ${target && last.v < target.v ? 'short' : ''}" cx="${x(pts.length - 1).toFixed(1)}" cy="${y(last.v).toFixed(1)}" r="4"/>
     <text class="ch-ax" x="${padL}" y="${H - 6}" text-anchor="start">Start</text><text class="ch-ax" x="${W - padR}" y="${H - 6}" text-anchor="end">Hand ${hist[hist.length - 1].n}</text>
