@@ -141,6 +141,7 @@ function newChallengeHTML(){
     <div class="pickch">
       <button class="pickopt" data-act="makeChallenge" data-v="group"><span class="po-ico" aria-hidden="true">♠</span><span><b>Group challenge</b><small>Send it to a group: everyone plays the same deck once, with a live scoreboard in the chat.</small></span></button>
       <button class="pickopt" data-act="makeChallenge" data-v="duel"><span class="po-ico" aria-hidden="true">⚔</span><span><b>Duel</b><small>You against one friend on the same deck. The winner is announced, then rematch!</small></span></button>
+      ${telegramLaunch() ? `<button class="pickopt" data-act="shareChatGame"><span class="po-ico" aria-hidden="true">🏆</span><span><b>Chat leaderboard</b><small>A scoreboard that stays in the group: everyone's best run, any time, on any deck.</small></span></button>` : ''}
     </div>
     <div class="actions"><button class="btn" data-act="close">Cancel</button></div>`;
 }
@@ -153,7 +154,8 @@ async function createGroup(fromRun, kind = 'group'){
   groupBusy = false;
   if (!res.success){ toast(res.error === 'rate_limited' ? 'Too many challenges for now. Try again later' : 'Couldn\'t make a challenge. Try again in a moment'); return; }
   const made = res.kind || kind;
-  if (fromRun && S.official){ S.challenge = res.code; store(SAVE_KEY, S); }
+  ui.madeChallenge = { code:res.code, kind:made };
+  if (fromRun && S.official){ S.challenge = res.code; S.chInfo = challengeInfo(res.code); store(SAVE_KEY, S); }
   await shareGroup(res.code, made);
   if (!fromRun) offerGroup(res.code, true);
   else openGroup(res.code);
@@ -175,7 +177,7 @@ async function loadGroup(code){
   const res = await LB.backend.challengeBoard(code);
   if (ui.groupCode !== code && (!ui.group || ui.group.code !== code)) return;
   ui.group = res.success ? { code, data:res } : { code, error:res.error || 'error' };
-  if (ui.modal === 'group' || ui.modal === 'joinGroup') render();
+  if (ui.modal === 'group' || ui.modal === 'joinGroup' || ui.modal === 'over') render();
 }
 function openGroup(code){ ui.groupCode = code; ui.modal = 'group'; render(); loadGroup(code); }
 const groupMe = g => g && g.data && g.data.players.find(p => p.user_id === LB.me);
@@ -224,4 +226,111 @@ function groupHTML(){
     <div class="actions"><button class="btn" data-act="groupRefresh">Refresh</button>${done && mine
       ? '<button class="btn" data-act="makeChallenge" data-v="duel">Rematch</button>'
       : `<button class="btn" data-act="groupInvite">${duel ? 'Send again' : 'Invite more'}</button>`}<button class="btn gold" data-act="close">Close</button></div>`;
+}
+
+/* ---------- while playing a challenge, and when it ends ----------
+   A strip above the level bar says what is being played (a group challenge or a duel, whose deck, one try) with a
+   button to the scores; the run-over window opens with the challenge's result: the placing, the board, what next. */
+// what a challenge run is (kept with the run, so it survives a reload): its kind and who made it
+function challengeInfo(code){
+  const g = ui.group && ui.group.code === code && ui.group.data;
+  if (g) return { kind:g.kind || 'group', host:g.host || 'A friend', mine:!!(LB.me && g.host_id === LB.me), round:g.round || 1 };
+  if (ui.madeChallenge && ui.madeChallenge.code === code) return { kind:ui.madeChallenge.kind, host:LB.myName || 'You', mine:true, round:1 };
+  return { kind:'group', host:'', mine:false, round:1 };
+}
+const chTitle = i => i.kind === 'duel' ? (i.mine ? 'Your duel' : `Duel with ${esc(i.host || 'a friend')}`)
+  : i.mine ? 'Your group challenge' : i.host ? `${esc(i.host)}'s group challenge` : 'Group challenge';
+// the strip above the level bar
+function playBarHTML(){
+  if (!S || S.intro) return '';
+  if (S.challenge){
+    const i = S.chInfo || challengeInfo(S.challenge), over = S.phase === 'over';
+    return `<div class="playbar ${i.kind}"><span class="pb-ico" aria-hidden="true">${i.kind === 'duel' ? '⚔' : '♠'}</span>
+      <span class="pb-txt"><b>${chTitle(i)}${i.round > 1 ? ` · round ${i.round}` : ''}</b><small>${over ? 'Your try is done' : i.kind === 'duel' ? (i.mine ? 'Same deck as your opponent · your one try' : `Same deck as ${esc(i.host || 'your friend')} · your one try`) : 'Same deck as everyone · your one try'}</small></span>
+      <button class="pb-btn" data-act="groupResults">Scores</button></div>`;
+  }
+  if (gameToken && !S.seedChosen) return `<div class="playbar game"><span class="pb-ico" aria-hidden="true">🏆</span>
+      <span class="pb-txt"><b>Chat leaderboard</b><small>Your best run goes to the chat</small></span>
+      <button class="pb-btn" data-act="chatScores">Scores</button></div>`;
+  return '';
+}
+// the top of the run-over window for a challenge (or a chat leaderboard) run
+function overPlayHTML(){
+  if (S.challenge){
+    const i = S.chInfo || challengeInfo(S.challenge), g = ui.group && ui.group.code === S.challenge ? ui.group : null;
+    if (!g && groupsOn()) setTimeout(() => loadGroup(S.challenge), 0);
+    const rows = g && g.data ? g.data.players : [], me = rows.findIndex(p => p.user_id === LB.me), mine = rows[me];
+    let headline = 'Posting your result…', sub = '';
+    if (mine && mine.finished){
+      if (i.kind === 'duel'){
+        const other = rows.find(p => p.user_id !== LB.me);
+        headline = !other ? 'Waiting for your opponent' : !other.finished ? `${esc(other.name)} is still playing` : me === 0 ? 'You won the duel! 🏆' : `${esc(other.name)} won this one`;
+        sub = !other ? 'The duel card in the chat shows the result when they\'ve played.' : '';
+      } else { headline = `You placed <b>#${me + 1}</b> of ${rows.length}`; sub = me === 0 ? 'Top of the table, for now.' : ''; }
+    } else if (g && g.error) headline = 'The results can\'t be reached right now';
+    const duelDone = i.kind === 'duel' && rows.length >= 2 && rows.every(p => p.finished);
+    return `<div class="ro-ch ${i.kind}"><div class="rs-eyebrow">${chTitle(i)}${i.round > 1 ? ` · round ${i.round}` : ''}</div>
+      <div class="roc-head">${headline}</div>${sub ? `<p class="snote">${sub}</p>` : ''}
+      ${rows.length ? groupBoardHTML(g, '') : ''}
+      <div class="roc-actions"><button class="btn" data-act="groupResults">Full results</button>${duelDone && mine
+        ? '<button class="btn gold" data-act="makeChallenge" data-v="duel">Rematch</button>'
+        : `<button class="btn gold" data-act="groupInvite">${i.kind === 'duel' ? 'Send the duel again' : 'Invite more friends'}</button>`}</div></div>`;
+  }
+  if (gameToken && !S.seedChosen){
+    const p = ui.gamePosted;
+    const line = !p ? 'Posting your best coins to the chat leaderboard…' : p.error ? 'Couldn\'t post to the chat leaderboard' :
+      p.posted ? `Posted to the chat leaderboard: <b>${fmtFit(p.score)}</b>` : `On the chat leaderboard your best is still higher than ${fmtFit(p.score)}`;
+    return `<div class="ro-ch game"><div class="rs-eyebrow">Chat leaderboard</div><div class="roc-head">${line}</div>
+      <div class="roc-actions"><button class="btn gold" data-act="chatScores">See the chat's scores</button></div></div>`;
+  }
+  return '';
+}
+
+/* ---------- the chat leaderboard (a Telegram game) ----------
+   Opened from the game message in a chat (?game=TOKEN): every finished run on a deck the server dealt posts its best
+   coins to that message's scoreboard (tools/telegram-core.mjs: postGameScore). */
+const GAME_KEY = 'bankroll-game' + KEY_NS;
+let gameToken = null;
+(function(){
+  try {
+    const q = new URLSearchParams(location.search).get('game');
+    // kept for this visit only (a reload keeps it; opening the game later from elsewhere doesn't post to the chat)
+    if (q && /^[a-z0-9]{8,20}$/.test(q)){ gameToken = q; sessionStorage.setItem(GAME_KEY, q); return; }
+    const g = sessionStorage.getItem(GAME_KEY);
+    if (g && /^[a-z0-9]{8,20}$/.test(g)) gameToken = g;
+  } catch(e){}
+})();
+async function postGameRun(runId){
+  if (!gameToken || !LB.backend || !LB.backend.postGameScore) return;
+  ui.gamePosted = null;
+  const r = await LB.backend.postGameScore(gameToken, runId);
+  ui.gamePosted = r && r.success ? r : { error:true };
+  if (r && r.success && r.posted) toast(`Posted to the chat leaderboard: ${fmtFit(r.score)}`);
+  if (ui.modal === 'over') render();
+}
+async function openChatScores(){
+  ui.chatScores = { loading:true }; ui.modal = 'chatScores'; render();
+  const r = LB.backend && LB.backend.gameScores ? await LB.backend.gameScores(gameToken) : null;
+  ui.chatScores = r && r.success ? { rows:r.scores } : { error:true };
+  if (ui.modal === 'chatScores') render();
+}
+function chatScoresHTML(){
+  const c = ui.chatScores || {};
+  const body = c.loading ? '<p class="empty">Loading…</p>' : c.error ? '<p class="empty">The chat\'s scores can\'t be reached right now.</p>'
+    : !c.rows.length ? '<p class="empty">No scores yet. Finish a run to be the first!</p>'
+    : `<div class="board cboard" role="table" aria-label="Chat leaderboard"><div class="brow bhead" role="row"><span>#</span><span>Player</span><span>Best coins</span></div>
+      ${c.rows.map(r => `<div class="brow ${r.me ? 'me' : ''}" role="row"><span>${r.position}</span><span class="bname">${esc(r.name)}${r.me ? ' <em>you</em>' : ''}</span><span>${r.score >= 2147483647 ? '∞' : fmtFit(r.score)}</span></div>`).join('')}</div>`;
+  return `<div class="rs-eyebrow">Telegram chat</div><h2>Chat leaderboard</h2>
+    <p class="snote">Everyone's best run in this chat (most coins). Telegram keeps the scoreboard on the game message too.</p>
+    ${body}<div class="actions"><button class="btn gold" data-act="close">Close</button></div>`;
+}
+// Telegram: send the chat leaderboard game to a group (Telegram's own picker)
+async function shareChatGame(){
+  const tg = telegramLaunch();
+  ui.modal = null; render();
+  if (tg && tg.app && tg.app.shareMessage && tg.app.isVersionAtLeast && tg.app.isVersionAtLeast('8.0') && LB.backend && LB.backend.shareGame){
+    const id = await LB.backend.shareGame();
+    if (id){ tg.app.shareMessage(id, sent => { if (sent) toast('Sent! Everyone\'s best run shows on that message'); }); return; }
+  }
+  toast('In a group with the bot, send /play to post the chat leaderboard');
 }

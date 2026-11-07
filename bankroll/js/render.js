@@ -106,7 +106,9 @@ function renderLedger(){
   const opened = ok && ui.lvOk === false; ui.lvOk = ok;            // the lock opens now: a little celebration
   const medal = (n, cls, inner, tip) => `<span class="lv-med ${cls} ${String(n).length > 2 ? 'long' : ''}" title="${tip}"${cls === 'cur' ? ' id="st-level"' : ''}>${inner}<b>${n}</b></span>`;
   const lock = ok ? '<path d="M8 11V7.5a4 4 0 0 1 7.6-1.7"/><rect x="5" y="11" width="14" height="10" rx="2"/>' : '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>';
-  setHTML($('levelbar'), `
+  const chBar = typeof playBarHTML === 'function' ? playBarHTML() : '';
+  $('levelbar').classList.toggle('has-ch', !!chBar);
+  setHTML($('levelbar'), `${chBar}
     <div class="lv-goal ${ok ? 'ok' : ''} ${opened ? 'opened' : ''}" role="meter" aria-label="Level ${L}. Coins toward level ${L + 1}" aria-valuemin="0" aria-valuemax="${price}" aria-valuenow="${Math.max(0, Math.min(S.coins, price))}">
       ${medal(L, 'cur', '', `Level ${L}`)}
       <div class="lv-mid" title="${ok ? `You can pay for level ${L + 1}, with ${fmtFit(-need)} to spare` : `${fmtFit(need)} more coins needed for level ${L + 1}`}">
@@ -412,6 +414,7 @@ function renderModal(){
   else if (m === 'group') html = groupHTML();
   else if (m === 'joinGroup') html = joinGroupHTML();
   else if (m === 'newChallenge') html = newChallengeHTML();
+  else if (m === 'chatScores') html = chatScoresHTML();
   else if (m === 'restart') html = `<h2>New game?</h2><p class="lead">This run will be lost.</p>
     <div class="actions"><button class="btn" data-act="close">Cancel</button><button class="btn gold" data-act="restartNow">New game</button></div>`;
   else if (m === 'pick' || m === 'view'){
@@ -447,7 +450,7 @@ function renderModal(){
   }
 }
 
-const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart', 'release5', 'record', 'unlock', 'challenge', 'group', 'joinGroup', 'newChallenge'];
+const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart', 'release5', 'record', 'unlock', 'challenge', 'group', 'joinGroup', 'newChallenge', 'chatScores'];
 const MODAL_NAMES = { help:'How to play', result:'Hand result', over:'Run over', reshuffle:'Level complete', tracker:'Card tracker', view:'Discard pile', pick:'Take a card back', history:'History', settings:'Settings', bust:'Cash-out warning', restart:'New game', release5:'Release Extra seat', record:'Top hand of the day', unlock:'Unlocked' };
 // closing a dialog that opened over another (the top-hand celebration) returns to the one underneath
 function closeModal(){ ui.modal = (ui.modal === 'record' || ui.modal === 'help') && ui.modalBack ? ui.modalBack : null; ui.modalBack = null; }
@@ -617,7 +620,7 @@ function overHTML(){
   const newCount = Object.keys(isNew).length;
   const meRow = leaderboardAvailable() && LB.me ? LB.boards.today.findIndex(x => x.id === LB.me) : -1;
 
-  return `<div class="ro-head">
+  return `${typeof overPlayHTML === 'function' ? overPlayHTML() : ''}<div class="ro-head">
       <div class="rs-eyebrow">Run over · level ${L}</div>
       <div class="ro-title">${head.title}</div>
       ${gauge}
@@ -630,9 +633,8 @@ function overHTML(){
     ${r ? `<details class="ro-hand"><summary>Last hand</summary>${handBody(r)}</details>` : ''}
     <h3>This run</h3>${stats}
     <p class="snote seedline">Seed ${seedHTML()}${DAILY_ON && isDaily(S.seed) ? ' · today\'s challenge' : ''}</p>
-    ${S.challenge ? `<div class="ro-group"><button class="btn gold" data-act="groupResults">Group challenge results</button></div>` : ''}
     <div class="ro-more"><button class="btn gold-line" data-act="createGroup" data-v="run">${S.challenge ? 'Invite more friends' : 'Challenge friends'}</button>${DAILY_ON ? `<button class="btn" data-act="playDaily">${isDaily(S.seed) ? 'Daily again' : 'Daily challenge'}</button>` : ''}
-      ${leaderboardAvailable() ? `<button class="btn" data-act="openBoard">Leaderboard</button>` : ''}<button class="btn" data-act="replaySeed">Same cards</button></div>
+      ${leaderboardAvailable() ? `<button class="btn" data-act="openBoard">Leaderboard</button>` : ''}${S.challenge ? '' : '<button class="btn" data-act="replaySeed">Same cards</button>'}</div>
     <div class="actions ro-actions"><button class="btn gold grow" data-act="restartNow">Play again</button></div>`;
 }
 // a tiny example hand for the rules: 'rank+suit' codes, with the scoring cards lit

@@ -234,6 +234,21 @@ const supabaseBackend = {
     try { const { data, error } = await this.client.functions.invoke('bankroll-telegram', { body:{ initData:tg.initData, action:'share', code } }); return error || !data ? null : data.id || null; }
     catch(e){ return null; }
   },
+  // the chat leaderboard (a Telegram game): post a finished run, read the scores, send the game to a chat
+  async postGameScore(token, runId){
+    try { const { data, error } = await this.client.functions.invoke('bankroll-telegram', { body:{ action:'gamescore', token, run_id:runId } }); return error || !data ? { error:'error' } : data; }
+    catch(e){ return { error:'error' }; }
+  },
+  async gameScores(token){
+    try { const { data, error } = await this.client.functions.invoke('bankroll-telegram', { body:{ action:'gamescores', token } }); return error || !data ? { error:'error' } : data; }
+    catch(e){ return { error:'error' }; }
+  },
+  async shareGame(){
+    const tg = telegramLaunch();
+    if (!tg) return null;
+    try { const { data, error } = await this.client.functions.invoke('bankroll-telegram', { body:{ initData:tg.initData, action:'sharegame' } }); return error || !data ? null : data.id || null; }
+    catch(e){ return null; }
+  },
   // a challenge's scores changed: the bot updates its cards in chats
   async pingChallenge(code){
     try { await this.client.functions.invoke('bankroll-telegram', { body:{ action:'refresh', code } }); } catch(e){}
@@ -334,7 +349,10 @@ async function beginRun(seed, challenge){
     else toast(run.error === 'unknown_challenge' ? 'That challenge doesn\'t exist' : 'Couldn\'t start the challenge. Try again in a moment');
     render(); return;
   }
-  if (run.run_id) useServerRun(run);
+  if (run.run_id){
+    useServerRun(run);
+    if (challenge){ S.chInfo = challengeInfo(challenge); toast(S.chInfo.kind === 'duel' ? 'Duel on! Same deck as your friend, one try. Good luck!' : 'Challenge on! Same deck as everyone, one try. Good luck!'); }
+  }
   else {
     newGame(chosen || undefined);
     toast(run.error === 'banned' ? 'Posting disabled for this account' : 'Offline: this run won’t be posted');
@@ -384,6 +402,9 @@ async function flushProgress(){
     SCORE_KEYS.forEach(k => { S.lbSent[k] = p[k]; });
     store(SAVE_KEY, S);
   }
+  // a finished run: the challenge's result, or the chat leaderboard's score
+  if (res === 'ok' && p.finished && p.challenge) loadGroup(p.challenge);
+  if (res === 'ok' && p.finished && !p.challenge && !p.seeded && typeof gameToken !== 'undefined' && gameToken) postGameRun(p.runId);
   // a challenge run: the chat cards show the new score (at most every 30 seconds, and always when the run ends)
   if (res === 'ok' && p.challenge && LB.backend.pingChallenge){
     const now = Date.now(), last = LB.pinged || {};

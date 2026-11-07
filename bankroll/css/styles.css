@@ -1166,3 +1166,25 @@ html.light .lv-deck{background:rgba(0,0,0,.1)} html.light .lv-deck > i{backgroun
 .ghow{margin:0 0 12px;padding-left:18px;color:var(--muted);font-size:13px;line-height:1.45}
 .ghow li{margin:2px 0}
 .gsub{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800;margin:12px 0 6px}
+
+/* ---------- the strip above the level bar: a challenge or the chat leaderboard is being played ---------- */
+.levelbar.has-ch{flex-direction:column;align-items:stretch;gap:6px}
+.playbar{display:flex;align-items:center;gap:10px;padding:6px 6px 6px 10px;border-radius:12px;border:1px solid var(--brass-dim);
+  background:linear-gradient(90deg,rgba(217,171,76,.16),rgba(217,171,76,.05));min-width:0}
+.playbar.duel{border-color:rgba(220,110,90,.45);background:linear-gradient(90deg,rgba(220,110,90,.18),rgba(220,110,90,.05))}
+.pb-ico{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:15px;color:var(--brass-hi);border:1px solid var(--brass-dim)}
+.pb-txt{flex:1;min-width:0;line-height:1.2}
+.pb-txt b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pb-txt small{display:block;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pb-btn{flex:none;font:inherit;font-size:12px;font-weight:800;color:var(--brass-hi);background:transparent;border:1px solid var(--brass-dim);border-radius:999px;padding:6px 12px;cursor:pointer}
+.pb-btn:hover{border-color:var(--brass-hi)}
+/* the challenge's result at the top of the run-over window */
+.ro-ch{margin:0 0 14px;padding:12px 14px;border-radius:14px;border:1px solid var(--brass-dim);background:linear-gradient(180deg,rgba(217,171,76,.12),rgba(217,171,76,.03))}
+.ro-ch.duel{border-color:rgba(220,110,90,.45);background:linear-gradient(180deg,rgba(220,110,90,.14),rgba(220,110,90,.03))}
+.roc-head{font-size:20px;font-weight:800;margin:4px 0 8px;color:var(--brass-hi)}
+.roc-head b{font-size:1.25em}
+.ro-ch .gboard{margin:6px 0 10px}
+.roc-actions{display:flex;gap:8px;flex-wrap:wrap}
+.roc-actions .btn{flex:1 1 auto}
+.cboard .brow{grid-template-columns:28px minmax(0,1fr) 96px}
+.cboard .bname em{font-style:normal;font-size:10px;font-weight:800;color:var(--brass-hi);margin-left:4px;text-transform:uppercase;letter-spacing:.08em}
