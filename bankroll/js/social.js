@@ -2,7 +2,7 @@
    challenge (everyone gets the same deck each day) and copying a seed. */
 'use strict';
 
-const TG_APP = 'https://t.me/TheBankrollBot/app';     // the Mini App's direct link; ?startapp=<seed> opens a challenge
+const TG_APP = 'https://t.me/TheBankrollBot';     // the bot's main Mini App; ?startapp=<seed> (or c_<code>) opens it on a challenge
 
 /* ---------- the daily challenge ----------
    Switched off for now (DAILY_ON): no buttons, no board. The server side (a seed filter on the boards) stays in place. */
