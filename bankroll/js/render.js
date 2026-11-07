@@ -220,9 +220,12 @@ function renderPowers(){
 // cards themselves are under 40px wide.
 // (Card sizes come from the layout, not the pack, so switching packs can't change the answer.)
 function handIsSmall(){
-  // layout sizes (offsetWidth / offsetLeft), not on-screen boxes: a card mid-animation (dealt, flipping) would look smaller
-  const cards = document.querySelectorAll('#hand > .card'); if (!cards.length) return false;
-  const w = cards[0].offsetWidth, step = cards.length > 1 ? cards[1].offsetLeft - cards[0].offsetLeft : w;
+  // exact layout sizes from the styles, not on-screen boxes: a card mid-animation (dealt, flipping) would look smaller
+  const cards = document.querySelectorAll('#hand > .card');
+  if (cards.length <= 6) return false;                               // a normal hand is never "crowded"
+  if (!$('hand').clientWidth) return !!ui.handClear;                  // not laid out yet (opening, rotating): no change
+  const w = parseFloat(getComputedStyle(cards[0]).width) || 0;
+  const step = cards.length > 1 ? w + (parseFloat(getComputedStyle(cards[1]).marginLeft) || 0) : w;
   return w < 40 || step < 26;
 }
 let resizeFrame = 0;

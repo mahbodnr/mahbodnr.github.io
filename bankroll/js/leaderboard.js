@@ -10,7 +10,7 @@
    viewer turns on "Include seeded runs". */
 'use strict';
 
-const LB = { kind:null, state:'off', period:'today', seeded:false, boards:{ today:[], all:[], daily:[] }, hands:{ today:[], all:[], daily:[] },
+const LB = { kind:null, state:'off', period:'today', seeded:false, boards:{ today:[], week:[], daily:[] }, hands:{ today:[], week:[], daily:[] },
   me:null, myName:'', signedIn:false, writeFailed:false, pending:null, posting:false, backend:null, closedRun:null,
   navigate: url => { location.href = url; } };
 const leaderboardAvailable = () => LB.state !== 'off';
@@ -38,6 +38,8 @@ window.addEventListener('error', e => reportError(e.message, e.filename ? `${e.f
 window.addEventListener('unhandledrejection', e => { const r = e.reason; reportError((r && r.message) || String(r), 'promise', r && r.stack); });
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const todayUTC = () => new Date().toISOString().slice(0, 10);
+// the week's first day (Monday, UTC): the "This week" boards start again then
+const weekUTC = () => { const d = new Date(); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); return d.toISOString().slice(0, 10); };
 const telegramLaunch = () => (typeof BankrollTG !== 'undefined' && BankrollTG) || null;   // js/telegram.js, inside Telegram only
 // infinite coins first (stored as the text 'Infinity': JSON can't hold the number), then level, coins, biggest win
 const isInf = v => +v === Infinity;
@@ -47,7 +49,7 @@ const byMult = (a, b) => (b.mult || 0) - (a.mult || 0) || (a.at || 0) - (b.at ||
 function refreshBoard(){ if (ui.modal === 'history' || ui.modal === 'over') render(); const t = $('boardBtn'); if (t) t.hidden = !leaderboardAvailable(); }
 
 /* ---------- backend: claude.ai shared database ---------- */
-// scores/<player>: { day, runs, all:{ ever, today }, open:{ ever, today } }
+// scores/<player>: { day, week, runs, all:{ ever, today, week }, open:{ ever, today, week } }
 //   all = every run, open = unseeded runs only; each slot is { level, peak, biggestWin, hand }
 //   hand = { mult, cards:[[rank, suit]…], labels, at }; "today" slots count only while day is today (UTC).
 const emptySlot = () => ({ level:0, peak:0, biggestWin:0, hand:null });
@@ -89,9 +91,11 @@ const claudeBackend = {
     if (LB.state !== 'ready') return;
     const scope = LB.seeded ? 'all' : 'open', day = todayUTC();
     const person = id => ({ id, name:(this.names[id] && this.names[id].name) || 'Player', avatar:this.names[id] && this.names[id].avatarUrl });
-    const slots = per => this.docs.map(r => { const d = readDoc(r); if (!d) return null; const s = d[scope] && d[scope][per === 'today' ? 'today' : 'ever'];
-      return per === 'today' && d.day !== day ? null : s ? { r, s } : null; }).filter(Boolean);
-    for (const per of ['today', 'all']){
+    const week = weekUTC();
+    const slots = per => this.docs.map(r => { const d = readDoc(r); if (!d) return null; const s = d[scope] && d[scope][per];
+      if ((per === 'today' && d.day !== day) || (per === 'week' && d.week !== week)) return null;
+      return s ? { r, s } : null; }).filter(Boolean);
+    for (const per of ['today', 'week']){
       const list = slots(per);
       LB.boards[per] = list.filter(x => x.s.level > 0).map(({ r, s }) => ({ ...person(r.id), level:s.level || 1, peak:+s.peak || 0, biggestWin:+s.biggestWin || 0 })).sort(byScore).slice(0, 50);
       LB.hands[per] = list.filter(x => x.s.hand && x.s.hand.mult > 0).map(({ r, s }) => ({ ...person(r.id), ...s.hand })).sort(byMult).slice(0, 10);
@@ -102,13 +106,14 @@ const claudeBackend = {
   async submit(p){
     if (!LB.me) return 'not_signed_in';
     const found = this.docs.find(r => r.id === LB.me), raw = found && readDoc(found) ? found : null, cur = raw ? readDoc(raw) : { all:{}, open:{} };
-    const day = todayUTC(), same = cur.day === day;
+    const day = todayUTC(), same = cur.day === day, week = weekUTC(), sameWeek = cur.week === week;
     const upd = (scope, on) => ({ ever: on ? mergeSlot(scope.ever, p) : scope.ever || emptySlot(),
-      today: on ? mergeSlot(same ? scope.today : null, p) : same ? scope.today || emptySlot() : emptySlot() });
-    const body = { rules:RULES, day, runs:Math.max(cur.runs || 0, (prefs.record && prefs.record.runs) || 0, 1),
+      today: on ? mergeSlot(same ? scope.today : null, p) : same ? scope.today || emptySlot() : emptySlot(),
+      week: on ? mergeSlot(sameWeek ? scope.week : null, p) : sameWeek ? scope.week || emptySlot() : emptySlot() });
+    const body = { rules:RULES, day, week, runs:Math.max(cur.runs || 0, (prefs.record && prefs.record.runs) || 0, 1),
       all:upd(cur.all || {}, true), open:upd(cur.open || {}, !p.seeded) };
     const strip = o => JSON.stringify(o, (k, v) => k === 'at' ? undefined : v);
-    if (raw && raw.all && strip({ rules:raw.rules, day:raw.day, runs:raw.runs, all:raw.all, open:raw.open }) === strip(body)) return 'ok';
+    if (raw && raw.all && strip({ rules:raw.rules, day:raw.day, week:raw.week, runs:raw.runs, all:raw.all, open:raw.open }) === strip(body)) return 'ok';
     try { await this.db.doc('scores/' + LB.me).set(JSON.parse(JSON.stringify(body, (k, v) => v === Infinity ? 'Infinity' : v))); return 'ok'; }
     catch(e){ LB.writeFailed = true; return 'denied'; }
   },
@@ -185,7 +190,7 @@ const supabaseBackend = {
     const seeded = LB.seeded;
     try {
       const calls = [];
-      for (const p of ['today', 'all']){
+      for (const p of ['today', 'week']){
         calls.push(this.client.rpc('bankroll_leaderboard', { p_period:p, p_include_seeded:seeded, p_limit:50 }));
         calls.push(this.client.rpc('bankroll_top_hands', { p_period:p, p_include_seeded:seeded, p_limit:10 }));
       }
@@ -193,19 +198,19 @@ const supabaseBackend = {
         calls.push(this.client.rpc('bankroll_leaderboard', { p_period:'all', p_include_seeded:true, p_limit:50, p_seed:dailySeed() }));
         calls.push(this.client.rpc('bankroll_top_hands', { p_period:'all', p_include_seeded:true, p_limit:10, p_seed:dailySeed() }));
       }
-      const [today, todayHands, all, allHands, daily = {}, dailyHands = {}] = await Promise.all(calls);
-      const bad = [today, todayHands, all, allHands, daily, dailyHands].find(r => r.error);
+      const [today, todayHands, week, weekHands, daily = {}, dailyHands = {}] = await Promise.all(calls);
+      const bad = [today, todayHands, week, weekHands, daily, dailyHands].find(r => r.error);
       if (bad) throw bad.error;
       if (seeded !== LB.seeded) return;                       // the toggle changed while this was loading
       const row = r => ({ id:r.user_id, name:r.username || 'Player', avatar:r.avatar_url, level:r.level, peak:+r.peak, biggestWin:+r.biggest_win, seeded:!!r.seeded });
       const hand = r => ({ id:r.user_id, name:r.username || 'Player', avatar:r.avatar_url, mult:+r.mult, seeded:!!r.seeded,
         cards:(r.hand && r.hand.cards) || [], labels:(r.hand && r.hand.labels) || [], at:Date.parse(r.achieved_at) || 0 });
-      LB.boards.today = (today.data || []).map(row); LB.boards.all = (all.data || []).map(row);
-      LB.hands.today = (todayHands.data || []).map(hand); LB.hands.all = (allHands.data || []).map(hand);
+      LB.boards.today = (today.data || []).map(row); LB.boards.week = (week.data || []).map(row);
+      LB.hands.today = (todayHands.data || []).map(hand); LB.hands.week = (weekHands.data || []).map(hand);
       LB.boards.daily = (daily.data || []).map(row); LB.hands.daily = (dailyHands.data || []).map(hand);
       LB.state = 'ready';
       checkTopHand();
-    } catch(e){ LB.state = LB.boards.all.length ? 'ready' : 'error'; }
+    } catch(e){ LB.state = LB.boards.week.length || LB.boards.today.length ? 'ready' : 'error'; }
     refreshBoard();
   },
   // asks the server for a run: it picks the seed unless the player chose one
@@ -467,15 +472,16 @@ function leaderboardHTML(){
   if (LB.state === 'slow') return `<p class="empty">The leaderboard can't be reached right now. It will appear once it loads.</p>`;
   if (LB.state === 'error') return `<p class="empty">The leaderboard isn't available right now. Try again in a moment.</p>`;
   const hasDaily = DAILY_ON && LB.kind === 'supabase';         // the daily board needs the website's server (and is off for now)
-  const per = LB.period === 'all' ? 'all' : LB.period === 'daily' && hasDaily ? 'daily' : 'today';
+  const per = LB.period === 'week' ? 'week' : LB.period === 'daily' && hasDaily ? 'daily' : 'today';
   const rows = LB.boards[per];
   const toggle = `<div class="lbbar"><div class="sg lbper" role="group" aria-label="Leaderboard period">
       <button data-act="lbPeriod" data-v="today" aria-pressed="${per === 'today'}">Today</button>
       ${hasDaily ? `<button data-act="lbPeriod" data-v="daily" aria-pressed="${per === 'daily'}">Daily</button>` : ''}
-      <button data-act="lbPeriod" data-v="all" aria-pressed="${per === 'all'}">All time</button></div>
+      <button data-act="lbPeriod" data-v="week" aria-pressed="${per === 'week'}">This week</button></div>
 </div>`;
   const seeded = `<button class="lbseed" data-act="lbSeeded" aria-pressed="${LB.seeded}" title="${LB.seeded ? 'Hide' : 'Include'} runs where the player chose the seed" aria-label="${LB.seeded ? 'Hide' : 'Include'} seeded runs">${LB.seeded ? '− seeded' : '+ seeded'}</button>`;
   const sub = per === 'today' ? `<p class="snote lbsub">Resets in ${resetIn()}</p>`
+    : per === 'week' ? `<p class="snote lbsub">Resets on Monday (UTC)</p>`
     : per === 'daily' ? `<div class="lbdaily"><p class="snote lbsub">Everyone plays the same deck today (${dailySeed()}) · new deck in ${resetIn()}</p>
         <button class="btn gold" data-act="playDaily">${isDaily(S.seed) ? 'Play it again' : 'Play today\'s challenge'}</button></div>` : '';
   let foot;
@@ -488,7 +494,7 @@ function leaderboardHTML(){
   else foot = `<p class="snote">Unverified scores${!LB.me ? ' · sign in to post' : LB.writeFailed ? ' · view only' : ''}</p>`;
   const list = !rows.length
     ? `<p class="empty">No runs yet</p>`
-    : `<div class="board" role="table" aria-label="Leaderboard, ${per === 'today' ? 'today' : 'all time'}">
+    : `<div class="board" role="table" aria-label="Leaderboard, ${per === 'today' ? 'today' : 'this week'}">
       <div class="brow bhead" role="row"><span>#</span><span>Player</span><span>Level</span><span>Most coins</span><span>Biggest win</span></div>
       ${rows.map((r, i) => `<div class="brow ${r.id === LB.me ? 'me' : ''}" role="row"><span>${i + 1}</span>${lbName(per === 'daily' ? { ...r, seeded:false } : r)}
         <span>${fmtFit(r.level || 1)}</span><span>${fmtFit(r.peak || 0)}</span><span class="pos">${r.biggestWin ? '+' + fmtFit(r.biggestWin) : '—'}</span></div>`).join('')}
