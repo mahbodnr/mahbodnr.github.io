@@ -1155,3 +1155,14 @@ html.light .lv-med.next{background:rgba(255,255,255,.5);border-color:rgba(60,80,
 html.light .lv-deck{background:rgba(0,0,0,.1)} html.light .lv-deck > i{background:rgba(40,60,50,.35)}
 @media (min-width:700px){ .lv-med{width:40px;height:40px} .lv-med b{font-size:17px} .lv-med.long b{font-size:13px} }
 .lv-mid .lv-track{flex:none}
+
+/* ---------- challenge friends: group challenge or duel, and the challenge page ---------- */
+.pickch{display:grid;gap:10px;margin:14px 0 4px}
+.pickopt{display:flex;gap:12px;align-items:flex-start;text-align:left;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:inherit;font:inherit;cursor:pointer}
+.pickopt:hover,.pickopt:focus-visible{border-color:var(--brass-hi);background:rgba(255,255,255,.07)}
+.pickopt b{display:block;font-size:15px}
+.pickopt small{display:block;color:var(--muted);font-size:12.5px;line-height:1.35;margin-top:2px}
+.po-ico{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:18px;color:var(--brass-hi);border:1px solid var(--brass-hi)}
+.ghow{margin:0 0 12px;padding-left:18px;color:var(--muted);font-size:13px;line-height:1.45}
+.ghow li{margin:2px 0}
+.gsub{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800;margin:12px 0 6px}

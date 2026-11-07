@@ -411,6 +411,7 @@ function renderModal(){
   else if (m === 'challenge') html = challengeHTML();
   else if (m === 'group') html = groupHTML();
   else if (m === 'joinGroup') html = joinGroupHTML();
+  else if (m === 'newChallenge') html = newChallengeHTML();
   else if (m === 'restart') html = `<h2>New game?</h2><p class="lead">This run will be lost.</p>
     <div class="actions"><button class="btn" data-act="close">Cancel</button><button class="btn gold" data-act="restartNow">New game</button></div>`;
   else if (m === 'pick' || m === 'view'){
@@ -446,10 +447,10 @@ function renderModal(){
   }
 }
 
-const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart', 'release5', 'record', 'unlock', 'challenge', 'group', 'joinGroup'];
+const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart', 'release5', 'record', 'unlock', 'challenge', 'group', 'joinGroup', 'newChallenge'];
 const MODAL_NAMES = { help:'How to play', result:'Hand result', over:'Run over', reshuffle:'Level complete', tracker:'Card tracker', view:'Discard pile', pick:'Take a card back', history:'History', settings:'Settings', bust:'Cash-out warning', restart:'New game', release5:'Release Extra seat', record:'Top hand of the day', unlock:'Unlocked' };
 // closing a dialog that opened over another (the top-hand celebration) returns to the one underneath
-function closeModal(){ ui.modal = ui.modal === 'record' && ui.modalBack ? ui.modalBack : null; ui.modalBack = null; }
+function closeModal(){ ui.modal = (ui.modal === 'record' || ui.modal === 'help') && ui.modalBack ? ui.modalBack : null; ui.modalBack = null; }
 function bustHTML(){
   const ev = evaluate(S.hand, S.powerups), payout = S.bet * ev.mult, after = S.coins + payout - S.debt;
   return `<div class="rs-head loss"><div class="rs-verdict">This ends your run</div>

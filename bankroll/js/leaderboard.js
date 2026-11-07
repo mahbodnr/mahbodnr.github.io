@@ -223,9 +223,20 @@ const supabaseBackend = {
       return data.success ? data : { error:data.error || 'error', challenge:data.challenge };
     } catch(e){ return { error:'error' }; }
   },
-  async createChallenge(runId){
-    try { const { data, error } = await this.client.rpc('bankroll_create_challenge', { p_run_id:runId || null }); return error || !data ? { error:'error' } : data; }
+  async createChallenge(runId, kind){
+    try { const { data, error } = await this.client.rpc('bankroll_create_challenge', { p_run_id:runId || null, p_kind:kind === 'duel' ? 'duel' : 'group' }); return error || !data ? { error:'error' } : data; }
     catch(e){ return { error:'error' }; }
+  },
+  // Telegram: the bot prepares the challenge card (video, description, scores, Play button) for shareMessage
+  async shareCard(code){
+    const tg = telegramLaunch();
+    if (!tg) return null;
+    try { const { data, error } = await this.client.functions.invoke('bankroll-telegram', { body:{ initData:tg.initData, action:'share', code } }); return error || !data ? null : data.id || null; }
+    catch(e){ return null; }
+  },
+  // a challenge's scores changed: the bot updates its cards in chats
+  async pingChallenge(code){
+    try { await this.client.functions.invoke('bankroll-telegram', { body:{ action:'refresh', code } }); } catch(e){}
   },
   async challengeBoard(code){
     try { const { data, error } = await this.client.rpc('bankroll_challenge_board', { p_code:code }); return error || !data ? { error:'error' } : data; }
@@ -290,6 +301,7 @@ async function initLeaderboard(){
   refreshBoard();
   if (LB.backend){ await upgradeFreshRun(); reportProgress(); }
   if (ui.pendingGroup){ const c = ui.pendingGroup; ui.pendingGroup = null; offerGroup(c); }
+  if (!LB.backend && ui.modal === 'joinGroup' && ui.group && ui.group.loading){ ui.group = { code:ui.group.code, error:'offline' }; render(); }
 }
 
 /* ---------- starting runs ---------- */
@@ -352,7 +364,7 @@ function reportProgress(finished){
   if (LB.kind === 'supabase' && (!S.official || !Array.isArray(S.log) || LB.closedRun === S.runId)) return;
   const p = { runId:S.runId, seed:S.seed, seeded:!!S.seedChosen, official:!!S.official, level:lvl(), peak:S.stats.peak || 0,
     biggestWin:S.stats.biggestWin || 0, bestPayout:S.stats.bestPayout || 0, bestMult:S.stats.bestMult || 0, hands:S.stats.cashouts || 0,
-    hand:S.bestHand || null, finished:!!finished || S.phase === 'over' };
+    hand:S.bestHand || null, finished:!!finished || S.phase === 'over', challenge:S.challenge || null };
   const last = S.lbSent || {};
   if (last.runId === p.runId && last.finished) return;
   if (LB.kind === 'supabase'){ if (last.runId === p.runId && !p.finished && last.moves === S.log.length) return; }   // every hand is recorded
@@ -371,6 +383,11 @@ async function flushProgress(){
     S.lbSent = { runId:p.runId, finished:p.finished, moves:p.moves ? p.moves.length : undefined };
     SCORE_KEYS.forEach(k => { S.lbSent[k] = p[k]; });
     store(SAVE_KEY, S);
+  }
+  // a challenge run: the chat cards show the new score (at most every 30 seconds, and always when the run ends)
+  if (res === 'ok' && p.challenge && LB.backend.pingChallenge){
+    const now = Date.now(), last = LB.pinged || {};
+    if (p.finished || last.code !== p.challenge || now - last.at > 30000){ LB.pinged = { code:p.challenge, at:now }; LB.backend.pingChallenge(p.challenge); }
   }
   if (LB.pending) return flushProgress();                         // a newer report arrived meanwhile
   if (res === 'error') LB.pending = p;                            // a network hiccup: keep it for the next try

@@ -23,14 +23,19 @@ function start(data){
     if (prefs.tutDone) newGame();
     store('bankroll-seen-help' + KEY_NS, true);
   }
+  // opened from a group challenge or duel link: straight to the challenge page (the introduction waits for a later visit)
+  const incoming = incomingSeed();
+  const toGroup = !!ui.pendingGroup || !!(saved && saved.challenge && saved.phase !== 'over');
+  if (ui.pendingGroup && window.BANKROLL_CONFIG) showGroupEarly(ui.pendingGroup);
   // first visit: the introduction (three practice hands), which can't be skipped; the player's run starts after it
-  if (!prefs.tutDone) startIntro(false);
+  if (!prefs.tutDone && !toGroup) startIntro(false);
+  else if (!S) newGame();
   store(PREF_KEY, prefs);
   window.claude?.hot?.snapshot?.(() => ({ S }));
   render();
   refreshBoard();
   initLeaderboard();
-  offerChallenge(incomingSeed());   // opened from a shared challenge link (js/social.js)
+  offerChallenge(incoming);   // opened from a shared challenge link (js/social.js)
 }
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 

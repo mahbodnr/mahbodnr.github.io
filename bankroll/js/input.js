@@ -193,11 +193,13 @@ document.addEventListener('click', e => {
     case 'replaySeed': beginRun(S.seed); break;
     case 'copySeed': copySeed(); return;
     case 'shareRun': shareRun(); return;
-    case 'createGroup': createGroup(t.dataset.v === 'run'); return;
+    case 'createGroup': pickChallenge(t.dataset.v === 'run'); return;
+    case 'makeChallenge': createGroup(ui.modal === 'newChallenge' && ui.newFromRun, t.dataset.v === 'duel' ? 'duel' : 'group'); return;
+    case 'groupHow': ui.modalBack = 'joinGroup'; ui.modal = 'help'; break;
     case 'groupResults': openGroup(S.challenge); return;
     case 'playGroup': { const c = ui.groupCode; ui.modal = null; beginRun(null, c); return; }
     case 'groupRefresh': loadGroup(ui.groupCode); return;
-    case 'groupInvite': shareGroup(ui.groupCode); return;
+    case 'groupInvite': shareGroup(ui.groupCode, isDuel(ui.group) ? 'duel' : 'group'); return;
     case 'playDaily': playDaily(); return;
     case 'acceptChallenge': { const s = ui.challengeSeed; ui.challengeSeed = null; ui.modal = null; beginRun(s); return; }
     case 'sortRank': prefs.sort = 'rank'; S.order = null; store(PREF_KEY, prefs); break;

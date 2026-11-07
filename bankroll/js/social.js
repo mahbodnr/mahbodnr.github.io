@@ -96,43 +96,69 @@ function challengeHTML(){
     <div class="actions"><button class="btn" data-act="close">Not now</button><button class="btn gold" data-act="acceptChallenge">Play these cards</button></div>`;
 }
 
-/* ---------- group challenges ----------
+/* ---------- group challenges and duels ----------
    A challenge is a deck shared in a chat (a fresh one, or the deck of a run just played, which then counts as that
-   player's entry). Everyone who opens it plays it once; the server keeps it to one run each and compares them
-   (supabase/bankroll-leaderboard.sql: bankroll_create_challenge, bankroll_challenge_board). Website and Telegram only. */
+   player's entry). A group challenge is for everyone in the chat; a duel is its maker against one friend. Each player
+   plays it once; the server keeps it to one run each and compares them (supabase/bankroll-leaderboard.sql:
+   bankroll_create_challenge, bankroll_challenge_board). In Telegram the challenge goes out as the bot's card (a short
+   video, a description, the scoreboard and a Play button) which the bot keeps up to date. Website and Telegram only. */
 const groupsOn = () => LB.kind === 'supabase' && !!LB.backend && typeof LB.backend.createChallenge === 'function';
+const isDuel = g => !!(g && g.data && g.data.kind === 'duel');
 function groupLink(code){
   if (telegramLaunch()) return TG_APP + '?startapp=c_' + code;
   const host = location.protocol.startsWith('http') ? location.origin + location.pathname : 'https://mahbod.me/bankroll/';
   return host + '?challenge=' + code;
 }
-async function shareGroup(code){
-  const link = groupLink(code);
-  const text = '♠ Bankroll challenge: the same deck for everyone, one try each. Can you beat us?';
+const GROUP_TEXT = {
+  group: '♠️ Bankroll group challenge: everyone plays the same deck, once. Bet, chase combos that multiply each other, and cash out before the debt catches you. Can you top the table?',
+  duel: '⚔️ I challenge you to a Bankroll duel: one deck, one try each. Bet, chase combos that multiply each other, and cash out before the debt catches you. Think you can beat me?',
+};
+async function shareGroup(code, kind){
+  const link = groupLink(code), text = GROUP_TEXT[kind === 'duel' ? 'duel' : 'group'];
   const tg = telegramLaunch();
   try {
+    // Telegram 8.0+: the bot's card, sent through Telegram's own chat picker
+    if (tg && tg.app && tg.app.shareMessage && tg.app.isVersionAtLeast && tg.app.isVersionAtLeast('8.0') && LB.backend && LB.backend.shareCard){
+      const id = await LB.backend.shareCard(code);
+      if (id){ tg.app.shareMessage(id, sent => { if (sent) toast('Sent! The scores there update as people play'); }); return; }
+    }
     if (tg && tg.app && tg.app.openTelegramLink && tg.app.isVersionAtLeast && tg.app.isVersionAtLeast('6.1')){
       tg.app.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent(link) + '&text=' + encodeURIComponent(text)); return;   // pick any chat or group
     }
-    if (navigator.share){ await navigator.share({ title:'Bankroll challenge', text, url:link }); return; }
+    if (navigator.share){ await navigator.share({ title: kind === 'duel' ? 'Bankroll duel' : 'Bankroll challenge', text, url:link }); return; }
   } catch(e){ if (e && e.name === 'AbortError') return; }
   toast(await copyText(text + ' ' + link) ? 'Challenge link copied: paste it in a chat' : 'Share this link: ' + esc(link));
 }
-// fromRun: make the run just played into a challenge (it's this player's entry); otherwise a fresh deck, played next
-let groupBusy = false;
-async function createGroup(fromRun){
+// The "Challenge friends" choice: a group challenge or a duel. fromRun: the run just played becomes the maker's entry.
+function pickChallenge(fromRun){
   if (!groupsOn()){ shareRun(); return; }               // no server (claude.ai, offline): share the seed instead
+  ui.newFromRun = !!fromRun; ui.modal = 'newChallenge'; render();
+}
+function newChallengeHTML(){
+  const run = ui.newFromRun && S.official;
+  return `<div class="rs-eyebrow">Play with friends</div><h2>Challenge friends</h2>
+    <p class="snote">${run ? 'Your friends get the deck you just played, and your run is your entry.' : 'A new deck. Send it, then play it yourself.'}</p>
+    <div class="pickch">
+      <button class="pickopt" data-act="makeChallenge" data-v="group"><span class="po-ico" aria-hidden="true">♠</span><span><b>Group challenge</b><small>Send it to a group: everyone plays the same deck once, with a live scoreboard in the chat.</small></span></button>
+      <button class="pickopt" data-act="makeChallenge" data-v="duel"><span class="po-ico" aria-hidden="true">⚔</span><span><b>Duel</b><small>You against one friend on the same deck. The winner is announced, then rematch!</small></span></button>
+    </div>
+    <div class="actions"><button class="btn" data-act="close">Cancel</button></div>`;
+}
+let groupBusy = false;
+async function createGroup(fromRun, kind = 'group'){
+  if (!groupsOn()){ shareRun(); return; }
   if (groupBusy) return;
-  groupBusy = true; toast('Making a challenge…');
-  const res = await LB.backend.createChallenge(fromRun && S.official ? S.runId : null);
+  groupBusy = true; ui.modal = null; render(); toast(kind === 'duel' ? 'Setting up the duel…' : 'Making a challenge…');
+  const res = await LB.backend.createChallenge(fromRun && S.official ? S.runId : null, kind);
   groupBusy = false;
   if (!res.success){ toast(res.error === 'rate_limited' ? 'Too many challenges for now. Try again later' : 'Couldn\'t make a challenge. Try again in a moment'); return; }
+  const made = res.kind || kind;
   if (fromRun && S.official){ S.challenge = res.code; store(SAVE_KEY, S); }
-  await shareGroup(res.code);
+  await shareGroup(res.code, made);
   if (!fromRun) offerGroup(res.code, true);
   else openGroup(res.code);
 }
-// joining from a link (or starting your own new challenge): asked first when a run is in progress
+// joining from a link (or starting your own new challenge): the challenge page first, with the scores so far
 function offerGroup(code, mine){
   if (!code) return;
   if (!groupsOn()){ toast('Group challenges need a connection to the server'); return; }
@@ -142,8 +168,10 @@ function offerGroup(code, mine){
   ui.modal = 'joinGroup'; render();
   loadGroup(code);
 }
+// opened from a link while the game is still connecting: the page shows straight away and fills in
+function showGroupEarly(code){ ui.groupCode = code; ui.groupMine = false; ui.group = { code, loading:true }; ui.modal = 'joinGroup'; }
 async function loadGroup(code){
-  ui.group = ui.group && ui.group.code === code ? ui.group : { code, loading:true };
+  ui.group = ui.group && ui.group.code === code && (ui.group.data || ui.group.loading) ? ui.group : { code, loading:true };
   const res = await LB.backend.challengeBoard(code);
   if (ui.groupCode !== code && (!ui.group || ui.group.code !== code)) return;
   ui.group = res.success ? { code, data:res } : { code, error:res.error || 'error' };
@@ -151,31 +179,49 @@ async function loadGroup(code){
 }
 function openGroup(code){ ui.groupCode = code; ui.modal = 'group'; render(); loadGroup(code); }
 const groupMe = g => g && g.data && g.data.players.find(p => p.user_id === LB.me);
-function joinGroupHTML(){
-  const g = ui.group || {}, played = groupMe(g), host = g.data ? esc(g.data.host) : 'A friend';
-  const n = g.data ? g.data.players.length : 0, inRun = S && S.phase !== 'over' && (S.stats.sets > 0 || S.stats.cashouts > 0);
-  if (played) return groupHTML();
-  return `<div class="rs-eyebrow">Group challenge</div><h2>${ui.groupMine ? 'Your challenge is ready' : `${host} challenged you`}</h2>
-    <p class="lead">Everyone plays the same deck, <b>once</b>. Your run is then compared with the others${n ? ` (${n} played so far)` : ''}.${inRun ? ' <b>Your current run ends</b> here.' : ''}</p>
-    <div class="actions"><button class="btn" data-act="close">Not now</button><button class="btn gold" data-act="playGroup">Play my one try</button></div>`;
-}
-function groupHTML(){
-  const g = ui.group || {};
-  let body;
-  if (g.loading || (!g.data && !g.error)) body = `<p class="empty">Loading…</p>`;
-  else if (g.error) body = `<p class="empty">${g.error === 'unknown_challenge' ? 'This challenge doesn\'t exist.' : 'The results can\'t be reached right now.'}</p>`;
-  else {
-    const rows = g.data.players;
-    body = !rows.length ? `<p class="empty">Nobody has played yet</p>` : `<div class="board gboard" role="table" aria-label="Challenge results">
+// a duel already has its two players (and this player isn't one of them)
+const duelFull = g => isDuel(g) && !groupMe(g) && g.data.host_id !== LB.me && g.data.players.some(p => p.user_id !== g.data.host_id);
+function groupBoardHTML(g, empty){
+  if (g.loading || (!g.data && !g.error)) return `<p class="empty">Loading the scores…</p>`;
+  if (g.error) return `<p class="empty">${g.error === 'unknown_challenge' ? 'This challenge doesn\'t exist.' : 'The scores can\'t be reached right now.'}</p>`;
+  const rows = g.data.players;
+  if (!rows.length) return `<p class="empty">${empty}</p>`;
+  return `<div class="board gboard" role="table" aria-label="Challenge results">
       <div class="brow bhead" role="row"><span>#</span><span>Player</span><span>Level</span><span>Coins</span><span></span></div>
       ${rows.map((r, i) => `<div class="brow ${r.user_id === LB.me ? 'me' : ''}" role="row"><span>${i + 1}</span>
         <span class="bname">${esc(r.name)}${r.user_id === LB.me ? ' <em>you</em>' : ''}</span><span>${fmtFit(r.level || 1)}</span>
-        <span>${fmtFit(+r.peak || 0)}</span><span class="gstat ${r.finished ? 'done' : 'live'}">${r.finished ? (r.end_cause === 'infinite' ? '∞ won' : 'done') : 'playing'}</span></div>`).join('')}
+        <span>${r.peak === 'Infinity' || +r.peak === Infinity ? '∞' : fmtFit(+r.peak || 0)}</span><span class="gstat ${r.finished ? 'done' : 'live'}">${r.finished ? (r.end_cause === 'infinite' ? '∞ won' : 'done') : 'playing'}</span></div>`).join('')}
     </div>`;
-  }
+}
+function joinGroupHTML(){
+  const g = ui.group || {}, played = groupMe(g), duel = isDuel(g), host = g.data ? esc(g.data.host) : 'A friend';
+  const inRun = S && !S.intro && S.phase !== 'over' && (S.stats.sets > 0 || S.stats.cashouts > 0);
+  if (played) return groupHTML();
+  if (duelFull(g)) return `<div class="rs-eyebrow">Duel</div><h2>This duel is taken</h2>
+    <p class="lead">${host} already has an opponent. Here's how it stands, or start a duel of your own.</p>
+    ${groupBoardHTML(g, '')}
+    <div class="actions"><button class="btn" data-act="close">Close</button><button class="btn gold" data-act="makeChallenge" data-v="duel">Start my own duel</button></div>`;
+  const ready = groupsOn() && !!g.data;
+  const title = ui.groupMine ? (duel ? 'Your duel is ready' : 'Your challenge is ready') : duel ? `${host} challenged you to a duel` : `${host} challenged you`;
+  return `<div class="rs-eyebrow">${duel ? 'Duel' : 'Group challenge'}${g.data && g.data.round > 1 ? ` · round ${g.data.round}` : ''}</div><h2>${title}</h2>
+    <p class="lead">${duel ? 'You and your friend play <b>the same deck, once each</b>.' : 'Everyone in the chat plays <b>the same deck, once</b>.'}
+      Highest level wins, then most coins.${inRun ? ' <b>Your current run ends</b> here.' : ''}</p>
+    <ul class="ghow"><li>Bet, then swap cards in until your hand pays.</li><li>Pairs, straights and flushes <b>multiply each other</b>.</li>
+      <li>Every card adds debt: cash out before it costs more than the hand is worth.</li></ul>
+    <h3 class="gsub">${duel ? 'The duel so far' : 'Leaderboard so far'}</h3>
+    ${groupBoardHTML(g, duel ? 'Nobody has played yet' : 'Nobody has played yet. Be the first!')}
+    <div class="actions"><button class="btn" data-act="groupHow">How to play</button><button class="btn gold" data-act="playGroup"${ready ? '' : ' disabled'}>${duel ? 'Play the duel' : 'Play'}</button></div>`;
+}
+function groupHTML(){
+  const g = ui.group || {}, duel = isDuel(g);
   const mine = groupMe(g), host = g.data ? esc(g.data.host) : '';
-  return `<div class="rs-eyebrow">Group challenge${host ? ` · by ${host}` : ''}</div><h2>Results</h2>
-    <p class="snote">Same deck for everyone, one try each.${mine && !mine.finished ? ' Your run is still going.' : ''}</p>
-    ${body}
-    <div class="actions"><button class="btn" data-act="groupRefresh">Refresh</button><button class="btn" data-act="groupInvite">Invite more</button><button class="btn gold" data-act="close">Close</button></div>`;
+  const rows = g.data ? g.data.players : [];
+  const done = duel && rows.length >= 2 && rows.every(p => p.finished);
+  const verdict = done ? (rows[0].user_id === LB.me ? 'You won the duel! 🏆' : mine ? `${esc(rows[0].name)} won this one` : `${esc(rows[0].name)} won`) : 'Results';
+  return `<div class="rs-eyebrow">${duel ? 'Duel' : 'Group challenge'}${host ? ` · by ${host}` : ''}${g.data && g.data.round > 1 ? ` · round ${g.data.round}` : ''}</div><h2>${verdict}</h2>
+    <p class="snote">${duel ? 'One deck, one try each.' : 'Same deck for everyone, one try each.'}${mine && !mine.finished ? ' Your run is still going.' : ''}${duel && !done && rows.length < 2 ? ' Waiting for the other player.' : ''}</p>
+    ${groupBoardHTML(g, 'Nobody has played yet')}
+    <div class="actions"><button class="btn" data-act="groupRefresh">Refresh</button>${done && mine
+      ? '<button class="btn" data-act="makeChallenge" data-v="duel">Rematch</button>'
+      : `<button class="btn" data-act="groupInvite">${duel ? 'Send again' : 'Invite more'}</button>`}<button class="btn gold" data-act="close">Close</button></div>`;
 }
