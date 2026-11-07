@@ -261,13 +261,17 @@ const supabaseBackend = {
       return !res.error;
     } catch(e){ return false; }
   },
-  // the site's existing Google sign-in page (shared with Latent Space) sends the player back here afterwards
+  // Bankroll's own Google sign-in: straight to Google and back to this page (Latent Space's login page isn't used,
+  // so Bankroll players don't get a Latent Space profile)
   async signIn(){
     if (telegramLaunch()){
       if (await this.telegramSignIn()) refreshBoard(); else toast('Couldn’t sign in');
       return;
     }
-    LB.navigate('/latent-space/login.html?next=' + encodeURIComponent(location.pathname + location.search));
+    try {
+      const { error } = await this.client.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: location.origin + location.pathname + location.search } });
+      if (error) toast('Couldn’t sign in');
+    } catch(e){ toast('Couldn’t sign in'); }
   },
 };
 
