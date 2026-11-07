@@ -178,12 +178,12 @@ const supabaseBackend = {
     }
     if (moved){ toast(`${moved} earlier run${moved > 1 ? 's' : ''} added to your account`); await this.refresh(); }
   },
-  // same profile row Latent Space creates, so names and avatars match across the site
+  // the player's name and avatar on Bankroll's boards: Bankroll's own profile (bankroll_users), not Latent Space's
   async ensureProfile(user){
+    const md = user.user_metadata || {};
     try {
-      await this.client.rpc('ensure_user_exists', { p_user_id:user.id, p_email:user.email,
-        p_username:(user.user_metadata && user.user_metadata.full_name) || (user.email || 'player').split('@')[0],
-        p_avatar_url:(user.user_metadata && user.user_metadata.avatar_url) || null });
+      await this.client.rpc('bankroll_ensure_profile', { p_username: md.full_name || md.name || (user.email || 'player').split('@')[0],
+        p_avatar_url: md.avatar_url || null, p_telegram_id: md.telegram_id || null });
     } catch(e){}
   },
   async refresh(){
