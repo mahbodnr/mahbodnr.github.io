@@ -13,7 +13,9 @@ const BankrollTG = (() => {
   if (!initData) return null;
   let user = null;
   try { user = JSON.parse(new URLSearchParams(initData).get('user')); } catch(e){}
-  const tg = { initData, user, app:null };
+  let startParam = null;
+  try { startParam = new URLSearchParams(initData).get('start_param') || new URLSearchParams(location.hash.slice(1)).get('tgWebAppStartParam'); } catch(e){}
+  const tg = { initData, user, app:null, startParam };
   document.documentElement.classList.add('in-telegram');
 
   const setup = app => {

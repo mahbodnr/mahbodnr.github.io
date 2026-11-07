@@ -81,7 +81,8 @@ function settingsHTML(){
     <h3>Table felt</h3>
     ${swatches('felt', FELTS, 'felt')}
     <h3>Seed</h3>
-    <div class="srow"><span>This run</span><code class="seed">${S.seed}</code></div>
+    <div class="srow"><span>This run</span><span class="seedline">${seedHTML()}</span></div>
+    <div class="srow"><span>Daily challenge<small>Everyone gets the same deck today</small></span><button class="btn" data-act="playDaily">Play</button></div>
     <form class="seedform" data-form="seed"><input id="seedInput" placeholder="ABCD-1234" maxlength="9" autocomplete="off" spellcheck="false" aria-label="Seed to play">
       <button class="btn" type="submit">Play</button></form>
     <p class="snote" id="seedMsg"></p>

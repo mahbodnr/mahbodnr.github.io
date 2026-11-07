@@ -8,10 +8,11 @@ function recordHand(res, coinsAfter){
   if (S.history.length > 300) S.history.splice(0, S.history.length - 300);
 }
 
-// short axis label: 950, 1.5K, 12K, 3.2M, 1B
+// short axis label: 950, 1.5K, 12K, 3.2M, 1B, then 1.5e12 …
 function axisNum(v){
   const a = Math.abs(v), s = v < 0 ? '−' : '';
-  for (const [d, u] of [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']])
+  if (a >= 999.5e9) return s + sci(Math.max(a, SCI_FROM)).replace(/(\.\d)\d/, '$1');
+  for (const [d, u] of [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']])
     if (a >= d) return s + String(+(a / d).toFixed(a / d < 10 ? 1 : 0)) + u;
   return s + String(Math.round(a));
 }

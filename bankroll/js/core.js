@@ -99,9 +99,18 @@ const swapCost = () => SWAP_COST * Math.pow(2, lvl() - 1);   // the 10 take-back
 // (p.paid = cards it has paid upkeep for so far)
 const upkeepOf = p => powerCost(p.card.rank) * Math.pow(2, (p.paid || 0) + 1);
 const upkeep = () => S.powerups.reduce((a, p) => a + upkeepOf(p), 0);
-const fmt = n => Math.round(n).toLocaleString('en-US');
-// for tight boxes: a million and up becomes 1.25M / 12.5M / 125M (and B beyond), so any amount fits
+// Amounts have no upper limit. Up to 999 billion they're written out (or as K / M / B in tight spots); from a trillion
+// on they switch to scientific notation, 1.23e12, which stays short however large the number grows.
+const SCI_FROM = 1e12;
+const sci = n => { const a = Math.abs(n), s = n < 0 ? '−' : '';
+  if (!isFinite(a)) return s + '∞';
+  let e = Math.floor(Math.log10(a)), m = a / Math.pow(10, e);
+  m = Math.floor(m * 100 + 1e-6) / 100; if (m >= 10){ m /= 10; e++; }            // round down, like the K / M / B forms (the 1e-6 absorbs float error)
+  return s + String(+m.toFixed(2)) + 'e' + e; };
+const fmt = n => Math.abs(n) >= SCI_FROM ? sci(n) : Math.round(n).toLocaleString('en-US');
+// for tight boxes: a million and up becomes 1.25M / 12.5M / 125M / 1.25B …, then 1.25e12 and so on, so any amount fits
 const fmtFit = n => { const a = Math.abs(n), s = n < 0 ? '−' : '';
+  if (a >= SCI_FROM) return sci(n);
   if (a < 1e6) return fmt(n);
   const [d, u] = a >= 1e9 ? [1e9, 'B'] : [1e6, 'M'], v = a / d;
   return s + (v >= 100 ? Math.floor(v) : v >= 10 ? Math.floor(v * 10) / 10 : Math.floor(v * 100) / 100) + u; };

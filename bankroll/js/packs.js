@@ -5,6 +5,7 @@
 
 const PACKS = [
   { id:'classic',   name:'Classic',   level:1, back:['#93303d', '#6e1f2b'], note:'Traditional English courts' },
+  { id:'clear',     name:'Clear',     level:1, back:['#2f6db5', '#173f73'], note:'Big, easy-to-read corners for small screens' },
   { id:'deco',      name:'Deco',      level:2, back:['#3a5ca8', '#1a2b5c'], note:'Art-deco gold and navy' },
   { id:'botanical', name:'Botanical', level:3, back:['#26876a', '#0f4a36'], note:'Laurels and engraved ink' },
   { id:'onyx',      name:'Onyx',      level:4, back:['#4a4a52', '#141417'], note:'Black cards, gold monograms' },
@@ -170,7 +171,11 @@ const RANK_LETTER = { 11:'J', 12:'Q', 13:'K' };
 
 // The centre panel of a J, Q or K in the given pack. The panel is 100 × 176 (it matches the card's centre area),
 // split into two mirrored halves of 100 × 88 for the double-headed designs.
+// Clear: one large suit instead of pips or court art (the big corner index carries the rank); courts get a small crown
+const CROWN = '<svg class="cl-crown" viewBox="0 0 40 24" aria-hidden="true"><path d="M3 20 L1 5 L11 12 L20 1 L29 12 L39 5 L37 20 Z"/><rect x="3" y="20" width="34" height="4" rx="1"/></svg>';
+function clearMid(c){ return `<div class="cl-mid">${c.rank >= 11 ? CROWN : ''}${suitSVG(c.suit, 'pp')}</div>`; }
 function courtHTML(c, pk){
+  if (pk === 'clear') return clearMid(c);
   const R = RANK_LETTER[c.rank], suit = `<use href="#su-${c.suit}"`;
   const flip = 'transform="rotate(180 50 88)"';
   if (pk === 'classic')
@@ -193,6 +198,7 @@ function courtHTML(c, pk){
       <text x="50" y="121" class="ct-mono">${R}</text></svg></div>`;
 }
 function aceHTML(c, pk){
+  if (pk === 'clear') return clearMid(c);
   const orn = ACE_ORN[pk] ? `<svg class="ace-orn" viewBox="0 0 100 100" aria-hidden="true"><use href="#ace-${pk}"/></svg>` : '';
   return `<div class="pips ace">${orn}${suitSVG(c.suit, 'pp')}</div>`;
 }

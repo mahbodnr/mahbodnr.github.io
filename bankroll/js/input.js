@@ -191,6 +191,10 @@ document.addEventListener('click', e => {
     case 'tipDone': tipDone(t.dataset.v); break;
     case 'replayTutorial': ui.modal = null; startIntro(true); break;
     case 'replaySeed': beginRun(S.seed); break;
+    case 'copySeed': copySeed(); return;
+    case 'shareRun': shareRun(); return;
+    case 'playDaily': playDaily(); return;
+    case 'acceptChallenge': { const s = ui.challengeSeed; ui.challengeSeed = null; ui.modal = null; beginRun(s); return; }
     case 'sortRank': prefs.sort = 'rank'; S.order = null; store(PREF_KEY, prefs); break;
     case 'sortSuit': prefs.sort = 'suit'; S.order = null; store(PREF_KEY, prefs); break;
     case 'betKey': if (e.detail === 0) stepBet(+t.dataset.hold); return; // keyboard; pointer presses are handled on pointerdown

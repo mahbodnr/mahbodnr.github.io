@@ -564,7 +564,9 @@ kbd{display:none;font:700 10.5px/1 var(--f-ui);padding:3px 5px;border-radius:5px
 /* run over: Play again stays pinned at the bottom; Leaderboard and Same cards sit at the end of the page, half and half */
 .modal .ro-actions{display:flex}
 .ro-actions > .btn{width:100%}
-.ro-more{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px;margin-top:16px}
+.ro-more{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+.ro-more > .btn:last-child:nth-child(odd){grid-column:1 / -1}
+.btn.gold-line{border-color:var(--brass-hi);color:var(--brass-hi)}
 .ro-more > .btn{width:100%;min-width:0}
 
 /* card tracker */
@@ -767,6 +769,8 @@ html.four-color .tc.s-C{color:#1b7a3c}
 .card .ace-orn{position:absolute;width:calc(var(--cw)*.9);height:calc(var(--cw)*.9);left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none}
 .card:not(.pk-classic) .pips.ace::after{display:none}
 .card.pk-classic{--court-border:#1d1f26}
+/* classic court art is 0.614 wide per unit of height: the panel takes exactly that shape, so nothing is cropped */
+.card.pk-classic .court{inset:17.9% 22%}
 .card.pk-deco{--paper:#f7f1e1; --paper-hi:#fffaf0; --paper-lo:#ece0c2; --ink:#1b2238; --suit-red:#b8323c; --gold:#b8913a; --line:#1b2238;
   --skin:#f1d9bd; --cbg:#f3ead2; --idx-font:'Limelight',Georgia,serif; --court-border:#b8913a; --c4d:#d8600f; --c4c:#1d7342}
 .card.pk-deco:not(.back)::before{border:1px solid var(--gold);box-shadow:inset 0 0 0 2px var(--paper), inset 0 0 0 2.6px var(--gold)}
@@ -1087,3 +1091,25 @@ input, textarea{user-select:text;-webkit-user-select:text}
 .putip .tip-own{padding-top:6px;border-top:1px solid rgba(245,217,140,.2)}
 .putip b{color:var(--brass-hi)}
 html.zoomed .putip{zoom:var(--z)}
+
+/* ---------- Clear pack: made to be read at a glance on small screens ----------
+   a big, heavy corner index (rank over suit) that stays visible when cards overlap, one large suit in place of pips or
+   court art, white paper and strong inks; court cards are marked with a small gold crown */
+.card.pk-clear{--idx-font:var(--f-ui); --paper:#ffffff; --paper-hi:#ffffff; --paper-lo:#f1f1ee; --ink:#111216; --suit-red:#d3121f;
+  --c4d:#e06a00; --c4c:#0f7a35; --gold:#d3a43c}
+.card.pk-clear::before{border-color:rgba(0,0,0,.08)}
+.card.pk-clear .ix{width:calc(var(--cw)*.4);align-items:flex-start;gap:calc(var(--cw)*.02)}
+.card.pk-clear .ix.tl{left:calc(var(--cw)*.07);top:calc(var(--cw)*.06)}
+.card.pk-clear .ix b{font-family:var(--f-ui);font-weight:900;font-size:calc(var(--cw)*.38);letter-spacing:-.07em;line-height:.82}
+.card.pk-clear .ix .su{width:calc(var(--cw)*.24);height:calc(var(--cw)*.24)}
+.card.pk-clear .ix.br{display:none}
+.card.pk-clear .cl-mid{position:absolute;right:calc(var(--cw)*.08);bottom:calc(var(--cw)*.09);width:calc(var(--cw)*.5);display:flex;flex-direction:column;align-items:center;gap:calc(var(--cw)*.02)}
+.card.pk-clear .cl-mid .pp{width:calc(var(--cw)*.5);height:calc(var(--cw)*.5);display:block}
+.card.pk-clear .cl-crown{width:calc(var(--cw)*.3);height:calc(var(--cw)*.18);fill:var(--gold);display:block}
+
+/* seed with a copy button (run over, settings) */
+.seedline{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.seedcopy{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--inset);display:inline-grid;place-items:center;padding:0;color:var(--muted)}
+.seedcopy:hover{color:var(--brass-hi);border-color:var(--brass-hi)}
+.seedcopy svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+.lbdaily{display:flex;flex-direction:column;align-items:center;gap:8px;margin:2px 0 10px}

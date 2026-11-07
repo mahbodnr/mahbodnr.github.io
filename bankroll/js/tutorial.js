@@ -47,8 +47,9 @@ function endIntro(){
   prefs.tutDone = true; prefs.tips = Object.assign({}, prefs.tips, { joker:true }); store(PREF_KEY, prefs);
   const saved = migrate(load(SAVE_KEY));
   ui.modal = null; ui.prev = null; ui.seen.clear();
-  if (saved && saved.phase !== 'over'){ S = saved; resumeModal(); render(); }
-  else beginRun();
+  const seed = ui.afterIntroSeed; ui.afterIntroSeed = null;            // opened from a challenge link
+  if (saved && saved.phase !== 'over'){ S = saved; resumeModal(); render(); if (seed) offerChallenge(seed); }   // asks: a run is in progress
+  else beginRun(seed || undefined);
 }
 function resumeModal(){
   ui.modal = { result:'result', over:'over', reshuffle:'reshuffle', swapPick:'pick' }[S.phase] || null;

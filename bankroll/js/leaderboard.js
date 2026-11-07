@@ -10,10 +10,32 @@
    viewer turns on "Include seeded runs". */
 'use strict';
 
-const LB = { kind:null, state:'off', period:'today', seeded:false, boards:{ today:[], all:[] }, hands:{ today:[], all:[] },
+const LB = { kind:null, state:'off', period:'today', seeded:false, boards:{ today:[], all:[], daily:[] }, hands:{ today:[], all:[], daily:[] },
   me:null, myName:'', signedIn:false, writeFailed:false, pending:null, posting:false, backend:null, closedRun:null,
   navigate: url => { location.href = url; } };
 const leaderboardAvailable = () => LB.state !== 'off';
+const CLAIM_KEY = 'bankroll-claims' + KEY_NS;
+const randomCode = () => { try { return crypto.randomUUID() + '-' + crypto.randomUUID(); } catch(e){ return Array.from({ length: 48 }, () => Math.floor(Math.random() * 36).toString(36)).join(''); } };
+
+/* ---------- error reports (website and Telegram) ----------
+   Uncaught errors are sent to bankroll_errors so problems on players' devices show up (supabase/bankroll-leaderboard.sql).
+   Each message once per visit, at most 15 a visit; they wait in a queue until the leaderboard has connected. */
+const ERR = { queue:[], seen:new Set() };
+function reportError(message, source, stack){
+  message = String(message || '').replace(/^Uncaught /, '').slice(0, 500);
+  if (!message || /^Script error\.?$/i.test(message) || /ResizeObserver loop/i.test(message) || ERR.seen.has(message) || ERR.seen.size >= 15) return;
+  ERR.seen.add(message);
+  ERR.queue.push({ p_message:message, p_source:source ? String(source).slice(0, 300) : null, p_stack:stack ? String(stack).slice(0, 2000) : null,
+    p_platform: telegramLaunch() ? 'telegram' : 'web', p_client:'rules ' + RULES, p_agent:navigator.userAgent.slice(0, 300), p_page:location.pathname.slice(0, 300) });
+  if (ERR.queue.length > 15) ERR.queue.shift();
+  flushErrors();
+}
+function flushErrors(){
+  if (LB.kind !== 'supabase' || !supabaseBackend.client) return;
+  while (ERR.queue.length){ const e = ERR.queue.shift(); try { supabaseBackend.client.rpc('bankroll_log_error', e).then(() => {}, () => {}); } catch(x){} }
+}
+window.addEventListener('error', e => reportError(e.message, e.filename ? `${e.filename.split('/').pop()}:${e.lineno}:${e.colno}` : '', e.error && e.error.stack));
+window.addEventListener('unhandledrejection', e => { const r = e.reason; reportError((r && r.message) || String(r), 'promise', r && r.stack); });
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const todayUTC = () => new Date().toISOString().slice(0, 10);
 const telegramLaunch = () => (typeof BankrollTG !== 'undefined' && BankrollTG) || null;   // js/telegram.js, inside Telegram only
@@ -106,7 +128,7 @@ const supabaseBackend = {
     try { const { data } = await this.client.auth.getSession(); setSession(data && data.session); } catch(e){}
     this.client.auth.onAuthStateChange((event, session) => {
       const was = LB.signedIn; setSession(session);
-      if (LB.signedIn && !was){ this.ensureProfile(session.user); if (LB.backend) upgradeFreshRun(); }
+      if (LB.signedIn && !was){ this.ensureProfile(session.user); this.claimRuns(); if (LB.backend) upgradeFreshRun(); }
       refreshBoard();
     });
     // inside Telegram: sign in with the Telegram account (Google sign-in doesn't work in Telegram's browser)
@@ -114,14 +136,39 @@ const supabaseBackend = {
     if (tg && tg.user && !(LB.signedIn && LB.tgId === tg.user.id)){
       if (await this.telegramSignIn()){ try { const { data } = await this.client.auth.getSession(); setSession(data && data.session); } catch(e){} }
     }
-    if (LB.signedIn){ const { data } = await this.client.auth.getSession(); this.ensureProfile(data.session.user); }
-    // not signed in: an anonymous account, so the run is still recorded (it never shows on the boards).
-    // Needs "Allow anonymous sign-ins" in Supabase; without it the player simply stays signed out.
+    if (LB.signedIn){ const { data } = await this.client.auth.getSession(); this.ensureProfile(data.session.user); await this.claimRuns(); }
+    // not signed in: an anonymous account, so the run is still recorded (off the boards until the player signs in,
+    // when claimRuns moves it to their account). Needs "Allow anonymous sign-ins" in Supabase.
     else if (!LB.anon){
       try { const { data, error } = await this.client.auth.signInAnonymously(); if (!error && data && data.session) setSession(data.session); } catch(e){}
     }
+    if (LB.anon) await this.registerClaim();
+    flushErrors();
     await this.refresh();
     return true;
+  },
+  // A random code, kept only on this device, that later proves these anonymous runs are this player's.
+  async registerClaim(){
+    const list = load(CLAIM_KEY) || [];
+    let c = list.find(x => x.anon === LB.me);
+    if (c && c.registered) return;
+    if (!c){ c = { anon:LB.me, code:randomCode(), registered:false }; list.push(c); store(CLAIM_KEY, list.slice(-5)); }
+    try { const { data } = await this.client.rpc('bankroll_register_claim', { p_code:c.code }); if (data && data.success){ c.registered = true; store(CLAIM_KEY, list.slice(-5)); } } catch(e){}
+  },
+  // Signed in: runs played earlier on this device without an account become this account's (and count on the boards).
+  async claimRuns(){
+    const list = (load(CLAIM_KEY) || []).filter(c => c.registered && c.anon !== LB.me);
+    if (!list.length || !LB.signedIn) return;
+    let moved = 0;
+    for (const c of list){
+      try {
+        const { data, error } = await this.client.rpc('bankroll_claim_runs', { p_code:c.code });
+        if (error) continue;
+        moved += (data && data.runs) || 0;
+        store(CLAIM_KEY, (load(CLAIM_KEY) || []).filter(x => x.code !== c.code));    // claimed, or no longer claimable
+      } catch(e){}
+    }
+    if (moved){ toast(`${moved} earlier run${moved > 1 ? 's' : ''} added to your account`); await this.refresh(); }
   },
   // same profile row Latent Space creates, so names and avatars match across the site
   async ensureProfile(user){
@@ -139,8 +186,10 @@ const supabaseBackend = {
         calls.push(this.client.rpc('bankroll_leaderboard', { p_period:p, p_include_seeded:seeded, p_limit:50 }));
         calls.push(this.client.rpc('bankroll_top_hands', { p_period:p, p_include_seeded:seeded, p_limit:10 }));
       }
-      const [today, todayHands, all, allHands] = await Promise.all(calls);
-      const bad = [today, todayHands, all, allHands].find(r => r.error);
+      calls.push(this.client.rpc('bankroll_leaderboard', { p_period:'all', p_include_seeded:true, p_limit:50, p_seed:dailySeed() }));
+      calls.push(this.client.rpc('bankroll_top_hands', { p_period:'all', p_include_seeded:true, p_limit:10, p_seed:dailySeed() }));
+      const [today, todayHands, all, allHands, daily, dailyHands] = await Promise.all(calls);
+      const bad = [today, todayHands, all, allHands, daily, dailyHands].find(r => r.error);
       if (bad) throw bad.error;
       if (seeded !== LB.seeded) return;                       // the toggle changed while this was loading
       const row = r => ({ id:r.user_id, name:r.username || 'Player', avatar:r.avatar_url, level:r.level, peak:+r.peak, biggestWin:+r.biggest_win, seeded:!!r.seeded });
@@ -148,6 +197,7 @@ const supabaseBackend = {
         cards:(r.hand && r.hand.cards) || [], labels:(r.hand && r.hand.labels) || [], at:Date.parse(r.achieved_at) || 0 });
       LB.boards.today = (today.data || []).map(row); LB.boards.all = (all.data || []).map(row);
       LB.hands.today = (todayHands.data || []).map(hand); LB.hands.all = (allHands.data || []).map(hand);
+      LB.boards.daily = (daily.data || []).map(row); LB.hands.daily = (dailyHands.data || []).map(hand);
       LB.state = 'ready';
       checkTopHand();
     } catch(e){ LB.state = LB.boards.all.length ? 'ready' : 'error'; }
@@ -355,14 +405,18 @@ function leaderboardHTML(){
   if (LB.state === 'loading') return `<p class="empty">Loading the leaderboard…</p>`;
   if (LB.state === 'slow') return `<p class="empty">The leaderboard can't be reached right now. It will appear once it loads.</p>`;
   if (LB.state === 'error') return `<p class="empty">The leaderboard isn't available right now. Try again in a moment.</p>`;
-  const per = LB.period === 'all' ? 'all' : 'today';
+  const hasDaily = LB.kind === 'supabase';                     // the daily board needs the website's server
+  const per = LB.period === 'all' ? 'all' : LB.period === 'daily' && hasDaily ? 'daily' : 'today';
   const rows = LB.boards[per];
   const toggle = `<div class="lbbar"><div class="sg lbper" role="group" aria-label="Leaderboard period">
       <button data-act="lbPeriod" data-v="today" aria-pressed="${per === 'today'}">Today</button>
+      ${hasDaily ? `<button data-act="lbPeriod" data-v="daily" aria-pressed="${per === 'daily'}">Daily</button>` : ''}
       <button data-act="lbPeriod" data-v="all" aria-pressed="${per === 'all'}">All time</button></div>
 </div>`;
   const seeded = `<button class="lbseed" data-act="lbSeeded" aria-pressed="${LB.seeded}" title="${LB.seeded ? 'Hide' : 'Include'} runs where the player chose the seed" aria-label="${LB.seeded ? 'Hide' : 'Include'} seeded runs">${LB.seeded ? '− seeded' : '+ seeded'}</button>`;
-  const sub = per === 'today' ? `<p class="snote lbsub">Resets in ${resetIn()}</p>` : '';
+  const sub = per === 'today' ? `<p class="snote lbsub">Resets in ${resetIn()}</p>`
+    : per === 'daily' ? `<div class="lbdaily"><p class="snote lbsub">Everyone plays the same deck today (${dailySeed()}) · new deck in ${resetIn()}</p>
+        <button class="btn gold" data-act="playDaily">${isDaily(S.seed) ? 'Play it again' : 'Play today\'s challenge'}</button></div>` : '';
   let foot;
   if (LB.kind === 'supabase' && !LB.signedIn)
     foot = `<div class="lbsign"><button class="btn gold" data-act="lbSignIn">Sign in to post scores</button></div>`;
@@ -375,8 +429,8 @@ function leaderboardHTML(){
     ? `<p class="empty">No runs yet</p>`
     : `<div class="board" role="table" aria-label="Leaderboard, ${per === 'today' ? 'today' : 'all time'}">
       <div class="brow bhead" role="row"><span>#</span><span>Player</span><span>Level</span><span>Most coins</span><span>Biggest win</span></div>
-      ${rows.map((r, i) => `<div class="brow ${r.id === LB.me ? 'me' : ''}" role="row"><span>${i + 1}</span>${lbName(r)}
+      ${rows.map((r, i) => `<div class="brow ${r.id === LB.me ? 'me' : ''}" role="row"><span>${i + 1}</span>${lbName(per === 'daily' ? { ...r, seeded:false } : r)}
         <span>${fmtFit(r.level || 1)}</span><span>${fmtFit(r.peak || 0)}</span><span class="pos">${r.biggestWin ? '+' + fmtFit(r.biggestWin) : '—'}</span></div>`).join('')}
     </div>`;
-  return `${toggle}${sub}${list}${handsHTML(per)}${foot}${seeded}`;
+  return `${toggle}${sub}${list}${handsHTML(per)}${foot}${per === 'daily' ? '' : seeded}`;
 }

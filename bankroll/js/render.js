@@ -27,6 +27,7 @@ function cardHTML(c, opts = {}){
   let mid;
   if (c.rank >= 11) mid = courtHTML(c, pk);
   else if (c.rank === 1) mid = aceHTML(c, pk);
+  else if (pk === 'clear') mid = clearMid(c);
   else mid = `<div class="pips">${PIPS[c.rank].map(([x, y]) => `<span style="left:${x}%;top:${y}%"${y > 50 ? ' class="dn"' : ''}>${suitSVG(c.suit, 'pp')}</span>`).join('')}</div>`;
   return `<div class="${cls.join(' ')}"${data} data-cid="${c.id}" aria-label="${cardName(c)}"><div class="ix tl"><b>${r}</b>${su}</div>${mid}<div class="ix br"><b>${r}</b>${su}</div>${tag}</div>`;
 }
@@ -386,6 +387,7 @@ function renderModal(){
       <p class="lead">Your hand has <b>${S.hand.length}</b> cards. With one seat fewer it holds <b>${capacity() - 1}</b>, so you'll have to <b>discard ${over === 1 ? 'one card' : over + ' cards'}</b> — the next costs ${coin}${fmtFit(nextCardCost())}, and each one after that raises the card debt ×1.5.</p>
       <div class="actions"><button class="btn" data-act="close">Keep it</button><button class="btn warn" data-act="releaseConfirm">Release and discard</button></div>`;
   }
+  else if (m === 'challenge') html = challengeHTML();
   else if (m === 'restart') html = `<h2>New game?</h2><p class="lead">This run will be lost.</p>
     <div class="actions"><button class="btn" data-act="close">Cancel</button><button class="btn gold" data-act="restartNow">New game</button></div>`;
   else if (m === 'pick' || m === 'view'){
@@ -421,7 +423,7 @@ function renderModal(){
   }
 }
 
-const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart', 'release5', 'record', 'unlock'];
+const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart', 'release5', 'record', 'unlock', 'challenge'];
 const MODAL_NAMES = { help:'How to play', result:'Hand result', over:'Run over', reshuffle:'Level complete', tracker:'Card tracker', view:'Discard pile', pick:'Take a card back', history:'History', settings:'Settings', bust:'Cash-out warning', restart:'New game', release5:'Release Extra seat', record:'Top hand of the day', unlock:'Unlocked' };
 // closing a dialog that opened over another (the top-hand celebration) returns to the one underneath
 function closeModal(){ ui.modal = ui.modal === 'record' && ui.modalBack ? ui.modalBack : null; ui.modalBack = null; }
@@ -599,8 +601,9 @@ function overHTML(){
     ${tips ? `<h3>Tips</h3><ul class="tips">${tips}</ul>` : ''}
     ${r ? `<details class="ro-hand"><summary>Last hand</summary>${handBody(r)}</details>` : ''}
     <h3>This run</h3>${stats}
-    <p class="snote">Seed <code class="seed">${S.seed}</code></p>
-    <div class="ro-more">${leaderboardAvailable() ? `<button class="btn" data-act="openBoard">Leaderboard</button>` : ''}<button class="btn" data-act="replaySeed">Same cards</button></div>
+    <p class="snote seedline">Seed ${seedHTML()}${isDaily(S.seed) ? ' · today\'s challenge' : ''}</p>
+    <div class="ro-more"><button class="btn gold-line" data-act="shareRun">Challenge a friend</button><button class="btn" data-act="playDaily">${isDaily(S.seed) ? 'Daily again' : 'Daily challenge'}</button>
+      ${leaderboardAvailable() ? `<button class="btn" data-act="openBoard">Leaderboard</button>` : ''}<button class="btn" data-act="replaySeed">Same cards</button></div>
     <div class="actions ro-actions"><button class="btn gold grow" data-act="restartNow">Play again</button></div>`;
 }
 // a tiny example hand for the rules: 'rank+suit' codes, with the scoring cards lit
