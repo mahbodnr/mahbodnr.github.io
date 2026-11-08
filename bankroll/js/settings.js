@@ -47,6 +47,7 @@ function setPref(k, v){
   store(PREF_KEY, prefs); applyPrefs();
   if (k === 'sound' && v) sfx('coin');
   if (k === 'music'){ applyMusic(); musicBtnState(); }
+  if (k === 'pack') preloadCourts();
   if (k === 'haptics' && v) buzz(20);
 }
 

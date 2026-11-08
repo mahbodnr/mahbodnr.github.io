@@ -323,9 +323,9 @@ document.addEventListener('submit', e => {
 
 /* Power-up descriptions: hovering a power-up (the buy button or a slot) with a mouse, or pressing and holding it on a
    touch screen, shows what it does. A hold that showed the description doesn't also press the button. */
-const tip = { el:null, target:null, timer:null, held:0 };
-function showTip(target){
-  const t = target.dataset.tip; if (!t || !S) return;
+const tip = { el:null, target:null, timer:null, held:0, watch:null, shown:0 };
+function showTip(target, mouse){
+  const t = target.dataset.tip; if (!t || !S || !target.isConnected) return;
   if (!tip.el){ tip.el = document.createElement('div'); tip.el.id = 'putip'; tip.el.className = 'putip'; tip.el.setAttribute('role', 'tooltip'); document.body.appendChild(tip.el); }
   tip.target = target; tip.el.innerHTML = puTipHTML(t); tip.el.hidden = false;
   const z = typeof ZK === 'number' ? ZK : 1, r = target.getBoundingClientRect(), w = Math.min(300 * z, innerWidth - 24);
@@ -333,12 +333,19 @@ function showTip(target){
   const h = tip.el.offsetHeight * z, above = r.top - h - 10 > 8;
   tip.el.style.left = Math.max(12, Math.min(innerWidth - w - 12, r.left + r.width / 2 - w / 2)) / z + 'px';
   tip.el.style.top = (above ? r.top - h - 10 : Math.min(innerHeight - h - 8, r.bottom + 10)) / z + 'px';
+  // A redraw replaces the element under the pointer without telling us the pointer left it, so check: the description
+  // closes once its element is gone or (mouse) no longer under the pointer, and (touch) after a few seconds anyway.
+  tip.shown = Date.now(); clearInterval(tip.watch);
+  tip.watch = setInterval(() => {
+    const t = tip.target;
+    if (!t || !t.isConnected || (mouse && !t.matches(':hover')) || (!mouse && Date.now() - tip.shown > 3500)) hideTip();
+  }, 200);
 }
-function hideTip(){ clearTimeout(tip.timer); tip.timer = null; tip.target = null; if (tip.el) tip.el.hidden = true; }
+function hideTip(){ clearTimeout(tip.timer); clearInterval(tip.watch); tip.timer = null; tip.watch = null; tip.target = null; if (tip.el) tip.el.hidden = true; }
 document.addEventListener('pointerover', e => {
   if (e.pointerType !== 'mouse') return;
   const t = e.target.closest('[data-tip]'); if (!t || t === tip.target) return;
-  clearTimeout(tip.timer); tip.timer = setTimeout(() => showTip(t), 220);
+  clearTimeout(tip.timer); tip.timer = setTimeout(() => showTip(t, true), 220);
 });
 document.addEventListener('pointerout', e => {
   if (e.pointerType !== 'mouse') return;
@@ -346,7 +353,7 @@ document.addEventListener('pointerout', e => {
   hideTip();
 });
 document.addEventListener('pointerdown', e => {
-  if (e.pointerType === 'mouse') return;
+  if (e.pointerType === 'mouse'){ hideTip(); return; }               // a click: the description has done its job
   const t = e.target.closest('[data-tip]'); if (!t || e.target.closest('.x')) return;
   const x0 = e.clientX, y0 = e.clientY;
   clearTimeout(tip.timer);
@@ -362,3 +369,4 @@ document.addEventListener('click', e => {
 }, true);
 document.addEventListener('contextmenu', e => { if (e.target.closest('#app, #modalRoot')) e.preventDefault(); });   // no long-press menu in the game
 window.addEventListener('scroll', hideTip, { passive:true });
+document.addEventListener('keydown', () => { if (tip.target) hideTip(); });

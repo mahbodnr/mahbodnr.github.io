@@ -174,6 +174,18 @@ const RANK_LETTER = { 11:'J', 12:'Q', 13:'K' };
 // Clear: the rank, very large, with its suit once under it: the corner index does it all
 const CROWN = '<svg class="cl-crown" viewBox="0 0 40 24" aria-hidden="true"><path d="M3 20 L1 5 L11 12 L20 1 L29 12 L39 5 L37 20 Z"/><rect x="3" y="20" width="34" height="4" rx="1"/></svg>';
 function clearMid(c){ return ''; }                                   // (the crown on court cards was dropped: the big J/Q/K says it)
+// The Classic pack's face-card art downloads quietly as soon as the game is up, so a J, Q or K never arrives blank
+// in the middle of a hand (the images otherwise load only when the first one is dealt).
+const COURT_IMGS = [];
+function preloadCourts(){
+  if (COURT_IMGS.length || (prefs.pack || 'classic') !== 'classic') return;
+  const go = () => ['J', 'Q', 'K'].forEach(R => ['S', 'H', 'D', 'C'].forEach(s => {
+    const im = new Image(); im.decoding = 'async'; im.src = `img/classic/${R}${s}.webp`;
+    if (im.decode) im.decode().catch(() => {});
+    COURT_IMGS.push(im);                               // kept, so the decoded pictures stay ready
+  }));
+  if (window.requestIdleCallback) requestIdleCallback(go, { timeout:1500 }); else setTimeout(go, 300);
+}
 function courtHTML(c, pk){
   if (pk === 'clear') return clearMid(c);
   const R = RANK_LETTER[c.rank], suit = `<use href="#su-${c.suit}"`;
