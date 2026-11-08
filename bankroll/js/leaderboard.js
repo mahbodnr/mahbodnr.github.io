@@ -243,6 +243,13 @@ const supabaseBackend = {
     try { const { data, error } = await this.client.functions.invoke('bankroll-telegram', { body:{ action:'gamescores', token } }); return error || !data ? { error:'error' } : data; }
     catch(e){ return { error:'error' }; }
   },
+  // a moment to share, as the bot's card (Telegram)
+  async shareMoment(moment){
+    const tg = telegramLaunch();
+    if (!tg) return null;
+    try { const { data, error } = await this.client.functions.invoke('bankroll-telegram', { body:{ initData:tg.initData, action:'shareresult', moment } }); return error || !data ? null : data.id || null; }
+    catch(e){ return null; }
+  },
   async shareGame(){
     const tg = telegramLaunch();
     if (!tg) return null;
@@ -443,7 +450,7 @@ function recordHTML(){
       ${r.labels.length ? `<p class="rec-labels">${r.labels.map(esc).join(' <span>×</span> ')}</p>` : ''}
       <div class="rec-name"><span>Your name is on top of today’s leaderboard</span><b>${esc(r.name || LB.myName || 'You')}</b></div>
     </div>
-    <div class="actions"><button class="btn" data-act="recordBoard">See leaderboard</button><button class="btn gold" data-act="close">Keep playing</button></div>`;
+    <div class="actions"><button class="btn" data-act="recordBoard">See leaderboard</button>${shareBtn('tophand', 'Share')}<button class="btn gold" data-act="close">Keep playing</button></div>`;
 }
 
 /* ---------- view ---------- */
@@ -541,5 +548,7 @@ function leaderboardHTML(){
       ${rows.map((r, i) => `<div class="brow ${r.id === LB.me ? 'me' : ''}" role="row"><span>${i + 1}</span>${lbName(per === 'daily' ? { ...r, seeded:false } : r)}
         <span>${fmtFit(r.level || 1)}</span><span>${fmtFit(r.peak || 0)}</span><span class="pos">${r.biggestWin ? '+' + fmtFit(r.biggestWin) : '—'}</span></div>`).join('')}
     </div>`;
-  return `${toggle}${sub}${list}${handsHTML(per)}${foot}${per === 'daily' ? '' : seeded}`;
+  const mine = per !== 'daily' && LB.me ? rows.findIndex(r => r.id === LB.me) : -1;
+  const shareMine = mine >= 0 ? `<div class="lbshare">${shareBtn('board', `Share my #${mine + 1}`, 'btn gold-line', per)}</div>` : '';
+  return `${toggle}${sub}${list}${shareMine}${handsHTML(per)}${foot}${per === 'daily' ? '' : seeded}`;
 }

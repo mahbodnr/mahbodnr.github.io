@@ -4,6 +4,10 @@
 
 const TG_APP = 'https://t.me/TheBankrollBot';     // the bot's main Mini App; ?startapp=<seed> (or c_<code>) opens it on a challenge
 
+/* Challenges (group challenges, duels, shared decks) are switched off for now: no buttons, and their links open the
+   game normally. The server side stays. Tests turn them on with window.BANKROLL_CHALLENGES = true. */
+const CHALLENGES_ON = window.BANKROLL_CHALLENGES === true;
+
 /* ---------- the daily challenge ----------
    Switched off for now (DAILY_ON): no buttons, no board. The server side (a seed filter on the boards) stays in place. */
 const DAILY_ON = false;
@@ -64,6 +68,7 @@ function incomingSeed(){
   const tg = telegramLaunch();
   if (!raw && !group && tg && tg.startParam){ if (/^c_/i.test(tg.startParam)) group = tg.startParam.slice(2); else raw = tg.startParam; }
   try { if (location.search) history.replaceState(null, '', location.pathname + location.hash); } catch(e){}
+  if (!CHALLENGES_ON) return null;
   // only once per link: a reload (or Telegram keeping its launch data) doesn't ask again
   const once = v => { try { const key = 'bankroll-challenge-seen' + KEY_NS; if (sessionStorage.getItem(key) === v) return false; sessionStorage.setItem(key, v); } catch(e){} return true; };
   if (group){
@@ -334,3 +339,50 @@ async function shareChatGame(){
   }
   toast('In a group with the bot, send /play to post the chat leaderboard');
 }
+
+
+/* ---------- sharing a moment ----------
+   A big hand (×10 or more), a finished run, a place on the leaderboard, the top hand of the day. In Telegram it goes
+   out as the bot's card (a short video, what happened, a Play button) through Telegram's chat picker; elsewhere as
+   text and a link through the system share sheet, or copied. */
+const plainLabel = l => String(l).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+const numOut = v => (typeof v === 'number' && !Number.isFinite(v)) || v === 'Infinity' ? 'Infinity' : Number(v) || 0;
+function momentOf(kind, period){
+  if (kind === 'hand'){ const r = S.result; return r && r.ev ? { kind, mult:numOut(r.ev.mult), labels:r.ev.combos.map(c => plainLabel(c.label)) } : null; }
+  if (kind === 'run'){ const run = (S.over && S.over.run) || {}; return { kind, level:run.level || lvl(), peak:numOut(run.peak ?? S.stats.peak), mult:numOut(S.stats.bestMult || 0) }; }
+  if (kind === 'board'){
+    const per = period === 'week' ? 'week' : 'today', rows = LB.boards[per] || [], i = rows.findIndex(x => x.id === LB.me);
+    return i < 0 ? null : { kind, rank:i + 1, period:per, level:rows[i].level || 1, peak:numOut(rows[i].peak) };
+  }
+  if (kind === 'tophand'){ const r = ui.record; return r ? { kind, mult:numOut(r.mult), labels:(r.labels || []).map(plainLabel) } : null; }
+  return null;
+}
+function momentText(m){
+  const f = v => v === 'Infinity' ? '∞' : fmtFit(v);
+  return {
+    hand: `🃏 I just made a ×${f(m.mult)} hand in Bankroll${m.labels && m.labels.length ? ': ' + m.labels.join(' × ') : ''}! Can you beat it?`,
+    run: `💰 I reached level ${m.level} with ${f(m.peak)} coins in Bankroll${Number(m.mult) > 0 || m.mult === 'Infinity' ? ` (best hand ×${f(m.mult)})` : ''}. Can you beat that?`,
+    board: `🏆 I'm #${m.rank} on ${m.period === 'week' ? 'this week\'s' : 'today\'s'} Bankroll leaderboard: level ${m.level}, ${f(m.peak)} coins. Can you beat me?`,
+    tophand: `👑 My ×${f(m.mult)} hand is the best in Bankroll today${m.labels && m.labels.length ? ': ' + m.labels.join(' × ') : ''}! Can you beat it?`,
+  }[m.kind];
+}
+const gameLink = () => telegramLaunch() ? TG_APP + '?startapp'
+  : location.protocol.startsWith('http') && !window.claude ? location.origin + location.pathname : 'https://mahbod.me/bankroll/';
+async function shareMoment(kind, period){
+  const m = momentOf(kind, period);
+  if (!m){ toast('Nothing to share yet'); return; }
+  const text = momentText(m), link = gameLink(), tg = telegramLaunch();
+  try {
+    if (tg && tg.app && tg.app.shareMessage && tg.app.isVersionAtLeast && tg.app.isVersionAtLeast('8.0') && LB.backend && LB.backend.shareMoment){
+      const id = await LB.backend.shareMoment(m);
+      if (id){ tg.app.shareMessage(id, sent => { if (sent) toast('Shared!'); }); return; }
+    }
+    if (tg && tg.app && tg.app.openTelegramLink && tg.app.isVersionAtLeast && tg.app.isVersionAtLeast('6.1')){
+      tg.app.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent(link) + '&text=' + encodeURIComponent(text)); return;
+    }
+    if (navigator.share){ await navigator.share({ title:'Bankroll', text, url:link }); return; }
+  } catch(e){ if (e && e.name === 'AbortError') return; }
+  toast(await copyText(text + ' ' + link) ? 'Copied: paste it anywhere' : esc(text + ' ' + link));
+}
+const SHARE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/></svg>';
+const shareBtn = (kind, label, cls = 'btn', period = '') => `<button class="${cls} sharebtn" data-act="share" data-v="${kind}"${period ? ` data-p="${period}"` : ''}>${SHARE_SVG}<span>${label}</span></button>`;

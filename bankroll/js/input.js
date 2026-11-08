@@ -196,6 +196,7 @@ document.addEventListener('click', e => {
     case 'createGroup': pickChallenge(t.dataset.v === 'run'); return;
     case 'makeChallenge': createGroup(ui.modal === 'newChallenge' && ui.newFromRun, t.dataset.v === 'duel' ? 'duel' : 'group'); return;
     case 'chatScores': openChatScores(); return;
+    case 'share': shareMoment(t.dataset.v, t.dataset.p); return;
     case 'shareChatGame': shareChatGame(); return;
     case 'groupHow': ui.modalBack = 'joinGroup'; ui.modal = 'help'; break;
     case 'groupResults': openGroup(S.challenge); return;

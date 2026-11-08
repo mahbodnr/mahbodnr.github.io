@@ -1188,3 +1188,10 @@ html.light .lv-deck{background:rgba(0,0,0,.1)} html.light .lv-deck > i{backgroun
 .roc-actions .btn{flex:1 1 auto}
 .cboard .brow{grid-template-columns:28px minmax(0,1fr) 96px}
 .cboard .bname em{font-style:normal;font-size:10px;font-weight:800;color:var(--brass-hi);margin-left:4px;text-transform:uppercase;letter-spacing:.08em}
+
+/* ---------- share buttons ---------- */
+.sharebtn{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.sharebtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.linkshare{font:inherit;font-size:12px;font-weight:800;color:var(--brass-hi);background:transparent;border:1px solid var(--brass-dim);border-radius:999px;padding:4px 10px;margin-left:8px;cursor:pointer;vertical-align:middle}
+.linkshare svg{width:13px;height:13px}
+.lbshare{display:flex;justify-content:center;margin:10px 0 4px}

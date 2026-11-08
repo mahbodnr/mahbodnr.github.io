@@ -531,7 +531,7 @@ function resultHTML(){
     </div>
     ${handBody(r)}
     ${levelWarning(r)}
-    <div class="actions rs-actions"><button class="btn gold" data-act="nextSet">Next hand</button></div>`;
+    <div class="actions rs-actions">${r.ev && r.ev.mult >= 10 ? shareBtn('hand', 'Share') : ''}<button class="btn gold" data-act="nextSet">Next hand</button></div>`;
 }
 /* ---------- run over ----------
    Leads with a picture of what happened (what you had against what you needed), then the run's path
@@ -627,13 +627,13 @@ function overHTML(){
     </div>
     ${journey}
     ${newCount && !o.firstRun ? `<p class="ro-best">${newCount} new best${newCount > 1 ? 's' : ''}!</p>` : ''}
-    ${meRow >= 0 ? `<p class="ro-best"><b>#${meRow + 1}</b> today</p>` : ''}
+    ${meRow >= 0 ? `<p class="ro-best"><b>#${meRow + 1}</b> today ${shareBtn('board', 'Share', 'linkshare', 'today')}</p>` : ''}
     ${chart}
     ${tips ? `<h3>Tips</h3><ul class="tips">${tips}</ul>` : ''}
     ${r ? `<details class="ro-hand"><summary>Last hand</summary>${handBody(r)}</details>` : ''}
     <h3>This run</h3>${stats}
     <p class="snote seedline">Seed ${seedHTML()}${DAILY_ON && isDaily(S.seed) ? ' · today\'s challenge' : ''}</p>
-    <div class="ro-more"><button class="btn gold-line" data-act="createGroup" data-v="run">${S.challenge ? 'Invite more friends' : 'Challenge friends'}</button>${DAILY_ON ? `<button class="btn" data-act="playDaily">${isDaily(S.seed) ? 'Daily again' : 'Daily challenge'}</button>` : ''}
+    <div class="ro-more">${shareBtn('run', 'Share this run', 'btn gold-line')}${CHALLENGES_ON ? `<button class="btn" data-act="createGroup" data-v="run">${S.challenge ? 'Invite more friends' : 'Challenge friends'}</button>` : ''}${DAILY_ON ? `<button class="btn" data-act="playDaily">${isDaily(S.seed) ? 'Daily again' : 'Daily challenge'}</button>` : ''}
       ${leaderboardAvailable() ? `<button class="btn" data-act="openBoard">Leaderboard</button>` : ''}${S.challenge ? '' : '<button class="btn" data-act="replaySeed">Same cards</button>'}</div>
     <div class="actions ro-actions"><button class="btn gold grow" data-act="restartNow">Play again</button></div>`;
 }
