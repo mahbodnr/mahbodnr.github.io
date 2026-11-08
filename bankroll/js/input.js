@@ -295,6 +295,8 @@ document.addEventListener('input', e => {
     S.betInput = v; e.target.value = betToPos(v); updateBetUI('range');
   } else if (e.target.id === 'volRange'){
     prefs.volume = +e.target.value / 100; store(PREF_KEY, prefs);
+  } else if (e.target.id === 'musicRange'){
+    prefs.musicVolume = +e.target.value / 100; store(PREF_KEY, prefs); applyMusic();
   } else if (e.target.id === 'betNum'){
     const v = Math.round(+e.target.value);
     if (v >= 1 && v <= S.coins){ S.betInput = v; updateBetUI('num'); }

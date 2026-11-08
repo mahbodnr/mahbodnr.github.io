@@ -47,3 +47,73 @@ function sfx(kind){
     }
   } catch(e){}
 }
+
+/* ---------- background music: "Calculated Ante" ----------
+   One file: the intro (played once), then a 20-bar body that loops without a gap (Web Audio loop points, so the
+   loop is sample-exact). Encoders add a little silence at the start of a file, and how much differs between AAC and
+   Opus decoders, so the loop points are found from the music itself: the drop is the first loud sample after the
+   intro's pause. The level sits a few dB under the sound effects (measured: typical effect ≈ 0.018 RMS, music
+   ≈ 0.18 RMS, so MUSIC_GAIN × the default volume ≈ 0.06). Browsers only allow sound after a tap, so it starts on
+   the first one. */
+const MUSIC = { files:['audio/calculated-ante.m4a', 'audio/calculated-ante.ogg'],
+  drop:4.668345, loopStart:4.658345, loopEnd:50.813583 };      // seconds in the master file (44.1 kHz)
+const MUSIC_GAIN = 0.075;
+const music = { buf:null, loading:null, src:null, gain:null, started:false, introDone:false };
+async function loadMusic(ac){
+  if (music.buf) return music.buf;
+  if (!music.loading) music.loading = (async () => {
+    for (const f of MUSIC.files){
+      try {
+        const res = await fetch(f); if (!res.ok) continue;
+        const buf = await ac.decodeAudioData(await res.arrayBuffer());
+        // where the drop really is in this decode (encoder padding moves everything a little)
+        const x = buf.getChannelData(0), from = Math.floor(4.3 * buf.sampleRate);
+        let i = from; while (i < x.length && Math.abs(x[i]) <= 0.05) i++;
+        if (i >= x.length) continue;
+        buf.shift = i / buf.sampleRate - MUSIC.drop;
+        return (music.buf = buf);
+      } catch(e){}
+    }
+    return null;
+  })();
+  return music.loading;
+}
+const musicLevel = () => prefs.music ? MUSIC_GAIN * (prefs.musicVolume ?? 0.8) : 0;
+async function startMusic(){
+  if (!prefs.music || music.src || music.starting) return;
+  music.starting = true;
+  try {
+    const ac = audio(), buf = await loadMusic(ac);
+    if (!buf || !prefs.music || music.src) return;
+    if (!music.gain){ music.gain = ac.createGain(); music.gain.connect(ac.destination); }
+    const s = ac.createBufferSource();
+    s.buffer = buf; s.loop = true;
+    s.loopStart = MUSIC.loopStart + buf.shift; s.loopEnd = MUSIC.loopEnd + buf.shift;
+    const t = ac.currentTime;
+    music.gain.gain.cancelScheduledValues(t); music.gain.gain.setValueAtTime(0.0001, t);
+    music.gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, musicLevel()), t + 0.6);
+    s.connect(music.gain);
+    // the intro plays once; turning the music back on later starts at the loop
+    s.start(t, music.introDone ? s.loopStart : 0);
+    music.introDone = true; music.src = s;
+  } catch(e){}
+  finally { music.starting = false; }
+}
+function stopMusic(){
+  const s = music.src; if (!s) return;
+  music.src = null;
+  try { const t = actx.currentTime; music.gain.gain.cancelScheduledValues(t); music.gain.gain.setTargetAtTime(0.0001, t, 0.12); s.stop(t + 0.6); } catch(e){}
+}
+// the volume slider and the switch
+function applyMusic(){
+  if (!prefs.music){ stopMusic(); return; }
+  if (music.src && music.gain && actx){ const t = actx.currentTime; music.gain.gain.cancelScheduledValues(t); music.gain.gain.setTargetAtTime(Math.max(0.0001, musicLevel()), t, 0.05); }
+  else if (music.unlocked) startMusic();
+}
+// first tap or key: sound is allowed from now on
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => { music.unlocked = true; startMusic(); }, { capture:true, passive:true }));
+// quiet while the game is hidden (another tab, Telegram in the background)
+document.addEventListener('visibilitychange', () => {
+  if (!actx) return;
+  try { if (document.hidden) actx.suspend(); else if (music.src || prefs.sound) actx.resume(); } catch(e){}
+});

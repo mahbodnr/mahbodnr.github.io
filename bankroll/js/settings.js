@@ -1,7 +1,7 @@
 /* Bankroll · settings: sound, vibration, animation speed, theme, four-colour deck, cosmetics, seeds */
 'use strict';
 
-const PREF_DEFAULTS = { sound:true, volume:0.8, haptics:true, speed:'normal', theme:'dark', fourColor:false, pack:'classic', felt:'green', sort:'rank' };
+const PREF_DEFAULTS = { sound:true, volume:0.8, music:true, musicVolume:0.8, haptics:true, speed:'normal', theme:'dark', fourColor:false, pack:'classic', felt:'green', sort:'rank' };
 
 // Card packs (js/packs.js) and table felts unlock as your best level climbs.
 const FELTS = [
@@ -39,13 +39,14 @@ try { new MutationObserver(applyPrefs).observe(document.documentElement, { attri
 
 function setPref(k, v){
   if (!(k in PREF_DEFAULTS)) return;
-  if (k === 'volume') v = Math.max(0, Math.min(1, +v));
-  if (k === 'sound' || k === 'fourColor' || k === 'haptics') v = v === true || v === 'true';
+  if (k === 'volume' || k === 'musicVolume') v = Math.max(0, Math.min(1, +v));
+  if (k === 'sound' || k === 'music' || k === 'fourColor' || k === 'haptics') v = v === true || v === 'true';
   if (k === 'pack' && !isUnlocked(packById(v))) return;
   if (k === 'felt' && !isUnlocked(FELTS.find(x => x.id === v))) return;
   prefs[k] = v; if (k === 'theme') prefs.themeChosen = true;
   store(PREF_KEY, prefs); applyPrefs();
   if (k === 'sound' && v) sfx('coin');
+  if (k === 'music') applyMusic();
   if (k === 'haptics' && v) buzz(20);
 }
 
@@ -61,8 +62,10 @@ function settingsHTML(){
       <span class="swv"></span><b>${it.name}</b>${ok ? '' : `<small>${LOCK_SVG}Level ${it.level}</small>`}</button>`; }).join('')}</div>`;
   return `<h2>Settings</h2>
     <h3>Sound</h3>
+    ${toggle('music', 'Music', '“Calculated Ante”')}
+    <div class="srow"><span>Music volume</span><input type="range" id="musicRange" min="0" max="100" value="${Math.round((prefs.musicVolume ?? .8) * 100)}" aria-label="Music volume" ${prefs.music ? '' : 'disabled'}></div>
     ${toggle('sound', 'Sound effects')}
-    <div class="srow"><span>Volume</span><input type="range" id="volRange" min="0" max="100" value="${Math.round((prefs.volume ?? .8) * 100)}" aria-label="Volume" ${prefs.sound ? '' : 'disabled'}></div>
+    <div class="srow"><span>Effects volume</span><input type="range" id="volRange" min="0" max="100" value="${Math.round((prefs.volume ?? .8) * 100)}" aria-label="Effects volume" ${prefs.sound ? '' : 'disabled'}></div>
     ${toggle('haptics', 'Vibration')}
     <h3>Look</h3>
     <div class="srow"><span>Theme</span>${seg('theme', [['system','System'],['dark','Dark'],['light','Light']], 'Theme')}</div>
