@@ -1195,3 +1195,7 @@ html.light .lv-deck{background:rgba(0,0,0,.1)} html.light .lv-deck > i{backgroun
 .linkshare{font:inherit;font-size:12px;font-weight:800;color:var(--brass-hi);background:transparent;border:1px solid var(--brass-dim);border-radius:999px;padding:4px 10px;margin-left:8px;cursor:pointer;vertical-align:middle}
 .linkshare svg{width:13px;height:13px}
 .lbshare{display:flex;justify-content:center;margin:10px 0 4px}
+/* the header's music switch: a line through the note when it's off */
+.musicbtn .mute{display:none}
+.musicbtn[aria-pressed="false"] .mute{display:inline}
+.musicbtn[aria-pressed="false"] svg{opacity:.6}

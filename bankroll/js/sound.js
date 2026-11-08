@@ -117,3 +117,6 @@ document.addEventListener('visibilitychange', () => {
   if (!actx) return;
   try { if (document.hidden) actx.suspend(); else if (music.src || prefs.sound) actx.resume(); } catch(e){}
 });
+
+// the music button in the header: on or off at a glance
+function musicBtnState(){ const b = document.getElementById('musicBtn'); if (b){ b.setAttribute('aria-pressed', String(!!prefs.music)); b.title = prefs.music ? 'Music on' : 'Music off'; b.setAttribute('aria-label', b.title); } }

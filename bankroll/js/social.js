@@ -348,13 +348,17 @@ async function shareChatGame(){
 const plainLabel = l => String(l).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 const numOut = v => (typeof v === 'number' && !Number.isFinite(v)) || v === 'Infinity' ? 'Infinity' : Number(v) || 0;
 function momentOf(kind, period){
-  if (kind === 'hand'){ const r = S.result; return r && r.ev ? { kind, mult:numOut(r.ev.mult), labels:r.ev.combos.map(c => plainLabel(c.label)) } : null; }
-  if (kind === 'run'){ const run = (S.over && S.over.run) || {}; return { kind, level:run.level || lvl(), peak:numOut(run.peak ?? S.stats.peak), mult:numOut(S.stats.bestMult || 0) }; }
+  if (kind === 'hand'){
+    const r = S.result; if (!r || !r.ev) return null;
+    const hot = new Set(r.ev.combos.flatMap(c => c.ids));
+    return { kind, mult:numOut(r.ev.mult), labels:r.ev.combos.map(c => plainLabel(c.label)), cards:r.hand.map(c => [c.rank, c.suit, hot.has(c.id)]) };
+  }
+  if (kind === 'run'){ const run = (S.over && S.over.run) || {}; return { kind, level:run.level || lvl(), peak:numOut(run.peak ?? S.stats.peak), mult:numOut(S.stats.bestMult || 0), cards:(S.bestHand && S.bestHand.cards) || [] }; }
   if (kind === 'board'){
     const per = period === 'week' ? 'week' : 'today', rows = LB.boards[per] || [], i = rows.findIndex(x => x.id === LB.me);
     return i < 0 ? null : { kind, rank:i + 1, period:per, level:rows[i].level || 1, peak:numOut(rows[i].peak) };
   }
-  if (kind === 'tophand'){ const r = ui.record; return r ? { kind, mult:numOut(r.mult), labels:(r.labels || []).map(plainLabel) } : null; }
+  if (kind === 'tophand'){ const r = ui.record; return r ? { kind, mult:numOut(r.mult), labels:(r.labels || []).map(plainLabel), cards:r.cards || [] } : null; }
   return null;
 }
 function momentText(m){
@@ -368,21 +372,46 @@ function momentText(m){
 }
 const gameLink = () => telegramLaunch() ? TG_APP + '?startapp'
   : location.protocol.startsWith('http') && !window.claude ? location.origin + location.pathname : 'https://mahbod.me/bankroll/';
+// The picture is drawn as soon as a Share button shows, so tapping it shares straight away (a share sheet has to
+// open within the tap, which a slow drawing could miss).
+const shareKey = m => JSON.stringify(m);
+const sharePics = new Map();
+function sharePicture(m){
+  const k = shareKey(m);
+  if (!sharePics.has(k)){ if (sharePics.size > 8) sharePics.clear(); sharePics.set(k, typeof shareImage === 'function' ? shareImage(m).catch(() => null) : Promise.resolve(null)); }
+  return sharePics.get(k);
+}
+function warmShares(){
+  document.querySelectorAll('#modalRoot .sharebtn').forEach(b => { const m = momentOf(b.dataset.v, b.dataset.p); if (m) sharePicture(m); });
+}
+const blobB64 = b => new Promise(res => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] || null); r.onerror = () => res(null); r.readAsDataURL(b); });
 async function shareMoment(kind, period){
   const m = momentOf(kind, period);
   if (!m){ toast('Nothing to share yet'); return; }
   const text = momentText(m), link = gameLink(), tg = telegramLaunch();
+  const pic = await sharePicture(m);
   try {
+    // Telegram: the bot sends the picture with the text and a Play button
     if (tg && tg.app && tg.app.shareMessage && tg.app.isVersionAtLeast && tg.app.isVersionAtLeast('8.0') && LB.backend && LB.backend.shareMoment){
-      const id = await LB.backend.shareMoment(m);
+      toast('Preparing the picture…');
+      const id = await LB.backend.shareMoment(m, pic ? await blobB64(pic) : null);
       if (id){ tg.app.shareMessage(id, sent => { if (sent) toast('Shared!'); }); return; }
+    }
+    // phones: the picture through the share sheet
+    if (pic && navigator.canShare){
+      const file = new File([pic], 'bankroll.jpg', { type:'image/jpeg' });
+      if (navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], text:text + ' ' + link }); return; }
     }
     if (tg && tg.app && tg.app.openTelegramLink && tg.app.isVersionAtLeast && tg.app.isVersionAtLeast('6.1')){
       tg.app.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent(link) + '&text=' + encodeURIComponent(text)); return;
     }
     if (navigator.share){ await navigator.share({ title:'Bankroll', text, url:link }); return; }
   } catch(e){ if (e && e.name === 'AbortError') return; }
-  toast(await copyText(text + ' ' + link) ? 'Copied: paste it anywhere' : esc(text + ' ' + link));
+  // computers: save the picture and copy the text
+  let saved = false;
+  if (pic){ try { const a = document.createElement('a'); a.href = URL.createObjectURL(pic); a.download = 'bankroll.jpg'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); saved = true; } catch(e){} }
+  const copied = await copyText(text + ' ' + link);
+  toast(saved && copied ? 'Picture saved and text copied' : saved ? 'Picture saved' : copied ? 'Copied: paste it anywhere' : esc(text + ' ' + link));
 }
 const SHARE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/></svg>';
 const shareBtn = (kind, label, cls = 'btn', period = '') => `<button class="${cls} sharebtn" data-act="share" data-v="${kind}"${period ? ` data-p="${period}"` : ''}>${SHARE_SVG}<span>${label}</span></button>`;

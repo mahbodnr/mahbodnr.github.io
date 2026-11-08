@@ -681,6 +681,7 @@ function render(){
   const stageEl = document.querySelector('#pit .stage .card[data-cid]');
   const stageWas = stageEl && { id:stageEl.dataset.cid, html:stageEl.outerHTML, rect:stageEl.getBoundingClientRect() };
   renderLedger(); renderPit(); renderPowers(); renderHand(); renderValue(); renderDock(); renderModal();
+  if (typeof warmShares === 'function') warmShares();
   // small cards (many in a row on a narrow screen): the hand switches to the easy-to-read Clear pack until there's room again
   const small = handIsSmall();
   if (small !== !!ui.handClear){ ui.handClear = small; renderHand(); }

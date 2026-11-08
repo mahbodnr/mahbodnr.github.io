@@ -46,7 +46,7 @@ const isInf = v => +v === Infinity;
 const cmpNum = (x, y) => { x = +x || 0; y = +y || 0; return x === y ? 0 : x > y ? 1 : -1; };
 const byScore = (a, b) => (isInf(b.peak) - isInf(a.peak)) || cmpNum(b.level, a.level) || cmpNum(b.peak, a.peak) || cmpNum(b.biggestWin, a.biggestWin);
 const byMult = (a, b) => (b.mult || 0) - (a.mult || 0) || (a.at || 0) - (b.at || 0);
-function refreshBoard(){ if (ui.modal === 'history' || ui.modal === 'over') render(); const t = $('boardBtn'); if (t) t.hidden = !leaderboardAvailable(); }
+function refreshBoard(){ if (ui.modal === 'history' || ui.modal === 'over') render(); }
 
 /* ---------- backend: claude.ai shared database ---------- */
 // scores/<player>: { day, week, runs, all:{ ever, today, week }, open:{ ever, today, week } }
@@ -244,10 +244,13 @@ const supabaseBackend = {
     catch(e){ return { error:'error' }; }
   },
   // a moment to share, as the bot's card (Telegram)
-  async shareMoment(moment){
+  async shareMoment(moment, image){
     const tg = telegramLaunch();
     if (!tg) return null;
-    try { const { data, error } = await this.client.functions.invoke('bankroll-telegram', { body:{ initData:tg.initData, action:'shareresult', moment } }); return error || !data ? null : data.id || null; }
+    try {
+      const body = { initData:tg.initData, action:'shareresult', moment };
+      if (image) body.image = image;
+      const { data, error } = await this.client.functions.invoke('bankroll-telegram', { body }); return error || !data ? null : data.id || null; }
     catch(e){ return null; }
   },
   async shareGame(){

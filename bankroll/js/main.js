@@ -10,7 +10,7 @@ function start(data){
   if (!savedPrefs.pack && savedPrefs.back) prefs.pack = BACK_TO_PACK[savedPrefs.back] || 'classic';   // older saves chose a card back
   // first visit: a guided first hand instead of the rules page; returning players skip it
   if (prefs.tutDone === undefined) prefs.tutDone = !!load('bankroll-seen-help' + KEY_NS);
-  applyPrefs();
+  applyPrefs(); musicBtnState();
   const saved = migrate((data && data.S) || load(SAVE_KEY));
   if (saved){
     S = saved;

@@ -46,7 +46,7 @@ function setPref(k, v){
   prefs[k] = v; if (k === 'theme') prefs.themeChosen = true;
   store(PREF_KEY, prefs); applyPrefs();
   if (k === 'sound' && v) sfx('coin');
-  if (k === 'music') applyMusic();
+  if (k === 'music'){ applyMusic(); musicBtnState(); }
   if (k === 'haptics' && v) buzz(20);
 }
 
