@@ -9,7 +9,7 @@ function audio(){
     noiseBuf = actx.createBuffer(1, actx.sampleRate * 0.4, actx.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   }
-  if (actx.state === 'suspended') actx.resume();
+  if (actx.state === 'suspended') actx.resume().catch(() => {});    // some webviews refuse audio at first; the next tap tries again
   master.gain.value = 0.9 * (prefs.volume ?? 0.8);
   return actx;
 }
@@ -115,7 +115,7 @@ function applyMusic(){
 // quiet while the game is hidden (another tab, Telegram in the background)
 document.addEventListener('visibilitychange', () => {
   if (!actx) return;
-  try { if (document.hidden) actx.suspend(); else if (music.src || prefs.sound) actx.resume(); } catch(e){}
+  try { if (document.hidden) actx.suspend().catch(() => {}); else if (music.src || prefs.sound) actx.resume().catch(() => {}); } catch(e){}
 });
 
 // the music button in the header: on or off at a glance
