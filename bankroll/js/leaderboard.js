@@ -119,12 +119,16 @@ const claudeBackend = {
   },
 };
 
+// the page's query string as it arrived (the game tidies the address bar soon after, see js/social.js)
+const ARRIVED_QS = (() => { try { return location.search; } catch(e){ return ''; } })();
+
 /* ---------- backend: Supabase (mahbod.me) ---------- */
 const supabaseBackend = {
   async init(cfg){
     if (!window.supabase || !window.supabase.createClient) return false;
     this.cfg = cfg;
     this.client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true } });
+    this.logVisit();
     // an anonymous session (a player who hasn't signed in) records runs for analysis but counts as signed out
     const setSession = session => {
       LB.anon = !!(session && session.user.is_anonymous);
@@ -285,6 +289,22 @@ const supabaseBackend = {
       this.refresh();
       return 'ok';
     } catch(e){ return 'error'; }
+  },
+  // One visit per page load (a reload within the same tab session doesn't count again). No IDs, cookies or IP: where the
+  // visitor came from, website or Telegram, phone or computer, language, and whether this browser has been here before.
+  logVisit(){
+    try {
+      if (sessionStorage.getItem('bankroll-visit' + KEY_NS)) return;
+      sessionStorage.setItem('bankroll-visit' + KEY_NS, '1');
+    } catch(e){}
+    let ref = '', tag = '';
+    try { const r = document.referrer && new URL(document.referrer); if (r && r.host !== location.host) ref = r.host.replace(/^www\./, ''); } catch(e){}
+    try { const q = new URLSearchParams(ARRIVED_QS); tag = q.get('ref') || q.get('utm_source') || q.get('src') || ''; } catch(e){}
+    const tg = telegramLaunch(), today = new Date().toISOString().slice(0, 10);
+    let seen = null; try { seen = localStorage.getItem('bankroll-last-visit' + KEY_NS); localStorage.setItem('bankroll-last-visit' + KEY_NS, today); } catch(e){}
+    const args = { p_source: tag || ref || (tg ? 'telegram' : 'direct'), p_referrer: ref || null, p_platform: tg ? 'telegram' : 'web',
+      p_mobile: matchMedia('(pointer: coarse)').matches, p_lang: (navigator.language || '').slice(0, 12), p_new: !seen, p_new_today: seen !== today };
+    this.client.rpc('bankroll_log_visit', args).then(() => {}, () => {});
   },
   // Telegram's signed launch data → the bankroll-telegram function → a one-time token → a Supabase session
   async telegramSignIn(){
