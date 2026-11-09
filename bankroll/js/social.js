@@ -269,7 +269,7 @@ function overPlayHTML(){
     if (i.kind === 'daily') return `<div class="ro-ch daily"><div class="rs-eyebrow">${chTitle(i)}</div>
       <div class="roc-head">${headline}</div>${sub ? `<p class="snote">${sub}</p>` : ''}
       ${rows.length ? groupBoardHTML({ ...g, data:{ ...g.data, players:rows.slice(0, 5) } }, '') : ''}
-      <div class="roc-actions"><button class="btn" data-act="groupResults">Today's full board</button>${shareBtn('run', 'Share', 'btn')}</div></div>`;
+      <div class="roc-actions"><button class="btn" data-act="groupResults">Today's full board</button>${mine && mine.finished ? shareBtn('daily', 'Share my result', 'btn gold') : ''}</div></div>`;
     return `<div class="ro-ch ${i.kind}"><div class="rs-eyebrow">${chTitle(i)}${i.round > 1 ? ` · round ${i.round}` : ''}</div>
       <div class="roc-head">${headline}</div>${sub ? `<p class="snote">${sub}</p>` : ''}
       ${rows.length ? groupBoardHTML(g, '') : ''}
@@ -354,6 +354,11 @@ function momentOf(kind, period){
     const per = period === 'week' ? 'week' : 'today', rows = LB.boards[per] || [], i = rows.findIndex(x => x.id === LB.me);
     return i < 0 ? null : { kind, rank:i + 1, period:per, level:rows[i].level || 1, peak:numOut(rows[i].peak) };
   }
+  if (kind === 'daily'){
+    const g = ui.group && LB.daily && ui.group.code === LB.daily.code && ui.group.data, rows = g ? g.players : [], i = rows.findIndex(p => p.user_id === LB.me);
+    if (i < 0) return null;
+    return { kind, rank:i + 1, players:rows.length, level:rows[i].level || 1, peak:numOut(rows[i].peak), mult:numOut(S.stats.bestMult || 0), cards:(S.bestHand && S.bestHand.cards) || [], day:dayLabel() };
+  }
   if (kind === 'tophand'){ const r = ui.record; return r ? { kind, mult:numOut(r.mult), labels:(r.labels || []).map(plainLabel), cards:r.cards || [] } : null; }
   return null;
 }
@@ -363,6 +368,7 @@ function momentText(m){
     hand: `🃏 I just made a ×${f(m.mult)} hand in Bankroll${m.labels && m.labels.length ? ': ' + m.labels.join(' × ') : ''}! Can you beat it?`,
     run: `💰 I reached level ${m.level} with ${f(m.peak)} coins in Bankroll${Number(m.mult) > 0 || m.mult === 'Infinity' ? ` (best hand ×${f(m.mult)})` : ''}. Can you beat that?`,
     board: `🏆 I'm #${m.rank} on ${m.period === 'week' ? 'this week\'s' : 'today\'s'} Bankroll leaderboard: level ${m.level}, ${f(m.peak)} coins. Can you beat me?`,
+    daily: `📅 I placed #${m.rank} of ${m.players} in today's Bankroll daily challenge: level ${m.level}, ${f(m.peak)} coins. Same deck for everyone, one try. Can you beat me?`,
     tophand: `👑 My ×${f(m.mult)} hand is the best in Bankroll today${m.labels && m.labels.length ? ': ' + m.labels.join(' × ') : ''}! Can you beat it?`,
   }[m.kind];
 }
@@ -451,11 +457,33 @@ function dailyOfferHTML(){
       <li>Your run goes on <b>today's daily board</b>${n ? `, where ${n} ${n === 1 ? 'player is' : 'players are'} already` : ''}.</li></ul>
     ${runInProgress() && !isDailyRun() ? '<p class="snote">Your current run is saved. You\'ll carry on with it after the daily.</p>' : ''}
     <p class="snote">New deck in ${resetIn()}.</p>
-    <div class="actions"><button class="btn" data-act="close">Not now</button><button class="btn gold" data-act="playDaily">Play the daily</button></div></div>`;
+    <div class="actions"><button class="btn" data-act="close">Not now</button><button class="btn gold" data-act="playDaily">${LB.signedIn ? 'Play the daily' : 'Sign in and play'}</button></div></div>`;
+}
+// guests: the daily is one try per person and puts a name on a public board, so it needs an account
+const DAILY_AFTER_SIGNIN = 'bankroll-daily-after-signin' + KEY_NS;
+function dailySignInHTML(){
+  return `<div class="rs-eyebrow">Daily challenge · ${dayLabel()}</div><h2>Sign in to play the daily</h2>
+    <p class="lead">The daily challenge is <b>one try per player</b>, and your run goes on today's board with your name, so it needs an account. Everything else in Bankroll works without one.</p>
+    <div class="actions"><button class="btn" data-act="close">Not now</button><button class="btn gold" data-act="dailySignIn">Sign in</button></div>`;
+}
+function signInForDaily(){ store(DAILY_AFTER_SIGNIN, todayUTC()); ui.modal = null; render(); if (LB.backend && LB.backend.signIn) LB.backend.signIn(); }
+// once today's daily is known: open on its board, start it when asked to (the reminder's button, or back from signing
+// in for it), otherwise suggest it the first time today
+function afterDailyLoaded(){
+  if (!LB.daily) return;
+  if (LB.period === 'today' && !LB.periodChosen) LB.period = 'daily';
+  let wanted = false;
+  try { wanted = new URLSearchParams(ARRIVED_QS).get('daily') === '1'; } catch(e){}
+  if (load(DAILY_AFTER_SIGNIN) === todayUTC() && LB.signedIn){ wanted = true; try { localStorage.removeItem(DAILY_AFTER_SIGNIN); } catch(e){} }
+  if (wanted && dailyTodo() && !(S && S.intro) && !(typeof intro !== 'undefined' && intro)){ store(DAILY_OFFER_KEY, todayUTC()); startDaily(); return; }
+  if (wanted && LB.daily.played){ openGroup(LB.daily.code); return; }
+  maybeOfferDaily();
 }
 // start today's daily: a run in progress is kept aside (on this device; the server keeps it open) to come back to
 async function startDaily(){
   if (!dailyTodo()) { if (LB.daily && LB.daily.code) openGroup(LB.daily.code); return; }
+  // one try per person: guests sign in first (Telegram players are always signed in)
+  if (!LB.signedIn){ ui.modalBack = null; ui.modal = 'dailySignIn'; render(); return; }
   if (runInProgress() && !isDailyRun()) store(STASH_KEY, JSON.parse(JSON.stringify(S)));
   ui.modal = null; ui.modalBack = null;
   await beginRun(null, LB.daily.code);

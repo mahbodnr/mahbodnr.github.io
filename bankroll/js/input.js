@@ -180,7 +180,7 @@ document.addEventListener('click', e => {
     case 'settings': ui.modal = 'settings'; break;
     case 'histTab': ui.histTab = t.dataset.v; if (t.dataset.v === 'board' && LB.backend && LB.backend.refresh) LB.backend.refresh(); break;
     case 'openBoard': ui.histTab = 'board'; ui.modal = 'history'; if (LB.backend && LB.backend.refresh) LB.backend.refresh(); break;
-    case 'lbPeriod': LB.period = t.dataset.v; break;
+    case 'lbPeriod': LB.period = t.dataset.v; LB.periodChosen = true; break;
     case 'lbSeeded': LB.seeded = !LB.seeded; if (LB.backend && LB.backend.refresh) LB.backend.refresh(); break;
     case 'lbSignIn': if (LB.backend && LB.backend.signIn) LB.backend.signIn(); return;
     case 'setPref': setPref(t.dataset.k, t.dataset.v); break;
@@ -205,6 +205,7 @@ document.addEventListener('click', e => {
     case 'groupRefresh': loadGroup(ui.groupCode); return;
     case 'groupInvite': shareGroup(ui.groupCode, isDuel(ui.group) ? 'duel' : 'group'); return;
     case 'playDaily': startDaily(); return;
+    case 'dailySignIn': signInForDaily(); return;
     case 'resumeStash': resumeStash(); return;
     case 'newRun': dropStash(); beginRun(); return;
     case 'acceptChallenge': { const s = ui.challengeSeed; ui.challengeSeed = null; ui.modal = null; beginRun(s); return; }

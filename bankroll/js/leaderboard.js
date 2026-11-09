@@ -187,7 +187,8 @@ const supabaseBackend = {
     const md = user.user_metadata || {};
     try {
       await this.client.rpc('bankroll_ensure_profile', { p_username: md.full_name || md.name || (user.email || 'player').split('@')[0],
-        p_avatar_url: md.avatar_url || null, p_telegram_id: md.telegram_id || null });
+        p_avatar_url: md.avatar_url || null, p_telegram_id: md.telegram_id || null,
+        p_tz: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch(e){ return null; } })() });   // for the afternoon reminder
     } catch(e){}
   },
   async refresh(){
@@ -350,7 +351,7 @@ async function initLeaderboard(){
   if (LB.backend){ await upgradeFreshRun(); reportProgress(); }
   if (ui.pendingGroup){ const c = ui.pendingGroup; ui.pendingGroup = null; offerGroup(c); }
   if (!LB.backend && ui.modal === 'joinGroup' && ui.group && ui.group.loading){ ui.group = { code:ui.group.code, error:'offline' }; render(); }
-  if (LB.backend){ await loadDaily(); if (LB.daily && LB.backend.refresh) LB.backend.refresh(); refreshBoard(); maybeOfferDaily(); }
+  if (LB.backend){ await loadDaily(); if (LB.daily && LB.backend.refresh) LB.backend.refresh(); refreshBoard(); afterDailyLoaded(); }
 }
 
 /* ---------- starting runs ---------- */
@@ -379,7 +380,8 @@ async function beginRun(seed, challenge){
   if (run.error === 'rate_limited'){ await new Promise(r => setTimeout(r, 2100)); run = await ask(); }
   runStarting = false; ui.starting = false; ui.modal = null;
   if (challenge && !run.run_id){                    // a challenge is played on the server or not at all
-    if (run.error === 'already_played'){ openGroup(run.challenge || challenge); toast('You\'ve played this challenge'); }
+    if (run.error === 'already_played'){ openGroup(run.challenge || challenge); toast(isDailyCode(challenge) ? 'You\'ve played today\'s daily challenge' : 'You\'ve played this challenge'); }
+    else if (run.error === 'sign_in_required'){ ui.modal = 'dailySignIn'; }
     else toast(run.error === 'unknown_challenge' ? 'That challenge doesn\'t exist' : 'Couldn\'t start the challenge. Try again in a moment');
     render(); return;
   }
@@ -551,16 +553,16 @@ function leaderboardHTML(){
   const per = LB.period === 'week' ? 'week' : LB.period === 'daily' && hasDaily ? 'daily' : 'today';
   const rows = LB.boards[per];
   const toggle = `<div class="lbbar"><div class="sg lbper" role="group" aria-label="Leaderboard period">
+      ${hasDaily ? `<button class="lbper-daily" data-act="lbPeriod" data-v="daily" aria-pressed="${per === 'daily'}">Daily Challenge</button>` : ''}
       <button data-act="lbPeriod" data-v="today" aria-pressed="${per === 'today'}">Today</button>
-      ${hasDaily ? `<button data-act="lbPeriod" data-v="daily" aria-pressed="${per === 'daily'}">Daily</button>` : ''}
       <button data-act="lbPeriod" data-v="week" aria-pressed="${per === 'week'}">This week</button></div>
 </div>`;
   const seeded = `<button class="lbseed" data-act="lbSeeded" aria-pressed="${LB.seeded}" title="${LB.seeded ? 'Hide' : 'Include'} runs where the player chose the seed" aria-label="${LB.seeded ? 'Hide' : 'Include'} seeded runs">${LB.seeded ? '− seeded' : '+ seeded'}</button>`;
   const sub = per === 'today' ? `<p class="snote lbsub">Resets in ${resetIn()}</p>`
     : per === 'week' ? `<p class="snote lbsub">Resets on Monday (UTC)</p>`
-    : per === 'daily' ? `<p class="snote lbsub">Everyone plays the same deck today, once · new deck in ${resetIn()}</p>` : '';
+    : per === 'daily' ? dailyHeadHTML(rows) : '';
   // not played today's daily yet: a way in from every tab
-  const dailyCta = hasDaily && dailyTodo() ? `<div class="lbdaily"><span><b>Daily challenge</b><small>Today's deck, one try, its own board</small></span>
+  const dailyCta = hasDaily && dailyTodo() && per !== 'daily' ? `<div class="lbdaily"><span><b>Daily challenge</b><small>Today's deck, one try, its own board</small></span>
       <button class="btn gold" data-act="playDaily">Play</button></div>` : '';
   let foot;
   if (LB.kind === 'supabase' && !LB.signedIn)
@@ -571,7 +573,8 @@ function leaderboardHTML(){
   }
   else foot = `<p class="snote">Unverified scores${!LB.me ? ' · sign in to post' : LB.writeFailed ? ' · view only' : ''}</p>`;
   const list = !rows.length
-    ? `<p class="empty">No runs yet</p>`
+    ? `<p class="empty">${per === 'daily' ? 'Nobody has played today\'s deck yet. The top spot is open.' : 'No runs yet'}</p>`
+    : per === 'daily' ? dailyBoardHTML(rows)
     : `<div class="board" role="table" aria-label="Leaderboard, ${per === 'today' ? 'today' : 'this week'}">
       <div class="brow bhead" role="row"><span>#</span><span>Player</span><span>Level</span><span>Most coins</span><span>Biggest win</span></div>
       ${rows.map((r, i) => `<div class="brow ${r.id === LB.me ? 'me' : ''}" role="row"><span>${i + 1}</span>${lbName(per === 'daily' ? { ...r, seeded:false } : r)}
@@ -580,4 +583,21 @@ function leaderboardHTML(){
   const mine = per !== 'daily' && LB.me ? rows.findIndex(r => r.id === LB.me) : -1;
   const shareMine = mine >= 0 ? `<div class="lbshare">${shareBtn('board', `Share my #${mine + 1}`, 'btn gold-line', per)}</div>` : '';
   return `${dailyCta}${toggle}${sub}${list}${shareMine}${per === 'daily' ? '' : handsHTML(per)}${foot}${per === 'daily' ? '' : seeded}`;
+}
+
+
+/* ---------- the Daily Challenge tab: a header with the day's state, and a podium-style board ---------- */
+function dailyHeadHTML(rows){
+  const me = LB.me ? rows.findIndex(r => r.id === LB.me) : -1;
+  const state = dailyTodo() ? `<button class="btn gold" data-act="playDaily">Play today's deck</button>`
+    : me >= 0 ? `<div class="dh-me"><b>#${me + 1}</b><span>your place today</span></div>` : '';
+  return `<div class="dailyhead"><div><div class="rs-eyebrow">Daily Challenge · ${dayLabel()}</div>
+      <p>Same deck for everyone, one try each. ${rows.length} ${rows.length === 1 ? 'player' : 'players'} so far · new deck in ${resetIn()}.</p></div>${state}</div>`;
+}
+function dailyBoardHTML(rows){
+  return `<div class="board dboard" role="table" aria-label="Daily challenge board, today">
+    <div class="brow bhead" role="row"><span>#</span><span>Player</span><span>Level</span><span>Most coins</span></div>
+    ${rows.map((r, i) => `<div class="brow ${r.id === LB.me ? 'me' : ''} ${i < 3 ? 'pod p' + (i + 1) : ''}" role="row"><span class="rk">${i + 1}</span>${lbName({ ...r, seeded:false })}
+      <span>${fmtFit(r.level || 1)}</span><span>${fmtFit(r.peak || 0)}${r.playing ? ' <i class="playing">playing</i>' : ''}</span></div>`).join('')}
+  </div>`;
 }

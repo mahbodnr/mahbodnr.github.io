@@ -43,6 +43,7 @@ function scContent(m){
   if (m.kind === 'hand') return { eyebrow:'Big hand', pre:'×', big:f(m.mult), sub:labels, cards:m.cards };
   if (m.kind === 'tophand') return { eyebrow:'Top hand of the day', pre:'×', big:f(m.mult), sub:labels, cards:m.cards, medal:'👑' };
   if (m.kind === 'run') return { eyebrow:'Run over', pre:'', big:`Level ${m.level}`, sub:`${f(m.peak)} coins${Number(m.mult) > 0 || m.mult === 'Infinity' ? ` · best hand ×${f(m.mult)}` : ''}`, cards:m.cards, medal:String(m.level), medalSub:'LEVEL' };
+  if (m.kind === 'daily') return { eyebrow:`Daily challenge · ${m.day || ''}`, pre:'#', big:String(m.rank), sub:`of ${m.players} today · level ${m.level} · ${f(m.peak)} coins`, cards:m.cards, medal:String(m.rank), medalSub:'DAILY' };
   if (m.kind === 'board') return { eyebrow:m.period === 'week' ? 'This week\'s leaderboard' : 'Today\'s leaderboard', pre:'#', big:String(m.rank), sub:`Level ${m.level} · ${f(m.peak)} coins`, cards:m.cards, medal:String(m.rank), medalSub:m.period === 'week' ? 'THIS WEEK' : 'TODAY' };
   return { eyebrow:'', pre:'', big:'', sub:'', cards:[] };
 }
