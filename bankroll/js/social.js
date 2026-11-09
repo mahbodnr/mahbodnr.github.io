@@ -361,8 +361,12 @@ function momentOf(kind, period){
     const h = list[i];
     return { kind, rank:i + 1, mult:numOut(h.mult), labels:(h.labels || []).map(plainLabel), cards:h.cards || [], powers:h.powers || [] };
   }
+  if (kind === 'dailyinvite') return LB.daily ? { kind, day:dayLabel(), players:(LB.boards.daily || []).length } : null;
   if (kind === 'daily'){
-    const g = ui.group && LB.daily && ui.group.code === LB.daily.code && ui.group.data, rows = g ? g.players : [], i = rows.findIndex(p => p.user_id === LB.me);
+    const g = ui.group && LB.daily && ui.group.code === LB.daily.code && ui.group.data;
+    let rows = g ? g.players : [];
+    if (!rows.length && LB.boards.daily) rows = LB.boards.daily.map(r => ({ user_id:r.id, level:r.level, peak:r.peak }));   // from the leaderboard
+    const i = rows.findIndex(p => p.user_id === LB.me);
     if (i < 0) return null;
     return { kind, rank:i + 1, players:rows.length, level:rows[i].level || 1, peak:numOut(rows[i].peak), mult:numOut(S.stats.bestMult || 0), cards:(S.bestHand && S.bestHand.cards) || [], day:dayLabel() };
   }
@@ -376,12 +380,17 @@ function momentText(m){
     run: `💰 I reached level ${m.level} with ${f(m.peak)} coins in Bankroll${Number(m.mult) > 0 || m.mult === 'Infinity' ? ` (best hand ×${f(m.mult)})` : ''}. Can you beat that?`,
     board: `🏆 I'm #${m.rank} on ${m.period === 'week' ? 'this week\'s' : 'today\'s'} Bankroll leaderboard: level ${m.level}, ${f(m.peak)} coins. Can you beat me?`,
     besthand: `🃏 My ×${f(m.mult)} hand is #${m.rank} of today's best hands in Bankroll${m.labels && m.labels.length ? ': ' + m.labels.join(' × ') : ''}! Can you beat it?`,
+    dailyinvite: `📅 Today's Bankroll daily challenge: the same deck for everyone, one try each.${m.players ? ` ${m.players} ${m.players === 1 ? 'player has' : 'players have'} played so far.` : ''} Can you top the board?`,
     daily: `📅 I placed #${m.rank} of ${m.players} in today's Bankroll daily challenge: level ${m.level}, ${f(m.peak)} coins. Same deck for everyone, one try. Can you beat me?`,
     tophand: `👑 My ×${f(m.mult)} hand is the best in Bankroll today${m.labels && m.labels.length ? ': ' + m.labels.join(' × ') : ''}! Can you beat it?`,
   }[m.kind];
 }
-const gameLink = () => telegramLaunch() ? TG_APP + '?startapp'
-  : location.protocol.startsWith('http') && !window.claude ? location.origin + location.pathname : 'https://mahbod.me/bankroll/';
+const gameLink = kind => {
+  const daily = kind === 'daily' || kind === 'dailyinvite';                 // a daily share opens today's daily
+  if (telegramLaunch()) return TG_APP + (daily ? '?startapp=daily' : '?startapp');
+  const base = location.protocol.startsWith('http') && !window.claude ? location.origin + location.pathname : 'https://mahbod.me/bankroll/';
+  return base + (daily ? '?daily=1' : '');
+};
 // The picture is drawn as soon as a Share button shows, so tapping it shares straight away (a share sheet has to
 // open within the tap, which a slow drawing could miss).
 const shareKey = m => JSON.stringify(m);
@@ -398,7 +407,7 @@ const blobB64 = b => new Promise(res => { const r = new FileReader(); r.onload =
 async function shareMoment(kind, period){
   const m = momentOf(kind, period);
   if (!m){ toast('Nothing to share yet'); return; }
-  const text = momentText(m), link = gameLink(), tg = telegramLaunch();
+  const text = momentText(m), link = gameLink(m.kind), tg = telegramLaunch();
   const pic = await sharePicture(m);
   try {
     // Telegram: the bot sends the picture with the text and a Play button
@@ -482,6 +491,7 @@ function afterDailyLoaded(){
   if (LB.period === 'today' && !LB.periodChosen) LB.period = 'daily';
   let wanted = false;
   try { wanted = new URLSearchParams(ARRIVED_QS).get('daily') === '1'; } catch(e){}
+  const tg = telegramLaunch(); if (tg && tg.startParam === 'daily') wanted = true;        // a shared daily link in Telegram
   if (load(DAILY_AFTER_SIGNIN) === todayUTC() && LB.signedIn){ wanted = true; try { localStorage.removeItem(DAILY_AFTER_SIGNIN); } catch(e){} }
   if (wanted && dailyTodo() && !(S && S.intro) && !(typeof intro !== 'undefined' && intro)){ store(DAILY_OFFER_KEY, todayUTC()); startDaily(); return; }
   if (wanted && LB.daily.played){ openGroup(LB.daily.code); return; }

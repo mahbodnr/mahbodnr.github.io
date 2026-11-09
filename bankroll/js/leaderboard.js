@@ -598,10 +598,11 @@ function leaderboardHTML(){
 /* ---------- the Daily Challenge tab: a header with the day's state, and a podium-style board ---------- */
 function dailyHeadHTML(rows){
   const me = LB.me ? rows.findIndex(r => r.id === LB.me) : -1;
-  const state = dailyTodo() ? `<button class="btn gold" data-act="playDaily">Play today's deck</button>`
-    : me >= 0 ? `<div class="dh-me"><b>#${me + 1}</b><span>your place today</span></div>` : '';
+  // challenge friends to today's deck: with your place when you're on the board, an invitation otherwise
+  const invite = shareBtn(me >= 0 ? 'daily' : 'dailyinvite', 'Challenge your friends', 'btn gold-line');
   return `<div class="dailyhead"><div><div class="rs-eyebrow">Daily Challenge · ${dayLabel()}</div>
-      <p>Same deck for everyone, one try each. ${rows.length} ${rows.length === 1 ? 'player' : 'players'} so far · new deck in ${resetIn()}.</p></div>${state}</div>`;
+      <p>Same deck for everyone, one try each. ${rows.length} ${rows.length === 1 ? 'player' : 'players'} so far · new deck in ${resetIn()}.</p></div>
+      <div class="dh-acts">${dailyTodo() ? '<button class="btn gold" data-act="playDaily">Play today\'s deck</button>' : ''}${invite}</div></div>`;
 }
 function dailyBoardHTML(rows){
   return `<div class="board dboard" role="table" aria-label="Daily challenge board, today">
