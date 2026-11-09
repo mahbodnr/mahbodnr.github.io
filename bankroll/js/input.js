@@ -175,7 +175,7 @@ document.addEventListener('click', e => {
     case 'restart':
       if (S.phase === 'over' || (S.phase === 'bet' && S.stats.sets === 0)) { beginRun(); break; }
       ui.modal = 'restart'; break;
-    case 'restartNow': beginRun(); break;
+    case 'restartNow': if (isDailyRun() && stashed()) resumeStash(); else { if (!isDailyRun()) dropStash(); beginRun(); } break;   // a run kept aside for the daily comes back
     case 'history': ui.modal = 'history'; break;
     case 'settings': ui.modal = 'settings'; break;
     case 'histTab': ui.histTab = t.dataset.v; if (t.dataset.v === 'board' && LB.backend && LB.backend.refresh) LB.backend.refresh(); break;
@@ -204,7 +204,9 @@ document.addEventListener('click', e => {
     case 'playGroup': { const c = ui.groupCode; ui.modal = null; beginRun(null, c); return; }
     case 'groupRefresh': loadGroup(ui.groupCode); return;
     case 'groupInvite': shareGroup(ui.groupCode, isDuel(ui.group) ? 'duel' : 'group'); return;
-    case 'playDaily': playDaily(); return;
+    case 'playDaily': startDaily(); return;
+    case 'resumeStash': resumeStash(); return;
+    case 'newRun': dropStash(); beginRun(); return;
     case 'acceptChallenge': { const s = ui.challengeSeed; ui.challengeSeed = null; ui.modal = null; beginRun(s); return; }
     case 'sortRank': prefs.sort = 'rank'; S.order = null; store(PREF_KEY, prefs); break;
     case 'sortSuit': prefs.sort = 'suit'; S.order = null; store(PREF_KEY, prefs); break;

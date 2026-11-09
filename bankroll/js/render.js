@@ -415,7 +415,8 @@ function renderModal(){
   else if (m === 'joinGroup') html = joinGroupHTML();
   else if (m === 'newChallenge') html = newChallengeHTML();
   else if (m === 'chatScores') html = chatScoresHTML();
-  else if (m === 'restart') html = `<h2>New game?</h2><p class="lead">This run will be lost.</p>
+  else if (m === 'dailyOffer') html = dailyOfferHTML();
+  else if (m === 'restart') html = `<h2>New game?</h2><p class="lead">${isDailyRun() ? 'This ends your one try at today\'s daily challenge.' : 'This run will be lost.'}</p>
     <div class="actions"><button class="btn" data-act="close">Cancel</button><button class="btn gold" data-act="restartNow">New game</button></div>`;
   else if (m === 'pick' || m === 'view'){
     const picking = m === 'pick';
@@ -450,10 +451,10 @@ function renderModal(){
   }
 }
 
-const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart', 'release5', 'record', 'unlock', 'challenge', 'group', 'joinGroup', 'newChallenge', 'chatScores'];
+const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart', 'release5', 'record', 'unlock', 'challenge', 'group', 'joinGroup', 'newChallenge', 'chatScores', 'dailyOffer'];
 const MODAL_NAMES = { help:'How to play', result:'Hand result', over:'Run over', reshuffle:'Level complete', tracker:'Card tracker', view:'Discard pile', pick:'Take a card back', history:'History', settings:'Settings', bust:'Cash-out warning', restart:'New game', release5:'Release Extra seat', record:'Top hand of the day', unlock:'Unlocked' };
 // closing a dialog that opened over another (the top-hand celebration) returns to the one underneath
-function closeModal(){ ui.modal = (ui.modal === 'record' || ui.modal === 'help') && ui.modalBack ? ui.modalBack : null; ui.modalBack = null; }
+function closeModal(){ ui.modal = (ui.modal === 'record' || ui.modal === 'help' || ui.modal === 'dailyOffer') && ui.modalBack ? ui.modalBack : null; ui.modalBack = null; }
 function bustHTML(){
   const ev = evaluate(S.hand, S.powerups), payout = S.bet * ev.mult, after = S.coins + payout - S.debt;
   return `<div class="rs-head loss"><div class="rs-verdict">This ends your run</div>
@@ -632,10 +633,12 @@ function overHTML(){
     ${tips ? `<h3>Tips</h3><ul class="tips">${tips}</ul>` : ''}
     ${r ? `<details class="ro-hand"><summary>Last hand</summary>${handBody(r)}</details>` : ''}
     <h3>This run</h3>${stats}
-    <p class="snote seedline">Seed ${seedHTML()}${DAILY_ON && isDaily(S.seed) ? ' · today\'s challenge' : ''}</p>
-    <div class="ro-more">${shareBtn('run', 'Share this run', 'btn gold-line')}${CHALLENGES_ON ? `<button class="btn" data-act="createGroup" data-v="run">${S.challenge ? 'Invite more friends' : 'Challenge friends'}</button>` : ''}${DAILY_ON ? `<button class="btn" data-act="playDaily">${isDaily(S.seed) ? 'Daily again' : 'Daily challenge'}</button>` : ''}
+    <p class="snote seedline">${isDailyRun() ? 'Today\'s daily deck' : `Seed ${seedHTML()}`}</p>
+    <div class="ro-more">${shareBtn('run', 'Share this run', 'btn gold-line')}${CHALLENGES_ON ? `<button class="btn" data-act="createGroup" data-v="run">${S.challenge ? 'Invite more friends' : 'Challenge friends'}</button>` : ''}
       ${leaderboardAvailable() ? `<button class="btn" data-act="openBoard">Leaderboard</button>` : ''}${S.challenge ? '' : '<button class="btn" data-act="replaySeed">Same cards</button>'}</div>
-    <div class="actions ro-actions"><button class="btn gold grow" data-act="restartNow">Play again</button></div>`;
+    <div class="actions ro-actions">${stashed() && isDailyRun()
+      ? '<button class="btn" data-act="newRun">New run</button><button class="btn gold grow" data-act="resumeStash">Back to my run</button>'
+      : `${dailyTodo() ? '<button class="btn gold-line grow" data-act="playDaily">Play the daily challenge</button>' : ''}<button class="btn gold grow" data-act="restartNow">Play again</button>`}</div>`;
 }
 // a tiny example hand for the rules: 'rank+suit' codes, with the scoring cards lit
 function exHand(codes, lit){

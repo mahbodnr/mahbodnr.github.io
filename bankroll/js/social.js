@@ -8,17 +8,8 @@ const TG_APP = 'https://t.me/TheBankrollBot';     // the bot's main Mini App; ?s
    game normally. The server side stays. Tests turn them on with window.BANKROLL_CHALLENGES = true. */
 const CHALLENGES_ON = window.BANKROLL_CHALLENGES === true;
 
-/* ---------- the daily challenge ----------
-   Switched off for now (DAILY_ON): no buttons, no board. The server side (a seed filter on the boards) stays in place. */
-const DAILY_ON = false;
-// The same seed for everyone on a UTC day: DY + yymmdd, shown as DY26-1107.
-function dailySeed(d = new Date()){
-  const p = n => String(n).padStart(2, '0');
-  return cleanSeed('DY' + p(d.getUTCFullYear() % 100) + p(d.getUTCMonth() + 1) + p(d.getUTCDate()));
-}
-const isDaily = seed => !!seed && seed === dailySeed();
-// mid-run the player is asked first (their run would end); on a fresh table or after a run it starts straight away
-function playDaily(){ ui.modal = null; offerChallenge(dailySeed()); render(); }
+/* The daily challenge: see the end of this file. */
+const DAILY_ON = true;
 
 /* ---------- sharing a run ---------- */
 // A link that opens the game on this run's cards: inside Telegram the Mini App link, otherwise this page with ?seed=
@@ -30,8 +21,7 @@ function challengeLink(seed){
 function challengeText(){
   const over = S.phase === 'over' && S.over && S.over.run, L = over ? over.level : lvl(), peak = S.stats.peak || 0;
   const best = S.stats.bestMult ? ` and a ×${fmtFit(S.stats.bestMult)} hand` : '';
-  const day = isDaily(S.seed) ? 'today\'s Bankroll challenge' : 'Bankroll';
-  return `I reached level ${L} with ${fmtFit(peak)} coins${best} in ${day}. Can you beat me on the same cards?`;
+  return `I reached level ${L} with ${fmtFit(peak)} coins${best} in Bankroll. Can you beat me on the same cards?`;
 }
 async function shareRun(){
   const link = challengeLink(S.seed), text = challengeText();
@@ -93,10 +83,7 @@ function offerChallenge(seed){
 }
 function challengeHTML(){
   const seed = ui.challengeSeed || '';
-  return isDaily(seed) ? `<h2>Today's challenge</h2>
-    <p class="lead">Start today's deck (<code class="seed">${esc(seed)}</code>)? <b>Your current run ends</b> here.</p>
-    <div class="actions"><button class="btn" data-act="close">Keep playing</button><button class="btn gold" data-act="acceptChallenge">Start the challenge</button></div>`
-    : `<h2>A challenge</h2>
+  return `<h2>A challenge</h2>
     <p class="lead">Play the cards someone shared with you (seed <code class="seed">${esc(seed)}</code>)? <b>Your current run ends</b> here.</p>
     <div class="actions"><button class="btn" data-act="close">Not now</button><button class="btn gold" data-act="acceptChallenge">Play these cards</button></div>`;
 }
@@ -225,6 +212,10 @@ function groupHTML(){
   const rows = g.data ? g.data.players : [];
   const done = duel && rows.length >= 2 && rows.every(p => p.finished);
   const verdict = done ? (rows[0].user_id === LB.me ? 'You won the duel! 🏆' : mine ? `${esc(rows[0].name)} won this one` : `${esc(rows[0].name)} won`) : 'Results';
+  if (g.data && g.data.kind === 'daily') return `<div class="rs-eyebrow">Daily challenge · ${dayLabel()}</div><h2>Today's board</h2>
+    <p class="snote">Same deck for everyone today, one try each. New deck in ${resetIn()}.${mine && !mine.finished ? ' Your run is still going.' : ''}</p>
+    ${groupBoardHTML(g, 'Nobody has played today\'s deck yet')}
+    <div class="actions"><button class="btn" data-act="groupRefresh">Refresh</button>${dailyTodo() ? '<button class="btn gold" data-act="playDaily">Play the daily challenge</button>' : '<button class="btn gold" data-act="close">Close</button>'}</div>`;
   return `<div class="rs-eyebrow">${duel ? 'Duel' : 'Group challenge'}${host ? ` · by ${host}` : ''}${g.data && g.data.round > 1 ? ` · round ${g.data.round}` : ''}</div><h2>${verdict}</h2>
     <p class="snote">${duel ? 'One deck, one try each.' : 'Same deck for everyone, one try each.'}${mine && !mine.finished ? ' Your run is still going.' : ''}${duel && !done && rows.length < 2 ? ' Waiting for the other player.' : ''}</p>
     ${groupBoardHTML(g, 'Nobody has played yet')}
@@ -238,12 +229,13 @@ function groupHTML(){
    button to the scores; the run-over window opens with the challenge's result: the placing, the board, what next. */
 // what a challenge run is (kept with the run, so it survives a reload): its kind and who made it
 function challengeInfo(code){
+  if (isDailyCode(code)) return { kind:'daily', host:'', mine:false, round:1 };
   const g = ui.group && ui.group.code === code && ui.group.data;
   if (g) return { kind:g.kind || 'group', host:g.host || 'A friend', mine:!!(LB.me && g.host_id === LB.me), round:g.round || 1 };
   if (ui.madeChallenge && ui.madeChallenge.code === code) return { kind:ui.madeChallenge.kind, host:LB.myName || 'You', mine:true, round:1 };
   return { kind:'group', host:'', mine:false, round:1 };
 }
-const chTitle = i => i.kind === 'duel' ? (i.mine ? 'Your duel' : `Duel with ${esc(i.host || 'a friend')}`)
+const chTitle = i => i.kind === 'daily' ? `Daily challenge · ${dayLabel()}` : i.kind === 'duel' ? (i.mine ? 'Your duel' : `Duel with ${esc(i.host || 'a friend')}`)
   : i.mine ? 'Your group challenge' : i.host ? `${esc(i.host)}'s group challenge` : 'Group challenge';
 // the strip above the level bar
 function playBarHTML(){
@@ -251,7 +243,7 @@ function playBarHTML(){
   if (S.challenge){
     const i = S.chInfo || challengeInfo(S.challenge), over = S.phase === 'over';
     return `<div class="playbar ${i.kind}"><span class="pb-ico" aria-hidden="true">${i.kind === 'duel' ? '⚔' : '♠'}</span>
-      <span class="pb-txt"><b>${chTitle(i)}${i.round > 1 ? ` · round ${i.round}` : ''}</b><small>${over ? 'Your try is done' : i.kind === 'duel' ? (i.mine ? 'Same deck as your opponent · your one try' : `Same deck as ${esc(i.host || 'your friend')} · your one try`) : 'Same deck as everyone · your one try'}</small></span>
+      <span class="pb-txt"><b>${chTitle(i)}${i.round > 1 ? ` · round ${i.round}` : ''}</b><small>${over ? 'Your try is done' : i.kind === 'daily' ? 'Same deck for everyone today · your one try' : i.kind === 'duel' ? (i.mine ? 'Same deck as your opponent · your one try' : `Same deck as ${esc(i.host || 'your friend')} · your one try`) : 'Same deck as everyone · your one try'}</small></span>
       <button class="pb-btn" data-act="groupResults">Scores</button></div>`;
   }
   if (gameToken && !S.seedChosen) return `<div class="playbar game"><span class="pb-ico" aria-hidden="true">🏆</span>
@@ -271,9 +263,13 @@ function overPlayHTML(){
         const other = rows.find(p => p.user_id !== LB.me);
         headline = !other ? 'Waiting for your opponent' : !other.finished ? `${esc(other.name)} is still playing` : me === 0 ? 'You won the duel! 🏆' : `${esc(other.name)} won this one`;
         sub = !other ? 'The duel card in the chat shows the result when they\'ve played.' : '';
-      } else { headline = `You placed <b>#${me + 1}</b> of ${rows.length}`; sub = me === 0 ? 'Top of the table, for now.' : ''; }
+      } else { headline = `You placed <b>#${me + 1}</b> of ${rows.length}${i.kind === 'daily' ? ' today' : ''}`; sub = me === 0 ? 'Top of the table, for now.' : i.kind === 'daily' ? `The board stays open until the new deck in ${resetIn()}.` : ''; }
     } else if (g && g.error) headline = 'The results can\'t be reached right now';
     const duelDone = i.kind === 'duel' && rows.length >= 2 && rows.every(p => p.finished);
+    if (i.kind === 'daily') return `<div class="ro-ch daily"><div class="rs-eyebrow">${chTitle(i)}</div>
+      <div class="roc-head">${headline}</div>${sub ? `<p class="snote">${sub}</p>` : ''}
+      ${rows.length ? groupBoardHTML({ ...g, data:{ ...g.data, players:rows.slice(0, 5) } }, '') : ''}
+      <div class="roc-actions"><button class="btn" data-act="groupResults">Today's full board</button>${shareBtn('run', 'Share', 'btn')}</div></div>`;
     return `<div class="ro-ch ${i.kind}"><div class="rs-eyebrow">${chTitle(i)}${i.round > 1 ? ` · round ${i.round}` : ''}</div>
       <div class="roc-head">${headline}</div>${sub ? `<p class="snote">${sub}</p>` : ''}
       ${rows.length ? groupBoardHTML(g, '') : ''}
@@ -415,3 +411,63 @@ async function shareMoment(kind, period){
 }
 const SHARE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/></svg>';
 const shareBtn = (kind, label, cls = 'btn', period = '') => `<button class="${cls} sharebtn" data-act="share" data-v="${kind}"${period ? ` data-p="${period}"` : ''}>${SHARE_SVG}<span>${label}</span></button>`;
+
+
+/* ---------- the daily challenge ----------
+   One deck a day (UTC) for everyone, made by the server and kept secret until a player starts it; each player gets one
+   try, and the day's runs have their own board (supabase/bankroll-leaderboard.sql: bankroll_daily). The first time the
+   game is opened each day it suggests the daily. A run in progress is kept aside and comes back after the daily. */
+const STASH_KEY = 'bankroll-stash' + KEY_NS, DAILY_OFFER_KEY = 'bankroll-daily-offer' + KEY_NS;
+const isDailyCode = code => /^DAY\d{6}$/.test(String(code || ''));
+const dailyOn = () => DAILY_ON && LB.kind === 'supabase' && !!LB.backend && typeof LB.backend.daily === 'function';
+const dailyTodo = () => dailyOn() && !!LB.daily && !LB.daily.played;
+const isDailyRun = () => !!(S && isDailyCode(S.challenge));
+const dayLabel = () => new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', timeZone:'UTC' });
+const stashed = () => { const s = load(STASH_KEY); return s && s.phase && s.phase !== 'over' ? s : null; };
+async function loadDaily(){
+  if (!dailyOn()) return;
+  const r = await LB.backend.daily();
+  if (r && r.success) LB.daily = { code:r.code, played:!!r.played, finished:!!r.finished, players:r.players || 0 };
+}
+// the first time today: suggest the daily (once the screen is free: not over the introduction or another window)
+function maybeOfferDaily(){
+  if (!dailyTodo() || gameToken) return;
+  if (load(DAILY_OFFER_KEY) === todayUTC()) return;
+  const tryShow = (left) => {
+    const busy = (typeof intro !== 'undefined' && intro) || (S && S.intro) || (ui.modal && ui.modal !== 'over') || ui.starting;
+    if (busy){ if (left > 0) setTimeout(() => tryShow(left - 1), 2000); return; }
+    if (!dailyTodo()) return;
+    store(DAILY_OFFER_KEY, todayUTC());
+    ui.modalBack = ui.modal === 'over' ? 'over' : null;
+    ui.modal = 'dailyOffer'; render();
+  };
+  tryShow(150);
+}
+const runInProgress = () => !!(S && !S.intro && S.phase !== 'over' && (S.stats.sets > 0 || S.stats.cashouts > 0));
+function dailyOfferHTML(){
+  const n = LB.daily && LB.daily.players;
+  return `<div class="daily-offer"><div class="rs-eyebrow">Daily challenge · ${dayLabel()}</div><h2>Today's deck is ready</h2>
+    <ul class="ghow"><li>Everyone plays <b>the same deck</b> today.</li><li>You get <b>one try</b>: make it count.</li>
+      <li>Your run goes on <b>today's daily board</b>${n ? `, where ${n} ${n === 1 ? 'player is' : 'players are'} already` : ''}.</li></ul>
+    ${runInProgress() && !isDailyRun() ? '<p class="snote">Your current run is saved. You\'ll carry on with it after the daily.</p>' : ''}
+    <p class="snote">New deck in ${resetIn()}.</p>
+    <div class="actions"><button class="btn" data-act="close">Not now</button><button class="btn gold" data-act="playDaily">Play the daily</button></div></div>`;
+}
+// start today's daily: a run in progress is kept aside (on this device; the server keeps it open) to come back to
+async function startDaily(){
+  if (!dailyTodo()) { if (LB.daily && LB.daily.code) openGroup(LB.daily.code); return; }
+  if (runInProgress() && !isDailyRun()) store(STASH_KEY, JSON.parse(JSON.stringify(S)));
+  ui.modal = null; ui.modalBack = null;
+  await beginRun(null, LB.daily.code);
+  if (isDailyRun()){ LB.daily.played = true; store(SAVE_KEY, S); }
+  else if (LB.daily) await loadDaily();
+  render();
+}
+// after the daily: back to the run that was kept aside
+function resumeStash(){
+  const s = migrate(stashed()); try { localStorage.removeItem(STASH_KEY); } catch(e){}
+  if (!s) { beginRun(); return; }
+  S = s; ui.modal = null; ui.prev = null; ui.seen.clear(); resumeModal(); store(SAVE_KEY, S); render();
+  toast('Back to your run');
+}
+function dropStash(){ try { localStorage.removeItem(STASH_KEY); } catch(e){} }

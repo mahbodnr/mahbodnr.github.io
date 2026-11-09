@@ -1201,3 +1201,11 @@ html.light .lv-deck{background:rgba(0,0,0,.1)} html.light .lv-deck > i{backgroun
 .musicbtn .mute{display:none}
 .musicbtn[aria-pressed="false"] .mute{display:inline}
 .musicbtn[aria-pressed="false"] svg{opacity:.6}
+/* the daily challenge, not played yet: a way in at the top of the leaderboard */
+.m-history .lbdaily{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:12px;text-align:left;padding:10px 12px;margin:0 0 12px;
+  border:1px solid var(--brass-dim);border-radius:12px;background:linear-gradient(90deg,rgba(217,171,76,.16),rgba(217,171,76,.04))}
+.m-history .lbdaily span{display:flex;flex-direction:column;min-width:0}
+.m-history .lbdaily b{font-size:14px}
+.m-history .lbdaily small{font-size:12px;color:var(--muted)}
+.m-history .lbdaily .btn{flex:none;min-height:0;padding:8px 18px}
+.daily-offer .ghow{font-size:14px}

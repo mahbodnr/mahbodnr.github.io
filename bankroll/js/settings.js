@@ -88,7 +88,7 @@ function settingsHTML(){
     <div class="srow"><span>This run</span><span class="seedline">${seedHTML()}</span></div>
     ${!CHALLENGES_ON && telegramLaunch() && groupsOn() ? `<div class="srow"><span>Chat leaderboard<small>Send a scoreboard to a group: everyone's best run shows on it</small></span><button class="btn" data-act="shareChatGame">Send</button></div>` : ''}
     ${CHALLENGES_ON && groupsOn() ? `<div class="srow"><span>Play with friends<small>Send a new deck to a chat: everyone plays it once, then compare</small></span><button class="btn" data-act="createGroup">Challenge</button></div>` : ''}
-    ${DAILY_ON ? `<div class="srow"><span>Daily challenge<small>Everyone gets the same deck today</small></span><button class="btn" data-act="playDaily">Play</button></div>` : ''}
+    ${dailyTodo() ? `<div class="srow"><span>Daily challenge<small>Today's deck for everyone, one try</small></span><button class="btn" data-act="playDaily">Play</button></div>` : ''}
     <form class="seedform" data-form="seed"><input id="seedInput" placeholder="ABCD-1234" maxlength="9" autocomplete="off" spellcheck="false" aria-label="Seed to play">
       <button class="btn" type="submit">Play</button></form>
     <p class="snote" id="seedMsg"></p>

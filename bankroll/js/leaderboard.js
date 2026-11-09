@@ -198,12 +198,9 @@ const supabaseBackend = {
         calls.push(this.client.rpc('bankroll_leaderboard', { p_period:p, p_include_seeded:seeded, p_limit:50 }));
         calls.push(this.client.rpc('bankroll_top_hands', { p_period:p, p_include_seeded:seeded, p_limit:10 }));
       }
-      if (DAILY_ON){
-        calls.push(this.client.rpc('bankroll_leaderboard', { p_period:'all', p_include_seeded:true, p_limit:50, p_seed:dailySeed() }));
-        calls.push(this.client.rpc('bankroll_top_hands', { p_period:'all', p_include_seeded:true, p_limit:10, p_seed:dailySeed() }));
-      }
-      const [today, todayHands, week, weekHands, daily = {}, dailyHands = {}] = await Promise.all(calls);
-      const bad = [today, todayHands, week, weekHands, daily, dailyHands].find(r => r.error);
+      if (LB.daily && LB.daily.code) calls.push(this.client.rpc('bankroll_challenge_board', { p_code:LB.daily.code }));
+      const [today, todayHands, week, weekHands, daily = {}] = await Promise.all(calls);
+      const bad = [today, todayHands, week, weekHands, daily].find(r => r.error);
       if (bad) throw bad.error;
       if (seeded !== LB.seeded) return;                       // the toggle changed while this was loading
       const row = r => ({ id:r.user_id, name:r.username || 'Player', avatar:r.avatar_url, level:r.level, peak:+r.peak, biggestWin:+r.biggest_win, seeded:!!r.seeded });
@@ -211,7 +208,8 @@ const supabaseBackend = {
         cards:(r.hand && r.hand.cards) || [], labels:(r.hand && r.hand.labels) || [], at:Date.parse(r.achieved_at) || 0 });
       LB.boards.today = (today.data || []).map(row); LB.boards.week = (week.data || []).map(row);
       LB.hands.today = (todayHands.data || []).map(hand); LB.hands.week = (weekHands.data || []).map(hand);
-      LB.boards.daily = (daily.data || []).map(row); LB.hands.daily = (dailyHands.data || []).map(hand);
+      LB.boards.daily = ((daily.data && daily.data.players) || []).map(r => ({ id:r.user_id, name:r.name || 'Player', level:r.level, peak:+r.peak, biggestWin:+r.biggest_win, seeded:false, playing:!r.finished }));
+      LB.hands.daily = [];
       LB.state = 'ready';
       checkTopHand();
     } catch(e){ LB.state = LB.boards.week.length || LB.boards.today.length ? 'ready' : 'error'; }
@@ -226,6 +224,11 @@ const supabaseBackend = {
       if (error || !data) return { error:'error' };
       return data.success ? data : { error:data.error || 'error', challenge:data.challenge };
     } catch(e){ return { error:'error' }; }
+  },
+  // today's daily challenge: its code, and whether this player has played it
+  async daily(){
+    try { const { data, error } = await this.client.rpc('bankroll_daily'); return error || !data ? { error:'error' } : data; }
+    catch(e){ return { error:'error' }; }
   },
   async createChallenge(runId, kind){
     try { const { data, error } = await this.client.rpc('bankroll_create_challenge', { p_run_id:runId || null, p_kind:kind === 'duel' ? 'duel' : 'group' }); return error || !data ? { error:'error' } : data; }
@@ -347,6 +350,7 @@ async function initLeaderboard(){
   if (LB.backend){ await upgradeFreshRun(); reportProgress(); }
   if (ui.pendingGroup){ const c = ui.pendingGroup; ui.pendingGroup = null; offerGroup(c); }
   if (!LB.backend && ui.modal === 'joinGroup' && ui.group && ui.group.loading){ ui.group = { code:ui.group.code, error:'offline' }; render(); }
+  if (LB.backend){ await loadDaily(); if (LB.daily && LB.backend.refresh) LB.backend.refresh(); refreshBoard(); maybeOfferDaily(); }
 }
 
 /* ---------- starting runs ---------- */
@@ -543,7 +547,7 @@ function leaderboardHTML(){
   if (LB.state === 'loading') return `<p class="empty">Loading the leaderboard…</p>`;
   if (LB.state === 'slow') return `<p class="empty">The leaderboard can't be reached right now. It will appear once it loads.</p>`;
   if (LB.state === 'error') return `<p class="empty">The leaderboard isn't available right now. Try again in a moment.</p>`;
-  const hasDaily = DAILY_ON && LB.kind === 'supabase';         // the daily board needs the website's server (and is off for now)
+  const hasDaily = dailyOn() && !!LB.daily;                    // the daily board needs the website's server
   const per = LB.period === 'week' ? 'week' : LB.period === 'daily' && hasDaily ? 'daily' : 'today';
   const rows = LB.boards[per];
   const toggle = `<div class="lbbar"><div class="sg lbper" role="group" aria-label="Leaderboard period">
@@ -554,8 +558,10 @@ function leaderboardHTML(){
   const seeded = `<button class="lbseed" data-act="lbSeeded" aria-pressed="${LB.seeded}" title="${LB.seeded ? 'Hide' : 'Include'} runs where the player chose the seed" aria-label="${LB.seeded ? 'Hide' : 'Include'} seeded runs">${LB.seeded ? '− seeded' : '+ seeded'}</button>`;
   const sub = per === 'today' ? `<p class="snote lbsub">Resets in ${resetIn()}</p>`
     : per === 'week' ? `<p class="snote lbsub">Resets on Monday (UTC)</p>`
-    : per === 'daily' ? `<div class="lbdaily"><p class="snote lbsub">Everyone plays the same deck today (${dailySeed()}) · new deck in ${resetIn()}</p>
-        <button class="btn gold" data-act="playDaily">${isDaily(S.seed) ? 'Play it again' : 'Play today\'s challenge'}</button></div>` : '';
+    : per === 'daily' ? `<p class="snote lbsub">Everyone plays the same deck today, once · new deck in ${resetIn()}</p>` : '';
+  // not played today's daily yet: a way in from every tab
+  const dailyCta = hasDaily && dailyTodo() ? `<div class="lbdaily"><span><b>Daily challenge</b><small>Today's deck, one try, its own board</small></span>
+      <button class="btn gold" data-act="playDaily">Play</button></div>` : '';
   let foot;
   if (LB.kind === 'supabase' && !LB.signedIn)
     foot = `<div class="lbsign"><button class="btn gold" data-act="lbSignIn">Sign in to post scores</button></div>`;
@@ -573,5 +579,5 @@ function leaderboardHTML(){
     </div>`;
   const mine = per !== 'daily' && LB.me ? rows.findIndex(r => r.id === LB.me) : -1;
   const shareMine = mine >= 0 ? `<div class="lbshare">${shareBtn('board', `Share my #${mine + 1}`, 'btn gold-line', per)}</div>` : '';
-  return `${toggle}${sub}${list}${shareMine}${handsHTML(per)}${foot}${per === 'daily' ? '' : seeded}`;
+  return `${dailyCta}${toggle}${sub}${list}${shareMine}${per === 'daily' ? '' : handsHTML(per)}${foot}${per === 'daily' ? '' : seeded}`;
 }
