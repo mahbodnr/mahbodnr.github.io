@@ -265,7 +265,8 @@ function cashOut(force){
   // the biggest multiplier this run, with the hand that made it (shown on the leaderboard). It only counts once the
   // run carries on after it (see keepBestHand): a hand that busts, or ends the run right after, is not a record.
   S.bestCandidate = ev.mult > (S.stats.bestMult || 0)
-    ? { cards:res.hand.map(c => [c.rank, c.suit]), labels:ev.combos.map(c => c.label), mult:ev.mult, bet:res.bet, hand:res.handNo, level:lvl() }
+    ? { cards:res.hand.map(c => [c.rank, c.suit]), powers:res.powerups.map(p => [p.card.rank, p.card.suit, p.type]),   // the power-ups that played a part
+        labels:ev.combos.map(c => c.label), mult:ev.mult, bet:res.bet, hand:res.handNo, level:lvl() }
     : null;
   coinChange(payout, 'payout'); coinChange(-S.debt, 'debt');
   res.ledger = Object.assign({}, S.handLedger || { bet:-res.bet, payout, debt:-res.debt });

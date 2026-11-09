@@ -347,19 +347,26 @@ function momentOf(kind, period){
   if (kind === 'hand'){
     const r = S.result; if (!r || !r.ev) return null;
     const hot = new Set(r.ev.combos.flatMap(c => c.ids));
-    return { kind, mult:numOut(r.ev.mult), labels:r.ev.combos.map(c => plainLabel(c.label)), cards:r.hand.map(c => [c.rank, c.suit, hot.has(c.id)]) };
+    return { kind, mult:numOut(r.ev.mult), labels:r.ev.combos.map(c => plainLabel(c.label)), cards:r.hand.map(c => [c.rank, c.suit, hot.has(c.id)]),
+      powers:(r.powerups || []).map(p => [p.card.rank, p.card.suit, p.type]) };
   }
-  if (kind === 'run'){ const run = (S.over && S.over.run) || {}; return { kind, level:run.level || lvl(), peak:numOut(run.peak ?? S.stats.peak), mult:numOut(S.stats.bestMult || 0), cards:(S.bestHand && S.bestHand.cards) || [] }; }
+  if (kind === 'run'){ const run = (S.over && S.over.run) || {}; return { kind, level:run.level || lvl(), peak:numOut(run.peak ?? S.stats.peak), mult:numOut(S.stats.bestMult || 0), cards:(S.bestHand && S.bestHand.cards) || [], powers:(S.bestHand && S.bestHand.powers) || [], labels:((S.bestHand && S.bestHand.labels) || []).map(plainLabel) }; }
   if (kind === 'board'){
     const per = period === 'week' ? 'week' : 'today', rows = LB.boards[per] || [], i = rows.findIndex(x => x.id === LB.me);
     return i < 0 ? null : { kind, rank:i + 1, period:per, level:rows[i].level || 1, peak:numOut(rows[i].peak) };
+  }
+  if (kind === 'besthand'){
+    const list = LB.hands.today || [], i = list.findIndex(r => r.id === LB.me);
+    if (i < 0) return null;
+    const h = list[i];
+    return { kind, rank:i + 1, mult:numOut(h.mult), labels:(h.labels || []).map(plainLabel), cards:h.cards || [], powers:h.powers || [] };
   }
   if (kind === 'daily'){
     const g = ui.group && LB.daily && ui.group.code === LB.daily.code && ui.group.data, rows = g ? g.players : [], i = rows.findIndex(p => p.user_id === LB.me);
     if (i < 0) return null;
     return { kind, rank:i + 1, players:rows.length, level:rows[i].level || 1, peak:numOut(rows[i].peak), mult:numOut(S.stats.bestMult || 0), cards:(S.bestHand && S.bestHand.cards) || [], day:dayLabel() };
   }
-  if (kind === 'tophand'){ const r = ui.record; return r ? { kind, mult:numOut(r.mult), labels:(r.labels || []).map(plainLabel), cards:r.cards || [] } : null; }
+  if (kind === 'tophand'){ const r = ui.record; return r ? { kind, mult:numOut(r.mult), labels:(r.labels || []).map(plainLabel), cards:r.cards || [], powers:r.powers || [] } : null; }
   return null;
 }
 function momentText(m){
@@ -368,6 +375,7 @@ function momentText(m){
     hand: `🃏 I just made a ×${f(m.mult)} hand in Bankroll${m.labels && m.labels.length ? ': ' + m.labels.join(' × ') : ''}! Can you beat it?`,
     run: `💰 I reached level ${m.level} with ${f(m.peak)} coins in Bankroll${Number(m.mult) > 0 || m.mult === 'Infinity' ? ` (best hand ×${f(m.mult)})` : ''}. Can you beat that?`,
     board: `🏆 I'm #${m.rank} on ${m.period === 'week' ? 'this week\'s' : 'today\'s'} Bankroll leaderboard: level ${m.level}, ${f(m.peak)} coins. Can you beat me?`,
+    besthand: `🃏 My ×${f(m.mult)} hand is #${m.rank} of today's best hands in Bankroll${m.labels && m.labels.length ? ': ' + m.labels.join(' × ') : ''}! Can you beat it?`,
     daily: `📅 I placed #${m.rank} of ${m.players} in today's Bankroll daily challenge: level ${m.level}, ${f(m.peak)} coins. Same deck for everyone, one try. Can you beat me?`,
     tophand: `👑 My ×${f(m.mult)} hand is the best in Bankroll today${m.labels && m.labels.length ? ': ' + m.labels.join(' × ') : ''}! Can you beat it?`,
   }[m.kind];

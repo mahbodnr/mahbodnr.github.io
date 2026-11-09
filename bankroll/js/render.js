@@ -59,6 +59,8 @@ const ico = n => `<svg class="bi" viewBox="0 0 24 24" aria-hidden="true">${ICON[
 // a control's label: a main line and, when given, a smaller second line
 const bl = (main, sub) => `<span class="bl"><b>${main}</b>${sub ? `<small>${sub}</small>` : ''}</span>`;
 
+// the bet box's font steps down for long bets, so every digit stays visible inside the box
+const betFit = b => { const n = String(b).length; return n >= 13 ? 'f4' : n >= 11 ? 'f3' : n >= 9 ? 'f2' : n >= 7 ? 'f1' : ''; };
 function suitSVG(s, cls){ return `<svg class="${cls || 'su'}" viewBox="0 0 100 100" aria-hidden="true"><use href="#su-${s}"/></svg>`; }
 
 // The hand as shown: sorted by rank or suit, or in the player's own order (dragged) until the next hand or a sort button.
@@ -312,7 +314,7 @@ function renderDock(){
         <div class="betbox">
           <div class="bet-row">
             <button class="step" data-act="betKey" data-hold="-1" aria-label="Lower bet" ${b <= 1 ? 'disabled' : ''}>−</button>
-            <label class="val">${coin}<input id="betNum" style="width:${Math.max(5, String(b).length + 1)}ch" type="number" inputmode="numeric" min="1" max="${S.coins}" step="1" value="${b}" aria-label="Bet amount"></label>
+            <label class="val ${betFit(b)}">${coin}<input id="betNum" type="number" inputmode="numeric" min="1" max="${S.coins}" step="1" value="${b}" aria-label="Bet amount"></label>
             <button class="step" data-act="betKey" data-hold="1" aria-label="Raise bet" ${b >= S.coins ? 'disabled' : ''}>+</button>
             <div class="presets" role="group" aria-label="Quick bets">${pre.map(([k, l, v]) => `<button class="q" data-act="preset" data-v="${v}" aria-pressed="${b === v}" title="Bet ${fmt(v)}" aria-label="${k === 'last' ? 'Last bet' : k === 'max' ? 'All in' : l + ' of your coins'}: ${fmt(v)}">${l}</button>`).join('')}</div>
           </div>

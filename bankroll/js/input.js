@@ -133,7 +133,7 @@ function updateBetUI(skip){
   const b = S.betInput;
   const num = $('betNum'), rg = $('betRange');
   if (num && skip !== 'num') num.value = b;
-  if (num) num.style.width = Math.max(5, String(b).length + 1) + 'ch';
+  if (num){ const v = num.closest('.val'); if (v){ v.classList.remove('f1', 'f2', 'f3', 'f4'); const f = betFit(b); if (f) v.classList.add(f); } }
   document.querySelectorAll('.presets .q').forEach(q => q.setAttribute('aria-pressed', String(+q.dataset.v === b)));
   if (rg && skip !== 'range') rg.value = betToPos(b);
   const dn = document.querySelector('[data-hold="-1"]'), up = document.querySelector('[data-hold="1"]');
