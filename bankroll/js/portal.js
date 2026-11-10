@@ -21,6 +21,8 @@ const Portal = {
         const apply = s => { this.muted = !!(s && s.muteAudio); if (typeof applyMusic === 'function') applyMusic(); };
         apply(C.game.settings);
         try { C.game.addSettingsChangeListener(apply); } catch(e){}
+        // logging in or out on CrazyGames mid-game: the leaderboard name follows (their username, or the guest name)
+        try { C.user.addAuthListener(user => { if (LB.backend && LB.backend.portalProfile) LB.backend.portalProfile(user || null).then(ok => { if (ok){ LB.myName = LB.backend.portalName; LB.backend.refresh(); } }); }); } catch(e){}
         return C;
       } catch(e){ return null; }
     })();

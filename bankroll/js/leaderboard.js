@@ -164,11 +164,12 @@ const supabaseBackend = {
   },
   // On a games portal (no outside sign-in): this anonymous account gets a profile with the portal's username for the
   // player (or a guest name), which makes it count on the boards and for the daily challenge (bankroll_portal_profile)
-  async portalProfile(){
+  async portalProfile(given){
     const { data: s } = await this.client.auth.getSession().catch(() => ({ data:null }));
     if (!s || !s.session) return false;
-    const u = await Portal.user();
+    const u = given !== undefined ? given : await Portal.user();   // given: from CrazyGames' login/logout listener
     const name = (u && u.username) || guestName();
+    try { console.info('[Bankroll] CrazyGames player:', u ? u.username : 'guest (not logged in)'); } catch(e){}
     try {
       const { data, error } = await this.client.rpc('bankroll_portal_profile', { p_portal:PORTAL, p_username:name, p_avatar_url:(u && u.profilePictureUrl) || null,
         p_tz:(() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch(e){ return null; } })() });
