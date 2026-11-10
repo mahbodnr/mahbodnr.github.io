@@ -212,10 +212,12 @@ function groupHTML(){
   const rows = g.data ? g.data.players : [];
   const done = duel && rows.length >= 2 && rows.every(p => p.finished);
   const verdict = done ? (rows[0].user_id === LB.me ? 'You won the duel! 🏆' : mine ? `${esc(rows[0].name)} won this one` : `${esc(rows[0].name)} won`) : 'Results';
-  if (g.data && g.data.kind === 'daily') return `<div class="rs-eyebrow">Daily challenge · ${dayLabel()}</div><h2>Today's board</h2>
+  // the daily: once played, the player's place and one tap to share it (this is where the bot's reminder opens)
+  if (g.data && g.data.kind === 'daily') return `<div class="rs-eyebrow">Daily challenge · ${dayLabel()}</div><h2>${mine ? `You're #${rows.indexOf(mine) + 1} of ${rows.length} today` : 'Today\'s board'}</h2>
     <p class="snote">Same deck for everyone today, one try each. New deck in ${resetIn()}.${mine && !mine.finished ? ' Your run is still going.' : ''}</p>
     ${groupBoardHTML(g, 'Nobody has played today\'s deck yet')}
-    <div class="actions"><button class="btn" data-act="groupRefresh">Refresh</button>${dailyTodo() ? '<button class="btn gold" data-act="playDaily">Play the daily challenge</button>' : '<button class="btn gold" data-act="close">Close</button>'}</div>`;
+    <div class="actions"><button class="btn" data-act="groupRefresh">Refresh</button>${mine ? shareBtn('daily', 'Share and challenge your friends', 'btn gold')
+      : dailyTodo() ? '<button class="btn gold" data-act="playDaily">Play the daily challenge</button>' : '<button class="btn gold" data-act="close">Close</button>'}</div>`;
   return `<div class="rs-eyebrow">${duel ? 'Duel' : 'Group challenge'}${host ? ` · by ${host}` : ''}${g.data && g.data.round > 1 ? ` · round ${g.data.round}` : ''}</div><h2>${verdict}</h2>
     <p class="snote">${duel ? 'One deck, one try each.' : 'Same deck for everyone, one try each.'}${mine && !mine.finished ? ' Your run is still going.' : ''}${duel && !done && rows.length < 2 ? ' Waiting for the other player.' : ''}</p>
     ${groupBoardHTML(g, 'Nobody has played yet')}
