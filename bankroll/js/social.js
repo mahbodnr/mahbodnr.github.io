@@ -494,7 +494,7 @@ function afterDailyLoaded(){
   let wanted = false;
   try { wanted = new URLSearchParams(ARRIVED_QS).get('daily') === '1'; } catch(e){}
   const tg = telegramLaunch(); if (tg && tg.startParam === 'daily') wanted = true;        // a shared daily link in Telegram
-  if (load(DAILY_AFTER_SIGNIN) === todayUTC() && LB.signedIn){ wanted = true; try { localStorage.removeItem(DAILY_AFTER_SIGNIN); } catch(e){} }
+  if (load(DAILY_AFTER_SIGNIN) === todayUTC() && LB.signedIn){ wanted = true; unstore(DAILY_AFTER_SIGNIN); }
   if (wanted && dailyTodo() && !(S && S.intro) && !(typeof intro !== 'undefined' && intro)){ store(DAILY_OFFER_KEY, todayUTC()); startDaily(); return; }
   if (wanted && LB.daily.played){ openGroup(LB.daily.code); return; }
   maybeOfferDaily();
@@ -513,9 +513,9 @@ async function startDaily(){
 }
 // after the daily: back to the run that was kept aside
 function resumeStash(){
-  const s = migrate(stashed()); try { localStorage.removeItem(STASH_KEY); } catch(e){}
+  const s = migrate(stashed()); unstore(STASH_KEY);
   if (!s) { beginRun(); return; }
   S = s; ui.modal = null; ui.prev = null; ui.seen.clear(); resumeModal(); store(SAVE_KEY, S); render();
   toast('Back to your run');
 }
-function dropStash(){ try { localStorage.removeItem(STASH_KEY); } catch(e){} }
+function dropStash(){ unstore(STASH_KEY); }

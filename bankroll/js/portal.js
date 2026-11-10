@@ -64,7 +64,7 @@ function privacyHTML(){
         <li><b>Your runs</b>: the moves, levels, coins and best hands, used for the leaderboards and the daily challenge, and to check scores are real.</li>
         <li><b>Basic visit counts</b>: the day, whether it's a phone or a computer, the browser language and your time zone. No cookies for advertising, and nothing is sold or shared.</li>
       </ul>
-      <p>Your settings and your game in progress stay in this browser. Clearing the site's data starts you over as a new player.</p>
+      <p>Your settings and your game in progress are saved through CrazyGames: on your CrazyGames account if you're logged in, otherwise in this browser.</p>
       <p>Bankroll does not use your data for anything else, and you can ask for your runs to be removed through the game's page on CrazyGames.</p>
     </div>
     <div class="actions"><button class="btn gold" data-act="close">OK</button></div>`;

@@ -127,7 +127,9 @@ const supabaseBackend = {
   async init(cfg){
     if (!window.supabase || !window.supabase.createClient) return false;
     this.cfg = cfg;
-    this.client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true } });
+    this.client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true,
+      // on CrazyGames the account's session is kept with the game's other saves (the data module), so it follows the player
+      ...(SAVE_AREA ? { storage:{ getItem:k => rawGet(k), setItem:(k, v) => rawSet(k, v), removeItem:k => unstore(k) } } : {}) } });
     this.logVisit();
     // an anonymous session (a player who hasn't signed in) records runs for analysis but counts as signed out
     const setSession = session => {
@@ -322,7 +324,7 @@ const supabaseBackend = {
     try { const r = document.referrer && new URL(document.referrer); if (r && r.host !== location.host) ref = r.host.replace(/^www\./, ''); } catch(e){}
     try { const q = new URLSearchParams(ARRIVED_QS); tag = q.get('ref') || q.get('utm_source') || q.get('src') || ''; } catch(e){}
     const tg = telegramLaunch(), today = new Date().toISOString().slice(0, 10);
-    let seen = null; try { seen = localStorage.getItem('bankroll-last-visit' + KEY_NS); localStorage.setItem('bankroll-last-visit' + KEY_NS, today); } catch(e){}
+    let seen = null; try { seen = rawGet('bankroll-last-visit' + KEY_NS); rawSet('bankroll-last-visit' + KEY_NS, today); } catch(e){}
     const args = { p_source: tag || ref || (tg ? 'telegram' : 'direct'), p_referrer: ref || null, p_platform: onPortal() ? PORTAL : tg ? 'telegram' : 'web',
       p_mobile: matchMedia('(pointer: coarse)').matches, p_lang: (navigator.language || '').slice(0, 12), p_new: !seen, p_new_today: seen !== today };
     this.client.rpc('bankroll_log_visit', args).then(() => {}, () => {});

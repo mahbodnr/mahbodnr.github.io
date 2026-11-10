@@ -25,8 +25,22 @@ let S = null;
 let prefs = { sound:true, sort:'rank' };
 const ui = { armed:null, modal:null, seen:new Set(), flips:new Set(), flies:[] };
 
-function store(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
-function load(k){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
+/* Where the game keeps what it saves: the browser's localStorage, or on CrazyGames the SDK's data module (the same
+   calls; synced to the player's CrazyGames account, set by js/main.js before the game starts). A save the data module
+   refuses (its 1 MB limit) falls back to localStorage. */
+let SAVE_AREA = null;
+const saveArea = () => SAVE_AREA || localStorage;
+function rawGet(k){
+  try { const v = saveArea().getItem(k); if (v != null || !SAVE_AREA) return v; } catch(e){}
+  try { return localStorage.getItem(k); } catch(e){ return null; }
+}
+function rawSet(k, v){
+  try { saveArea().setItem(k, v); if (SAVE_AREA) try { localStorage.removeItem(k); } catch(e){} return; } catch(e){}
+  try { localStorage.setItem(k, v); if (SAVE_AREA) SAVE_AREA.removeItem(k); } catch(e){}
+}
+function unstore(k){ try { saveArea().removeItem(k); } catch(e){} try { localStorage.removeItem(k); } catch(e){} }
+function store(k, v){ rawSet(k, JSON.stringify(v)); }
+function load(k){ try{ const v = rawGet(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
 
 function makeDeck(){
   const d = [];

@@ -39,7 +39,14 @@ function start(data){
   offerChallenge(incoming);   // opened from a shared challenge link (js/social.js)
   if (onPortal()){ Portal.loadingStop(); privacyNotice(); }
 }
-window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+const boot = () => window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+// CrazyGames: the SDK first (it loads the player's saved data), then the game, from the data module. If the SDK doesn't
+// answer in 6 seconds the game starts anyway, on localStorage.
+if (typeof onPortal === 'function' && onPortal()){
+  let booted = false;
+  const go = () => { if (booted) return; booted = true; if (Portal.sdk && Portal.sdk.data) SAVE_AREA = Portal.sdk.data; boot(); };
+  Portal.init().then(go, go); setTimeout(go, 6000);
+} else boot();
 
 // On the website only (it has a manifest; the claude.ai page doesn't): keep a copy of the game for offline play.
 if ('serviceWorker' in navigator && window.isSecureContext && location.protocol !== 'file:' && !window.claude && document.querySelector('link[rel="manifest"]'))
