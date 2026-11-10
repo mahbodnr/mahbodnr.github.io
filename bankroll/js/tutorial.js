@@ -138,7 +138,7 @@ function introStep(){
   return st;
 }
 function introNext(){ if (!introOn()) return; const st = INTRO[intro.i]; if (st && st.done) return endIntro(); intro.i++; }
-function introAllows(el){ return !introOn() || !!(el && el.closest && el.closest('.intro-ok, #coach')); }
+function introAllows(el){ return !introOn() || !!(el && el.closest && el.closest('.intro-ok, #coach, .privnote, .m-privacy')); }   // the portal's privacy notice works any time
 
 function introTick(){
   const root = document.documentElement;

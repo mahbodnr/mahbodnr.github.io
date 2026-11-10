@@ -94,6 +94,7 @@ function settingsHTML(){
     <p class="snote" id="seedMsg"></p>
     <h3>Help</h3>
     <div class="srow"><span>Introduction</span><button class="btn" data-act="replayTutorial">Replay</button></div>
+    ${onPortal() ? `<div class="srow"><span>Privacy<small>What Bankroll stores for its leaderboard</small></span><button class="btn" data-act="privacy">Read</button></div>` : ''}
     <div class="srow kbrow"><span>Keys<small>1–9 swap · D discard/deal · C cash out · N next · T throw away · P power-up · W 10-swap · ↑↓ bet · K tracker · Y history · ? help</small></span></div>
     <div class="actions"><button class="btn gold" data-act="close">Done</button></div>`;
 }

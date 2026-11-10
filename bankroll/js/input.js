@@ -183,6 +183,8 @@ document.addEventListener('click', e => {
     case 'lbPeriod': LB.period = t.dataset.v; LB.periodChosen = true; break;
     case 'lbSeeded': LB.seeded = !LB.seeded; if (LB.backend && LB.backend.refresh) LB.backend.refresh(); break;
     case 'lbSignIn': if (LB.backend && LB.backend.signIn) LB.backend.signIn(); return;
+    case 'privacy': ui.modalBack = ui.modal; ui.modal = 'privacy'; render(); return;
+    case 'privacyOk': privacyOk(); return;
     case 'setPref': setPref(t.dataset.k, t.dataset.v); break;
     case 'preset': setBet(+t.dataset.v); return;
     case 'bustConfirm': act('cash', 1); break;

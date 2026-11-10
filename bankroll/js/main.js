@@ -37,6 +37,7 @@ function start(data){
   initLeaderboard();
   preloadCourts();
   offerChallenge(incoming);   // opened from a shared challenge link (js/social.js)
+  if (onPortal()){ Portal.loadingStop(); privacyNotice(); }
 }
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 

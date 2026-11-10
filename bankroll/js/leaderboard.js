@@ -26,7 +26,7 @@ function reportError(message, source, stack){
   if (!message || /^Script error\.?$/i.test(message) || /ResizeObserver loop/i.test(message) || ERR.seen.has(message) || ERR.seen.size >= 15) return;
   ERR.seen.add(message);
   ERR.queue.push({ p_message:message, p_source:source ? String(source).slice(0, 300) : null, p_stack:stack ? String(stack).slice(0, 2000) : null,
-    p_platform: telegramLaunch() ? 'telegram' : 'web', p_client:'rules ' + RULES, p_agent:navigator.userAgent.slice(0, 300), p_page:location.pathname.slice(0, 300) });
+    p_platform: onPortal() ? PORTAL : telegramLaunch() ? 'telegram' : 'web', p_client:'rules ' + RULES, p_agent:navigator.userAgent.slice(0, 300), p_page:location.pathname.slice(0, 300) });
   if (ERR.queue.length > 15) ERR.queue.shift();
   flushErrors();
 }
@@ -131,10 +131,10 @@ const supabaseBackend = {
     this.logVisit();
     // an anonymous session (a player who hasn't signed in) records runs for analysis but counts as signed out
     const setSession = session => {
-      LB.anon = !!(session && session.user.is_anonymous);
+      LB.anon = !!(session && session.user.is_anonymous) && !(this.portalName && session.user.id === this.portalId);   // a portal guest with a profile plays as a player
       LB.signedIn = !!session && !LB.anon; LB.me = session ? session.user.id : null;
       const md = (session && session.user.user_metadata) || {};
-      LB.myName = md.full_name || md.name || (session && session.user.email ? session.user.email.split('@')[0] : '');
+      LB.myName = (!LB.anon && this.portalName) || md.full_name || md.name || (session && session.user.email ? session.user.email.split('@')[0] : '');
       LB.tgId = md.telegram_id || null;
     };
     try { const { data } = await this.client.auth.getSession(); setSession(data && data.session); } catch(e){}
@@ -154,10 +154,26 @@ const supabaseBackend = {
     else if (!LB.anon){
       try { const { data, error } = await this.client.auth.signInAnonymously(); if (!error && data && data.session) setSession(data.session); } catch(e){}
     }
-    if (LB.anon) await this.registerClaim();
+    if (onPortal() && LB.anon){ await this.portalProfile(); try { const { data } = await this.client.auth.getSession(); setSession(data && data.session); } catch(e){} }
+    if (LB.anon && !onPortal()) await this.registerClaim();
     flushErrors();
     await this.refresh();
     return true;
+  },
+  // On a games portal (no outside sign-in): this anonymous account gets a profile with the portal's username for the
+  // player (or a guest name), which makes it count on the boards and for the daily challenge (bankroll_portal_profile)
+  async portalProfile(){
+    const { data: s } = await this.client.auth.getSession().catch(() => ({ data:null }));
+    if (!s || !s.session) return false;
+    const u = await Portal.user();
+    const name = (u && u.username) || guestName();
+    try {
+      const { data, error } = await this.client.rpc('bankroll_portal_profile', { p_portal:PORTAL, p_username:name, p_avatar_url:(u && u.profilePictureUrl) || null,
+        p_tz:(() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch(e){ return null; } })() });
+      if (error || !data || !data.success) return false;
+      this.portalId = s.session.user.id; this.portalName = data.name;
+      return true;
+    } catch(e){ return false; }
   },
   // A random code, kept only on this device, that later proves these anonymous runs are this player's.
   async registerClaim(){
@@ -220,7 +236,7 @@ const supabaseBackend = {
   // asks the server for a run: it picks the seed unless the player chose one
   async startRun(seed, challenge){
     try {
-      const args = { p_seed:seed || null, p_platform: telegramLaunch() ? 'telegram' : 'web', p_client: 'rules ' + RULES };
+      const args = { p_seed:seed || null, p_platform: onPortal() ? PORTAL : telegramLaunch() ? 'telegram' : 'web', p_client: 'rules ' + RULES };
       if (challenge) args.p_challenge = challenge;
       const { data, error } = await this.client.rpc('bankroll_start_run', args);
       if (error || !data) return { error:'error' };
@@ -307,7 +323,7 @@ const supabaseBackend = {
     try { const q = new URLSearchParams(ARRIVED_QS); tag = q.get('ref') || q.get('utm_source') || q.get('src') || ''; } catch(e){}
     const tg = telegramLaunch(), today = new Date().toISOString().slice(0, 10);
     let seen = null; try { seen = localStorage.getItem('bankroll-last-visit' + KEY_NS); localStorage.setItem('bankroll-last-visit' + KEY_NS, today); } catch(e){}
-    const args = { p_source: tag || ref || (tg ? 'telegram' : 'direct'), p_referrer: ref || null, p_platform: tg ? 'telegram' : 'web',
+    const args = { p_source: tag || ref || (tg ? 'telegram' : 'direct'), p_referrer: ref || null, p_platform: onPortal() ? PORTAL : tg ? 'telegram' : 'web',
       p_mobile: matchMedia('(pointer: coarse)').matches, p_lang: (navigator.language || '').slice(0, 12), p_new: !seen, p_new_today: seen !== today };
     this.client.rpc('bankroll_log_visit', args).then(() => {}, () => {});
   },
@@ -325,6 +341,7 @@ const supabaseBackend = {
   // Bankroll's own Google sign-in: straight to Google and back to this page (Latent Space's login page isn't used,
   // so Bankroll players don't get a Latent Space profile)
   async signIn(){
+    if (onPortal()){ if (await this.portalProfile()){ try { const { data } = await this.client.auth.getSession(); LB.anon = false; LB.signedIn = !!(data && data.session); LB.myName = this.portalName; } catch(e){} await this.refresh(); refreshBoard(); } else toast('The leaderboard can’t be reached right now'); return; }
     if (telegramLaunch()){
       if (await this.telegramSignIn()) refreshBoard(); else toast('Couldn’t sign in');
       return;
@@ -575,7 +592,7 @@ function leaderboardHTML(){
       <button class="btn gold" data-act="playDaily">Play</button></div>` : '';
   let foot;
   if (LB.kind === 'supabase' && !LB.signedIn)
-    foot = `<div class="lbsign"><button class="btn gold" data-act="lbSignIn">Sign in to post scores</button></div>`;
+    foot = `<div class="lbsign"><button class="btn gold" data-act="lbSignIn">${onPortal() ? 'Join the leaderboard' : 'Sign in to post scores'}</button></div>`;
   else if (LB.kind === 'supabase'){
     const note = !S.official ? 'This run isn’t posted (started signed out, or under older rules)' : LB.closedRun === S.runId ? 'This run can’t be posted' : '';
     foot = note ? `<p class="snote">${note}</p>` : '';
@@ -626,7 +643,7 @@ function announceBoardPlace(){
   if (better(hand, prev.hand) && hand > 1) note = { kind:'besthand', rank:hand, text:`Your ×${fmtFit(LB.hands.today[hand - 1].mult)} hand is <b>#${hand}</b> of today's best hands` };
   else if (better(run, prev.run)) note = { kind:'board', rank:run, text:`You're <b>#${run}</b> on today's leaderboard` };
   store(LB_SEEN_KEY, { day, run: run && (!prev.run || run < prev.run) ? run : (prev.run || 0), hand: hand && (!prev.hand || hand < prev.hand) ? hand : (prev.hand || 0) });
-  if (note) showLbNote(note);
+  if (note){ showLbNote(note); if (typeof Portal !== 'undefined') Portal.happytime(); }
 }
 let lbNoteTimer = null;
 function showLbNote(note){

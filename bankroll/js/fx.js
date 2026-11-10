@@ -65,7 +65,7 @@ const FIT_W = 1300, FIT_H = 840;
 let ZK = 1;
 function fitScreen(){
   const w = innerWidth, h = innerHeight;
-  const z = w >= 1080 && h > 560 ? Math.max(1, Math.min(w / FIT_W, h / FIT_H, 3)) : 1;
+  const z = w >= 1080 && h > 720 ? Math.max(1, Math.min(w / FIT_W, h / FIT_H, 3)) : 1;
   ZK = Math.floor(z * 100) / 100;
   const r = document.documentElement;
   r.classList.toggle('zoomed', ZK > 1);

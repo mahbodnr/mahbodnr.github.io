@@ -419,6 +419,7 @@ function renderModal(){
   else if (m === 'chatScores') html = chatScoresHTML();
   else if (m === 'dailyOffer') html = dailyOfferHTML();
   else if (m === 'dailySignIn') html = dailySignInHTML();
+  else if (m === 'privacy') html = privacyHTML();
   else if (m === 'restart') html = `<h2>New game?</h2><p class="lead">${isDailyRun() ? 'This ends your one try at today\'s daily challenge.' : 'This run will be lost.'}</p>
     <div class="actions"><button class="btn" data-act="close">Cancel</button><button class="btn gold" data-act="restartNow">New game</button></div>`;
   else if (m === 'pick' || m === 'view'){
@@ -454,10 +455,10 @@ function renderModal(){
   }
 }
 
-const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart', 'release5', 'record', 'unlock', 'challenge', 'group', 'joinGroup', 'newChallenge', 'chatScores', 'dailyOffer', 'dailySignIn'];
-const MODAL_NAMES = { help:'How to play', result:'Hand result', over:'Run over', reshuffle:'Level complete', tracker:'Card tracker', view:'Discard pile', pick:'Take a card back', history:'History', settings:'Settings', bust:'Cash-out warning', restart:'New game', release5:'Release Extra seat', record:'Top hand of the day', unlock:'Unlocked' };
+const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart', 'release5', 'record', 'unlock', 'challenge', 'group', 'joinGroup', 'newChallenge', 'chatScores', 'dailyOffer', 'dailySignIn', 'privacy'];
+const MODAL_NAMES = { help:'How to play', result:'Hand result', over:'Run over', reshuffle:'Level complete', tracker:'Card tracker', view:'Discard pile', pick:'Take a card back', history:'History', settings:'Settings', bust:'Cash-out warning', restart:'New game', release5:'Release Extra seat', record:'Top hand of the day', unlock:'Unlocked', privacy:'Privacy' };
 // closing a dialog that opened over another (the top-hand celebration) returns to the one underneath
-function closeModal(){ ui.modal = (ui.modal === 'record' || ui.modal === 'help' || ui.modal === 'dailyOffer') && ui.modalBack ? ui.modalBack : null; ui.modalBack = null; }
+function closeModal(){ ui.modal = (ui.modal === 'record' || ui.modal === 'help' || ui.modal === 'dailyOffer' || ui.modal === 'privacy') && ui.modalBack ? ui.modalBack : null; ui.modalBack = null; }
 function bustHTML(){
   const ev = evaluate(S.hand, S.powerups), payout = S.bet * ev.mult, after = S.coins + payout - S.debt;
   return `<div class="rs-head loss"><div class="rs-verdict">This ends your run</div>
@@ -688,6 +689,7 @@ function render(){
   const stageWas = stageEl && { id:stageEl.dataset.cid, html:stageEl.outerHTML, rect:stageEl.getBoundingClientRect() };
   renderLedger(); renderPit(); renderPowers(); renderHand(); renderValue(); renderDock(); renderModal();
   if (typeof warmShares === 'function') warmShares();
+  if (typeof Portal !== 'undefined') Portal.gameplay(portalPlaying());   // CrazyGames: playing, or a break (js/portal.js)
   // small cards (many in a row on a narrow screen): the hand switches to the easy-to-read Clear pack until there's room again
   const small = handIsSmall();
   if (small !== !!ui.handClear){ ui.handClear = small; renderHand(); }

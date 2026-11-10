@@ -13,8 +13,9 @@ function audio(){
   master.gain.value = 0.9 * (prefs.volume ?? 0.8);
   return actx;
 }
+const portalMuted = () => typeof Portal !== 'undefined' && Portal.muted;   // CrazyGames' mute setting wins (js/portal.js)
 function sfx(kind){
-  if (!prefs.sound || !(prefs.volume ?? 0.8)) return;
+  if (!prefs.sound || !(prefs.volume ?? 0.8) || portalMuted()) return;
   try {
     const ac = audio(), t = ac.currentTime;
     const tone = (f, d, type, v, at, f2) => {
@@ -78,9 +79,9 @@ async function loadMusic(ac){
   })();
   return music.loading;
 }
-const musicLevel = () => prefs.music ? MUSIC_GAIN * (prefs.musicVolume ?? 0.8) : 0;
+const musicLevel = () => prefs.music && !portalMuted() ? MUSIC_GAIN * (prefs.musicVolume ?? 0.8) : 0;
 async function startMusic(){
-  if (!prefs.music || music.src || music.starting) return;
+  if (!prefs.music || portalMuted() || music.src || music.starting) return;
   music.starting = true;
   try {
     const ac = audio(), buf = await loadMusic(ac);
@@ -106,7 +107,7 @@ function stopMusic(){
 }
 // the volume slider and the switch
 function applyMusic(){
-  if (!prefs.music){ stopMusic(); return; }
+  if (!prefs.music || portalMuted()){ stopMusic(); return; }
   if (music.src && music.gain && actx){ const t = actx.currentTime; music.gain.gain.cancelScheduledValues(t); music.gain.gain.setTargetAtTime(Math.max(0.0001, musicLevel()), t, 0.05); }
   else if (music.unlocked) startMusic();
 }
