@@ -27,9 +27,10 @@ function start(data){
   const incoming = incomingSeed();
   const toGroup = !!ui.pendingGroup || !!(saved && saved.challenge && saved.phase !== 'over');
   if (ui.pendingGroup && window.BANKROLL_CONFIG) showGroupEarly(ui.pendingGroup);
-  // first visit: the introduction (three practice hands), which can't be skipped; the player's run starts after it
-  if (!prefs.tutDone && !toGroup) startIntro(false);
-  else if (!S) newGame();
+  // a new player starts a real run straight away, with a Tutorial button on the table until their first hand is over
+  // (and, if that hand loses, an offer to take it); the tutorial is three practice hands that can be skipped
+  if (!S) newGame();
+  if (!prefs.tutDone && prefs.tutHint === undefined) prefs.tutHint = true;
   store(PREF_KEY, prefs);
   window.claude?.hot?.snapshot?.(() => ({ S }));
   render();
@@ -37,7 +38,7 @@ function start(data){
   initLeaderboard();
   preloadCourts();
   offerChallenge(incoming);   // opened from a shared challenge link (js/social.js)
-  if (onPortal()){ Portal.loadingStop(); privacyNotice(); }
+  if (onPortal()) Portal.loadingStop();
 }
 const boot = () => window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 // CrazyGames: the SDK first (it loads the player's saved data), then the game, from the data module. If the SDK doesn't

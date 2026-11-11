@@ -344,6 +344,7 @@ const supabaseBackend = {
   // Bankroll's own Google sign-in: straight to Google and back to this page (Latent Space's login page isn't used,
   // so Bankroll players don't get a Latent Space profile)
   async signIn(){
+    if (PORTAL === 'reddit'){ toast('Log in to Reddit to post scores'); return; }   // the Reddit account is the player (reddit/)
     if (onPortal()){ if (await this.portalProfile()){ try { const { data } = await this.client.auth.getSession(); LB.anon = false; LB.signedIn = !!(data && data.session); LB.myName = this.portalName; } catch(e){} await this.refresh(); refreshBoard(); } else toast('The leaderboard can’t be reached right now'); return; }
     if (telegramLaunch()){
       if (await this.telegramSignIn()) refreshBoard(); else toast('Couldn’t sign in');
@@ -652,8 +653,8 @@ let lbNoteTimer = null;
 function showLbNote(note){
   let el = document.getElementById('lbnote');
   if (!el){ el = document.createElement('div'); el.id = 'lbnote'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
-  el.innerHTML = `<span class="ln-ico" aria-hidden="true">🏆</span><span class="ln-txt">${note.text}</span>
-    ${shareBtn(note.kind, 'Share', 'ln-btn', 'today')}<button class="ln-btn" data-act="openBoard">View</button>`;
+  el.innerHTML = `<span class="ln-ico" aria-hidden="true">🏆</span><div class="ln-main"><span class="ln-txt">${note.text}</span>
+    <div class="ln-acts">${shareBtn(note.kind, 'Share', 'ln-btn', 'today')}<button class="ln-btn" data-act="openBoard">View</button></div></div>`;
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   sfx('coin'); buzz([20, 30, 20]);
   announce(note.text.replace(/<[^>]+>/g, ''));

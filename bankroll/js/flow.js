@@ -294,6 +294,8 @@ function cashOut(force){
   S.stats.bestPayout = Math.max(S.stats.bestPayout, payout);
   S.stats.peak = Math.max(S.stats.peak, S.coins);
   S.result = res; S.phase = 'result'; ui.modal = 'result';
+  // a new player's first hand is over: the Tutorial button goes; if the hand lost, its result offers the tutorial
+  if (!S.intro && prefs.tutHint){ prefs.tutHint = false; ui.tutOffer = res.net < 0 && !prefs.tutDone; store(PREF_KEY, prefs); }
   sfx(payout > res.debt ? 'win' : payout > 0 ? 'coin' : 'lose');
   if (ev.mult >= 10){ ui.celebrate = true; buzz([25, 40, 25, 40, 60]); } else if (res.net > 0) buzz(30);
   reportProgress();

@@ -1276,13 +1276,15 @@ html.light .lv-deck{background:rgba(0,0,0,.1)} html.light .lv-deck > i{backgroun
 .th-pu > span{font-family:var(--f-card);font-weight:800;font-size:12px;background:var(--paper, #fbf6ea);color:#1d1f26;border-radius:4px;padding:1px 4px}
 .th-pu > span.r{color:#c3303b}
 /* the leaderboard announcement banner */
-#lbnote{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 10px);transform:translate(-50%,-140%);z-index:60;display:flex;align-items:center;gap:10px;
-  max-width:min(520px, calc(100vw - 24px));padding:9px 10px 9px 14px;border-radius:999px;border:1px solid var(--brass);color:var(--text);
+#lbnote{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 10px);transform:translate(-50%,-140%);z-index:60;display:flex;align-items:center;gap:12px;
+  max-width:min(420px, calc(100vw - 24px));padding:12px 16px 12px 14px;border-radius:16px;border:1px solid var(--brass);color:var(--text);
   background:linear-gradient(180deg,rgba(40,30,10,.96),rgba(20,16,6,.96));box-shadow:0 10px 30px rgba(0,0,0,.45),0 0 0 4px rgba(217,171,76,.12);
   transition:transform .45s cubic-bezier(.2,.9,.3,1.2);font-size:14px}
 #lbnote.show{transform:translate(-50%,0)}
-#lbnote .ln-ico{font-size:20px}
-#lbnote .ln-txt{min-width:0}
+#lbnote .ln-ico{font-size:26px;flex:none}
+#lbnote .ln-main{min-width:0;display:flex;flex-direction:column;gap:8px}   /* the text, with its buttons in a row underneath */
+#lbnote .ln-txt{min-width:0;line-height:1.35}
+#lbnote .ln-acts{display:flex;gap:8px}
 #lbnote .ln-txt b{color:var(--brass-hi)}
 #lbnote .ln-btn{flex:none;font:inherit;font-size:12px;font-weight:800;color:var(--brass-hi);background:transparent;border:1px solid var(--brass-dim);border-radius:999px;padding:5px 11px;cursor:pointer;display:inline-flex;gap:5px;align-items:center}
 #lbnote .ln-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
@@ -1295,13 +1297,17 @@ html.light #lbnote{background:#fffaf0;color:#2a1c05}
 .dailyhead .dh-acts .btn{min-height:0;padding:9px 16px;justify-content:center}
 @media (max-width:420px){ .dailyhead .dh-acts{flex-direction:row;flex-wrap:wrap;width:100%} .dailyhead .dh-acts .btn{flex:1 1 auto} }
 
-/* games portal (js/portal.js): the privacy notice for new players, and the privacy page */
-.privnote{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;
-  max-width:calc(100vw - 24px);padding:8px 10px 8px 14px;border-radius:12px;background:rgba(10,24,21,.94);color:#efe6cf;font:500 12.5px/1.3 var(--f-ui, system-ui);
-  box-shadow:0 6px 24px rgba(0,0,0,.4);border:1px solid rgba(245,217,140,.25)}
-.privnote span{flex:1;min-width:0}
-.privnote button{flex:none;background:none;border:1px solid rgba(245,217,140,.45);color:#f5d98c;border-radius:8px;padding:5px 10px;font:600 12px var(--f-ui, system-ui);cursor:pointer}
-.privnote button:last-child{background:#f5d98c;color:#2a2008;border-color:#f5d98c}
+/* games portal (js/portal.js): the privacy page */
 .privacy{text-align:left;font-size:14px;line-height:1.45}
 .privacy ul{margin:8px 0 10px;padding-left:20px}
 .privacy li{margin:6px 0}
+
+/* a new player's Tutorial button (until their first hand is over), and the offer after a losing first hand */
+.tutpill{display:inline-flex;align-items:center;gap:6px;padding:4px 12px 4px 9px;border-radius:999px;border:1px solid var(--brass-hi, #f5d98c);
+  background:rgba(245,217,140,.12);color:var(--brass-hi, #f5d98c);font:700 12.5px var(--f-ui);cursor:pointer;animation:tutGlow 2.4s ease-in-out infinite}
+.tutpill svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+@keyframes tutGlow{0%,100%{box-shadow:0 0 0 0 rgba(245,217,140,0)}50%{box-shadow:0 0 0 4px rgba(245,217,140,.18)}}
+@media (prefers-reduced-motion: reduce){ .tutpill{animation:none} }
+.tutoffer{margin:12px 0 4px;padding:12px 14px;border-radius:14px;border:1px solid var(--brass-dim, rgba(217,171,76,.5));background:rgba(245,217,140,.08);font-size:14px;line-height:1.4;text-align:left}
+.tutoffer b{color:var(--brass-hi, #f5d98c)}
+.tutoffer-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}

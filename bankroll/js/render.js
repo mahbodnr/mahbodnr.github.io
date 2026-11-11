@@ -250,7 +250,9 @@ function renderHand(){
   const on = k => !S.order && prefs.sort === k ? 'true' : 'false';
   const note = S.phase === 'trim' ? `<div class="hnote trim">${S.hand.length} cards, ${cap} seats: tap a card to discard it <b>+${fmtFit(nextCardCost())} debt</b></div>`
     : S.phase === 'swapPlace' ? `<div class="hnote">Replace which card with ${cardName(S.swapCard)}?</div>` : '';
-  setHTML($('handhead'), `${note || `<div class="lbl">Hand <b>${S.hand.length}</b>/<b>${cap}</b></div>`}
+  const tut = prefs.tutHint && !prefs.tutDone && !S.intro
+    ? `<button class="tutpill" data-act="startTutorial" title="Three practice hands; skip any time"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5C6.5 4.3 9.3 4.3 12 6c2.7-1.7 5.5-1.7 8-.5v13c-2.5-1.2-5.3-1.2-8 .5-2.7-1.7-5.5-1.7-8-.5z"/><path d="M12 6v13"/></svg>Tutorial</button>` : '';
+  setHTML($('handhead'), `${note || `<div class="lbl">Hand <b>${S.hand.length}</b>/<b>${cap}</b></div>`}${tut}
     <div class="seg" role="group" aria-label="Sort hand">
       <button data-act="sortRank" aria-pressed="${on('rank')}" title="Sort by rank"><span class="ico rk"><i></i><i></i><i></i></span>Rank</button>
       <button data-act="sortSuit" aria-pressed="${on('suit')}" title="Sort by suit"><span class="ico st">${suitSVG('S')}${suitSVG('H')}</span>Suit</button>
@@ -541,7 +543,9 @@ function resultHTML(){
     </div>
     ${handBody(r)}
     ${levelWarning(r)}
-    <div class="actions rs-actions">${r.ev && r.ev.mult >= 10 ? shareBtn('hand', 'Share') : ''}<button class="btn gold" data-act="nextSet">Next hand</button></div>`;
+    ${ui.tutOffer ? `<div class="tutoffer"><b>Tough first hand.</b> The tutorial shows how combos, bets and debt work in three practice hands. You can skip it any time.
+      <div class="tutoffer-acts"><button class="btn" data-act="tutNo">No thanks</button><button class="btn gold" data-act="startTutorial">Take the tutorial</button></div></div>` : ''}
+    <div class="actions rs-actions">${r.ev && r.ev.mult >= 10 ? shareBtn('hand', 'Share') : ''}<button class="btn ${ui.tutOffer ? '' : 'gold'}" data-act="nextSet">Next hand</button></div>`;
 }
 /* ---------- run over ----------
    Leads with a picture of what happened (what you had against what you needed), then the run's path

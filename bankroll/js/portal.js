@@ -3,7 +3,7 @@
    - the CrazyGames SDK (loaded by the portal page): loading and gameplay start/stop events, the portal's mute setting,
      a celebration on a new leaderboard place, the logged-in CrazyGames user's name for the boards
    - no outside sign-in, links or sharing on the portal (their rules): see onPortal() in leaderboard.js and social.js
-   - a short privacy notice for new players, and the privacy page in Settings */
+   - the privacy page in Settings */
 'use strict';
 
 const PORTAL = (window.BANKROLL_CONFIG && window.BANKROLL_CONFIG.portal) || null;
@@ -55,8 +55,18 @@ const portalPlaying = () => !!(S && !ui.modal && S.phase !== 'over');
 if (onPortal()) Portal.loadingStart();
 
 /* ---------- privacy ---------- */
-const PRIVACY_SEEN = 'bankroll-privacy-seen';
 function privacyHTML(){
+  if (PORTAL === 'reddit') return `<div class="rs-eyebrow">Bankroll</div><h2>Privacy</h2>
+    <div class="privacy">
+      <p>Bankroll keeps a leaderboard, so this Reddit app stores a little about your play in its own storage on Reddit:</p>
+      <ul>
+        <li><b>Your Reddit username and account ID</b>, to put your runs on the boards. Nothing else from your account.</li>
+        <li><b>Your runs</b>: the moves, levels, coins and best hands, used for the leaderboards and the daily challenge, and to check scores are real.</li>
+      </ul>
+      <p>Your settings and your game in progress stay in this browser. Nothing is sold or shared, and there are no ads.</p>
+      <p>Logged out of Reddit, you can still play; nothing is stored about you.</p>
+    </div>
+    <div class="actions"><button class="btn gold" data-act="close">OK</button></div>`;
   return `<div class="rs-eyebrow">Bankroll</div><h2>Privacy</h2>
     <div class="privacy">
       <p>Bankroll keeps a leaderboard, so it stores a little about your play on its own server (Supabase):</p>
@@ -71,12 +81,3 @@ function privacyHTML(){
     </div>
     <div class="actions"><button class="btn gold" data-act="close">OK</button></div>`;
 }
-// a one-line notice for new players on the portal (not a window: play isn't interrupted)
-function privacyNotice(){
-  if (!onPortal() || load(PRIVACY_SEEN)) return;
-  const el = document.createElement('div');
-  el.className = 'privnote'; el.setAttribute('role', 'note');
-  el.innerHTML = `<span>Bankroll stores your runs and player name for its leaderboard.</span><button data-act="privacy">Privacy</button><button data-act="privacyOk" aria-label="OK">OK</button>`;
-  document.body.appendChild(el);
-}
-function privacyOk(){ store(PRIVACY_SEEN, true); document.querySelector('.privnote')?.remove(); }

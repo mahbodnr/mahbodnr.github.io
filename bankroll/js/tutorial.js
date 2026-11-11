@@ -3,8 +3,8 @@
      1. the hand and the combos, a set bet (Bet and Debt highlighted), a discard, a swap and a cash-out;
      2. a Joker and the Ace boost power-up (with its upkeep);
      3. an all-in bet that chases a card, runs the debt past the hand and loses; then the level price.
-   The first time it can't be skipped; replayed from Help or Settings it can. The practice run is never saved or posted,
-   and the player's own run (if any) is picked up again afterwards. */
+   Nobody is made to take it: new players get a Tutorial button (js/render.js, until their first hand is over) and it
+   can always be skipped. The practice run is never saved or posted, and the player's own run is picked up afterwards. */
 'use strict';
 
 /* ---------- the cards, in the order they are dealt ---------- */
@@ -138,7 +138,7 @@ function introStep(){
   return st;
 }
 function introNext(){ if (!introOn()) return; const st = INTRO[intro.i]; if (st && st.done) return endIntro(); intro.i++; }
-function introAllows(el){ return !introOn() || !!(el && el.closest && el.closest('.intro-ok, #coach, .privnote, .m-privacy')); }   // the portal's privacy notice works any time
+function introAllows(el){ return !introOn() || !!(el && el.closest && el.closest('.intro-ok, #coach')); }
 
 function introTick(){
   const root = document.documentElement;
@@ -155,7 +155,7 @@ function introTick(){
   c.classList.toggle('wide', !!st.center);
   const h = Math.min(3, introHand());
   c.innerHTML = `<div class="ch-step">${st.center && intro.i === 0 ? 'Introduction' : `Practice hand ${h} of 3`}</div><b>${st.title}</b>${st.panel ? st.panel() : ''}<p>${st.text()}</p>
-    <div class="ch-actions">${intro.replay ? '<button class="ch-skip" data-act="introSkip">Skip</button>' : '<span></span>'}
+    <div class="ch-actions"><button class="ch-skip" data-act="introSkip">Skip</button>
     ${st.until ? '' : `<button class="btn gold ch-next" data-act="introNext">${st.done ? 'Start playing' : 'Next'}</button>`}</div>`;
   const target = st.target && document.querySelector(st.target);
   if (target) target.classList.add('coach-on');

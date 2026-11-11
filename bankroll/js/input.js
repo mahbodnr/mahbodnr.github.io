@@ -184,14 +184,15 @@ document.addEventListener('click', e => {
     case 'lbSeeded': LB.seeded = !LB.seeded; if (LB.backend && LB.backend.refresh) LB.backend.refresh(); break;
     case 'lbSignIn': if (LB.backend && LB.backend.signIn) LB.backend.signIn(); return;
     case 'privacy': ui.modalBack = ui.modal; ui.modal = 'privacy'; render(); return;
-    case 'privacyOk': privacyOk(); return;
     case 'setPref': setPref(t.dataset.k, t.dataset.v); break;
     case 'preset': setBet(+t.dataset.v); return;
     case 'bustConfirm': act('cash', 1); break;
     case 'introNext': introNext(); if (!intro) return; break;
-    case 'introSkip': if (intro && intro.replay) endIntro(); return;
+    case 'introSkip': if (intro) endIntro(); return;
+    case 'startTutorial': if (S && !S.intro) store(SAVE_KEY, S); ui.tutOffer = false; ui.modal = null; startIntro(true); break;   // the run is kept and picked up afterwards
+    case 'tutNo': ui.tutOffer = false; break;
     case 'tipDone': tipDone(t.dataset.v); break;
-    case 'replayTutorial': ui.modal = null; startIntro(true); break;
+    case 'replayTutorial': if (S && !S.intro) store(SAVE_KEY, S); ui.modal = null; startIntro(true); break;
     case 'replaySeed': beginRun(S.seed); break;
     case 'copySeed': copySeed(); return;
     case 'shareRun': shareRun(); return;
@@ -237,7 +238,7 @@ document.addEventListener('click', e => {
       if (S.deck.length && S.coins < upkeep()){ ui.upkeepFx = true; break; }   // can't pay upkeep: explain instead of dealing
       act('next'); break;
     case 'cash': act('cash'); break;
-    case 'nextSet': act('nextSet'); break;
+    case 'nextSet': ui.tutOffer = false; act('nextSet'); break;
     case 'openReshuffle': ui.modal = 'reshuffle'; break;
     case 'reshuffle': act('level'); break;
     default: return;
