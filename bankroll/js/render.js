@@ -20,13 +20,18 @@ function cardHTML(c, opts = {}){
   if (opts.extra) cls.push(opts.extra);
   const data = opts.act ? ` data-act="${opts.act}" data-id="${c.id}" role="button" tabindex="0"` : '';
   const tag = opts.tag ? `<span class="tag ${opts.tagClass || ''}">${opts.tag}</span>` : '';
+  if (isJoker(c) && pk === 'tarot'){
+    cls.push('joker');
+    return `<div class="${cls.join(' ')}"${data} data-cid="${c.id}" aria-label="${cardName(c)}">${tarotHTML(c)}<div class="ix tl"><b>★</b></div><div class="ix br"><b>★</b></div>${tag}</div>`;
+  }
   if (isJoker(c)){
     cls.push('joker');
     return `<div class="${cls.join(' ')}"${data} data-cid="${c.id}" aria-label="${cardName(c)}"><span class="jw">JOKER</span><span class="jw b2">JOKER</span><div class="pip"><span class="medal"><svg viewBox="0 0 100 100"><use href="#jk-star"/></svg></span></div>${tag}</div>`;
   }
   const r = RANKS[c.rank], su = suitSVG(c.suit);
   let mid;
-  if (c.rank >= 11) mid = courtHTML(c, pk);
+  if (pk === 'tarot') mid = tarotHTML(c);
+  else if (c.rank >= 11) mid = courtHTML(c, pk);
   else if (c.rank === 1) mid = aceHTML(c, pk);
   else if (pk === 'clear') mid = clearMid(c);
   else mid = `<div class="pips">${PIPS[c.rank].map(([x, y]) => `<span style="left:${x}%;top:${y}%"${y > 50 ? ' class="dn"' : ''}>${suitSVG(c.suit, 'pp')}</span>`).join('')}</div>`;

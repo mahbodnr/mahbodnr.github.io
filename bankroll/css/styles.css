@@ -776,6 +776,16 @@ html.four-color .tc.s-C{color:#1b7a3c}
 .card:not(.pk-classic) .pips.ace::after{display:none}
 .card.pk-classic{--court-border:#3a3530}
 .card.pk-classic .court{background:transparent;border-radius:calc(var(--cw)*.04)}   /* the art on the card's paper, in a thin frame with softly rounded corners */
+/* Tarot: the Rider–Waite–Smith picture fills the card (its own frame line and title included); the corner indexes sit
+   on paper-coloured notches over its corners */
+.card.pk-tarot{--paper:#f4ead2; --paper-hi:#fbf4e2; --paper-lo:#e6d6b2; --ink:#1d1a16; --suit-red:#b3262e; --idx-font:'Cormorant Garamond',Georgia,serif}
+.card.pk-tarot:not(.back)::before{display:none}
+.card .tart{position:absolute;top:4.6%;bottom:4.6%;left:13%;right:13%;overflow:hidden;border-radius:calc(var(--cw)*.025);box-shadow:0 0 0 1px rgba(29,26,22,.55)}
+.card .tart img{display:block;width:100%;height:100%;object-fit:cover;user-select:none;-webkit-user-drag:none}
+.card.pk-tarot .ix b{font-style:italic;font-weight:700;letter-spacing:-.03em}
+.card.pk-tarot:not(.back) .ix{box-shadow:0 0 0 1px rgba(29,26,22,.35)}
+.card.pk-tarot.joker .ix b{font-style:normal;font-size:calc(var(--cw)*.2)}
+.card.pk-tarot .ix.br{display:none}   /* it would hide the end of the card's title; the top corner is the one a fanned hand shows */
 /* classic court art is 0.614 wide per unit of height: the panel takes exactly that shape, so nothing is cropped */
 .card.pk-classic .court{inset:22.8% 26.8%}   /* 46% of the width, in the art's proportions, so the frame clears both corner indexes */
 .card.pk-deco{--paper:#f7f1e1; --paper-hi:#fffaf0; --paper-lo:#ece0c2; --ink:#1b2238; --suit-red:#b8323c; --gold:#b8913a; --line:#1b2238;
@@ -807,6 +817,11 @@ html.four-color .tc.s-C{color:#1b7a3c}
   repeating-conic-gradient(from 0deg at 50% 50%, rgba(245,217,140,.22) 0 5deg, transparent 5deg 15deg), linear-gradient(160deg,var(--back-hi),var(--back))}
 .card.back.pk-onyx{background:var(--back-medal) center / 34% auto no-repeat,
   repeating-linear-gradient(90deg, rgba(245,217,140,.16) 0 1px, transparent 1px 5px), linear-gradient(160deg,var(--back-hi),var(--back))}
+.card.back.pk-tarot{background:var(--back-medal) center / 34% auto no-repeat,
+  radial-gradient(circle at 50% 50%, transparent 0 calc(var(--cw)*.24), rgba(245,217,140,.5) calc(var(--cw)*.24) calc(var(--cw)*.25), transparent calc(var(--cw)*.255)),
+  radial-gradient(circle, rgba(255,236,180,.85) 0 .8px, transparent 1.4px) 3px 5px/17px 19px,
+  radial-gradient(circle, rgba(255,236,180,.45) 0 .6px, transparent 1.1px) 11px 2px/13px 23px,
+  linear-gradient(160deg,var(--back-hi),var(--back))}
 .card.back.pk-royal{background:var(--back-medal) center / 34% auto no-repeat,
   radial-gradient(circle, rgba(245,217,140,.32) 0 1.2px, transparent 1.8px) 0 0/7px 7px, linear-gradient(160deg,var(--back-hi),var(--back))}
 .card.back.pk-botanical{background:var(--back-medal) center / 34% auto no-repeat,

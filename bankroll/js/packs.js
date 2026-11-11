@@ -1,5 +1,6 @@
 /* Bankroll · card packs: each pack has its own face design, court art, aces and back.
-   Classic uses public-domain court art (Byron Knoll's Vector Playing Cards, see img/classic/SOURCE.md);
+   Classic uses public-domain court art (Byron Knoll's Vector Playing Cards, see img/classic/SOURCE.md); Tarot puts a
+   Rider–Waite–Smith picture on every card (img/tarot/SOURCE.md);
    the other packs are drawn here as SVG and coloured through CSS variables set per pack. */
 'use strict';
 
@@ -10,6 +11,7 @@ const PACKS = [
   { id:'botanical', name:'Botanical', level:3, back:['#26876a', '#0f4a36'], note:'Laurels and engraved ink' },
   { id:'onyx',      name:'Onyx',      level:4, back:['#4a4a52', '#141417'], note:'Black cards, gold monograms' },
   { id:'royal',     name:'Royal',     level:5, back:['#7b4bb0', '#3d1f63'], note:'Baroque cameos in purple' },
+  { id:'tarot',     name:'Tarot',     level:4, back:['#2b5d78', '#0f2a3a'], note:'The 1909 Rider–Waite–Smith pictures' },
 ];
 // earlier versions picked a card back; map it to the matching pack
 const BACK_TO_PACK = { burgundy:'classic', midnight:'deco', emerald:'botanical', onyx:'onyx', royal:'royal' };
@@ -177,13 +179,20 @@ function clearMid(c){ return ''; }                                   // (the cro
 // The Classic pack's face-card art downloads quietly as soon as the game is up, so a J, Q or K never arrives blank
 // in the middle of a hand (the images otherwise load only when the first one is dealt).
 const COURT_IMGS = [];
+// the Tarot pack's picture for a card: suit + rank (H01 … S13), or JR / JB for the Jokers (The Fool, The Magician)
+const tarotSrc = c => `img/tarot/${isJoker(c) ? (c.suit === 'JR' ? 'JR' : 'JB') : c.suit + String(c.rank).padStart(2, '0')}.webp`;
+function tarotHTML(c){ return `<div class="tart"><img src="${tarotSrc(c)}" alt="" draggable="false" decoding="async"></div>`; }
 function preloadCourts(){
-  if (COURT_IMGS.length || (prefs.pack || 'classic') !== 'classic') return;
-  const go = () => ['J', 'Q', 'K'].forEach(R => ['S', 'H', 'D', 'C'].forEach(s => {
-    const im = new Image(); im.decoding = 'async'; im.src = `img/classic/${R}${s}.webp`;
+  const pk = prefs.pack || 'classic';
+  if (COURT_IMGS.length || (pk !== 'classic' && pk !== 'tarot')) return;
+  const srcs = pk === 'tarot'
+    ? ['S', 'H', 'D', 'C'].flatMap(s => Array.from({ length:13 }, (_, i) => tarotSrc({ rank:i + 1, suit:s }))).concat(['img/tarot/JR.webp', 'img/tarot/JB.webp'])
+    : ['J', 'Q', 'K'].flatMap(R => ['S', 'H', 'D', 'C'].map(s => `img/classic/${R}${s}.webp`));
+  const go = () => srcs.forEach(src => {
+    const im = new Image(); im.decoding = 'async'; im.src = src;
     if (im.decode) im.decode().catch(() => {});
     COURT_IMGS.push(im);                               // kept, so the decoded pictures stay ready
-  }));
+  });
   if (window.requestIdleCallback) requestIdleCallback(go, { timeout:1500 }); else setTimeout(go, 300);
 }
 function courtHTML(c, pk){
