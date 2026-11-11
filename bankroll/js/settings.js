@@ -57,16 +57,18 @@ function settingsHTML(){
     `<button data-act="setPref" data-k="${k}" data-v="${v}" aria-pressed="${String(prefs[k]) === String(v)}">${t}</button>`).join('')}</div>`;
   const toggle = (k, label, note) => `<div class="srow"><span>${label}${note ? `<small>${note}</small>` : ''}</span>
     <button class="switch" role="switch" data-act="setPref" data-k="${k}" data-v="${!prefs[k]}" aria-checked="${!!prefs[k]}" aria-label="${label}"><i></i></button></div>`;
+  // on/off and volume on one line: the slider is greyed out while it's off
+  const volRow = (k, label, id, v) => `<div class="srow svol"><span>${label}</span>
+    <input type="range" id="${id}" min="0" max="100" value="${Math.round((v ?? .8) * 100)}" aria-label="${label} volume" ${prefs[k] ? '' : 'disabled'}>
+    <button class="switch" role="switch" data-act="setPref" data-k="${k}" data-v="${!prefs[k]}" aria-checked="${!!prefs[k]}" aria-label="${label}"><i></i></button></div>`;
   const swatches = (k, list, kind) => `<div class="swatches">${list.map(it => {
     const ok = isUnlocked(it), on = (prefs[k] || list[0].id) === it.id;
     return `<button class="sw sw-${kind}" data-act="setPref" data-k="${k}" data-v="${it.id}" ${ok ? '' : 'disabled'} aria-pressed="${on}" style="--c1:${it.c1};--c2:${it.c2}" title="${ok ? it.name : `Reach level ${it.level} to unlock`}">
       <span class="swv"></span><b>${it.name}</b>${ok ? '' : `<small>${LOCK_SVG}Level ${it.level}</small>`}</button>`; }).join('')}</div>`;
   return `<h2>Settings</h2>
     <h3>Sound</h3>
-    ${toggle('music', 'Music', '“Calculated Ante”')}
-    <div class="srow"><span>Music volume</span><input type="range" id="musicRange" min="0" max="100" value="${Math.round((prefs.musicVolume ?? .8) * 100)}" aria-label="Music volume" ${prefs.music ? '' : 'disabled'}></div>
-    ${toggle('sound', 'Sound effects')}
-    <div class="srow"><span>Effects volume</span><input type="range" id="volRange" min="0" max="100" value="${Math.round((prefs.volume ?? .8) * 100)}" aria-label="Effects volume" ${prefs.sound ? '' : 'disabled'}></div>
+    ${volRow('music', 'Music', 'musicRange', prefs.musicVolume)}
+    ${volRow('sound', 'Sound effects', 'volRange', prefs.volume)}
     ${toggle('haptics', 'Vibration')}
     <h3>Look</h3>
     <div class="srow"><span>Theme</span>${seg('theme', [['system','System'],['dark','Dark'],['light','Light']], 'Theme')}</div>

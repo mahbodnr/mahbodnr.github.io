@@ -191,6 +191,7 @@ document.addEventListener('click', e => {
     case 'introSkip': if (intro) endIntro(); return;
     case 'startTutorial': if (S && !S.intro) store(SAVE_KEY, S); ui.tutOffer = false; ui.modal = null; startIntro(true); break;   // the run is kept and picked up afterwards
     case 'tutNo': ui.tutOffer = false; break;
+    case 'lbNoteClose': { const n = document.getElementById('lbnote'); if (n) n.classList.remove('show'); return; }
     case 'tipDone': tipDone(t.dataset.v); break;
     case 'replayTutorial': if (S && !S.intro) store(SAVE_KEY, S); ui.modal = null; startIntro(true); break;
     case 'replaySeed': beginRun(S.seed); break;

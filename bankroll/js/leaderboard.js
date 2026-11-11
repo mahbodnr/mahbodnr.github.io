@@ -228,7 +228,7 @@ const supabaseBackend = {
         cards:(r.hand && r.hand.cards) || [], labels:(r.hand && r.hand.labels) || [], at:Date.parse(r.achieved_at) || 0 });
       LB.boards.today = (today.data || []).map(row); LB.boards.week = (week.data || []).map(row);
       LB.hands.today = (todayHands.data || []).map(hand); LB.hands.week = (weekHands.data || []).map(hand);
-      LB.boards.daily = ((daily.data && daily.data.players) || []).map(r => ({ id:r.user_id, name:r.name || 'Player', level:r.level, peak:+r.peak, biggestWin:+r.biggest_win, seeded:false, playing:!r.finished }));
+      LB.boards.daily = ((daily.data && daily.data.players) || []).map(r => ({ id:r.user_id, name:r.name || 'Player', avatar:r.avatar_url || null, level:r.level, peak:+r.peak, biggestWin:+r.biggest_win, seeded:false, playing:!r.finished }));
       LB.hands.daily = [];
       LB.state = 'ready';
       checkTopHand();
@@ -654,7 +654,8 @@ function showLbNote(note){
   let el = document.getElementById('lbnote');
   if (!el){ el = document.createElement('div'); el.id = 'lbnote'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
   el.innerHTML = `<span class="ln-ico" aria-hidden="true">🏆</span><div class="ln-main"><span class="ln-txt">${note.text}</span>
-    <div class="ln-acts">${shareBtn(note.kind, 'Share', 'ln-btn', 'today')}<button class="ln-btn" data-act="openBoard">View</button></div></div>`;
+    <div class="ln-acts">${shareBtn(note.kind, 'Share', 'ln-btn', 'today')}<button class="ln-btn" data-act="openBoard">View</button></div></div>
+    <button class="ln-x" data-act="lbNoteClose" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   sfx('coin'); buzz([20, 30, 20]);
   announce(note.text.replace(/<[^>]+>/g, ''));

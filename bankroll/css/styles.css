@@ -1285,6 +1285,9 @@ html.light .lv-deck{background:rgba(0,0,0,.1)} html.light .lv-deck > i{backgroun
 #lbnote .ln-main{min-width:0;display:flex;flex-direction:column;gap:8px}   /* the text, with its buttons in a row underneath */
 #lbnote .ln-txt{min-width:0;line-height:1.35}
 #lbnote .ln-acts{display:flex;gap:8px}
+#lbnote .ln-x{align-self:flex-start;flex:none;width:28px;height:28px;margin:-4px -8px 0 0;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--muted);cursor:pointer}
+#lbnote .ln-x:hover{color:var(--text);background:rgba(255,255,255,.08)}
+#lbnote .ln-x svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
 #lbnote .ln-txt b{color:var(--brass-hi)}
 #lbnote .ln-btn{flex:none;font:inherit;font-size:12px;font-weight:800;color:var(--brass-hi);background:transparent;border:1px solid var(--brass-dim);border-radius:999px;padding:5px 11px;cursor:pointer;display:inline-flex;gap:5px;align-items:center}
 #lbnote .ln-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
@@ -1311,3 +1314,8 @@ html.light #lbnote{background:#fffaf0;color:#2a1c05}
 .tutoffer{margin:12px 0 4px;padding:12px 14px;border-radius:14px;border:1px solid var(--brass-dim, rgba(217,171,76,.5));background:rgba(245,217,140,.08);font-size:14px;line-height:1.4;text-align:left}
 .tutoffer b{color:var(--brass-hi, #f5d98c)}
 .tutoffer-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+
+/* Settings: a sound's on/off and its volume on one line */
+.srow.svol{display:grid;grid-template-columns:7.2em minmax(0,1fr) auto;align-items:center;gap:14px}
+.srow.svol input[type=range]{width:100%;min-width:0}
+.srow.svol input[type=range]:disabled{opacity:.35}
