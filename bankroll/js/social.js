@@ -496,7 +496,7 @@ function afterDailyLoaded(){
   const tg = telegramLaunch(); if (tg && tg.startParam === 'daily') wanted = true;        // a shared daily link in Telegram
   if (load(DAILY_AFTER_SIGNIN) === todayUTC() && LB.signedIn){ wanted = true; unstore(DAILY_AFTER_SIGNIN); }
   if (wanted && dailyTodo() && !(S && S.intro) && !(typeof intro !== 'undefined' && intro)){ store(DAILY_OFFER_KEY, todayUTC()); startDaily(); return; }
-  if (wanted && LB.daily.played){ openGroup(LB.daily.code); return; }
+  if (wanted && LB.daily.played && !(typeof RINLINE !== 'undefined' && RINLINE)){ openGroup(LB.daily.code); return; }   // (in Reddit's feed: just the game)
   maybeOfferDaily();
 }
 // start today's daily: a run in progress is kept aside (on this device; the server keeps it open) to come back to
