@@ -11,8 +11,11 @@ const PACKS = [
   { id:'botanical', name:'Botanical', level:3, back:['#26876a', '#0f4a36'], note:'Laurels and engraved ink' },
   { id:'onyx',      name:'Onyx',      level:4, back:['#4a4a52', '#141417'], note:'Black cards, gold monograms' },
   { id:'royal',     name:'Royal',     level:5, back:['#7b4bb0', '#3d1f63'], note:'Baroque cameos in purple' },
-  { id:'tarot',     name:'Tarot',     level:4, back:['#2b5d78', '#0f2a3a'], note:'The 1909 Rider–Waite–Smith pictures' },
 ];
+// The Tarot pack is off for now (its pictures, img/tarot/, are left out of every build: tools/build-site.mjs,
+// tools/build-crazygames.mjs). To bring it back: TAROT_ON = true and remove those exclusions.
+const TAROT_ON = typeof window !== 'undefined' && window.BANKROLL_TAROT === true;   // (tests turn it on)
+if (TAROT_ON) PACKS.push({ id:'tarot', name:'Tarot', level:4, back:['#2b5d78', '#0f2a3a'], note:'The 1909 Rider–Waite–Smith pictures' });
 // earlier versions picked a card back; map it to the matching pack
 const BACK_TO_PACK = { burgundy:'classic', midnight:'deco', emerald:'botanical', onyx:'onyx', royal:'royal' };
 const packById = id => PACKS.find(p => p.id === id);
