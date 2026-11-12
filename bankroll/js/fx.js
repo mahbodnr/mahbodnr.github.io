@@ -117,7 +117,8 @@ function runFly(f, delay = 0){
   else label = '★ Joker · +1 seat';
   setTimeout(() => {
     sources.forEach(sv => { sv.classList.remove('jpulse'); void sv.offsetWidth; sv.classList.add('jpulse'); setTimeout(() => sv.classList.remove('jpulse'), 1700); });
-    el.classList.add('seated'); setTimeout(() => el.classList.remove('seated'), 1700);
+    // the card a Joker's seat took isn't lit up: only the Joker is
+    if (f.kind !== 'joker'){ el.classList.add('seated'); setTimeout(() => el.classList.remove('seated'), 1700); }
   }, delay);
   const a = deckRect();
   if (a && !reduceMotion()){
@@ -130,7 +131,7 @@ function runFly(f, delay = 0){
   }
   if (reduceMotion()) return;
   setTimeout(() => {
-    const r = el.getBoundingClientRect();
+    const r = (f.kind === 'joker' && sources[0] ? sources[0] : el).getBoundingClientRect();   // (over the Joker)
     const t = document.createElement('div');
     t.className = 'float seat'; t.setAttribute('aria-hidden', 'true'); t.textContent = label;
     t.style.left = (r.left + r.width / 2) / ZK + 'px'; t.style.top = (r.top - 4) / ZK + 'px';

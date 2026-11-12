@@ -94,11 +94,22 @@ async function startMusic(){
     music.gain.gain.cancelScheduledValues(t); music.gain.gain.setValueAtTime(0.0001, t);
     music.gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, musicLevel()), t + 0.6);
     s.connect(music.gain);
-    // the intro plays once; turning the music back on later starts at the loop
-    s.start(t, music.introDone ? s.loopStart : 0);
+    // the intro plays once; turning the music back on later starts at the loop. Or where another view of the game had
+    // got to (Reddit's feed post, opened in full: reddit/client/reddit-inline.js)
+    let off = music.introDone ? s.loopStart : 0;
+    if (music.resumeAt != null){ off = music.resumeAt; music.resumeAt = null; }
+    if (off >= s.loopEnd) off = s.loopStart + (off - s.loopStart) % (s.loopEnd - s.loopStart);
+    s.start(t, off);
+    music.t0 = t; music.off0 = off;
     music.introDone = true; music.src = s;
   } catch(e){}
   finally { music.starting = false; }
+}
+// where in the track the music is now (seconds), or null when it isn't playing
+function musicAt(){
+  const s = music.src; if (!s || !actx) return null;
+  const e = music.off0 + (actx.currentTime - music.t0);
+  return e < s.loopEnd ? e : s.loopStart + (e - s.loopStart) % (s.loopEnd - s.loopStart);
 }
 function stopMusic(){
   const s = music.src; if (!s) return;

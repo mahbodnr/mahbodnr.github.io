@@ -202,6 +202,7 @@ document.addEventListener('click', e => {
     case 'chatScores': openChatScores(); return;
     case 'toggleMusic': setPref('music', !prefs.music); return;
     case 'share': shareMoment(t.dataset.v, t.dataset.p); return;
+    case 'commentMoment': commentMoment(t.dataset.v, t.dataset.p, t); return;
     case 'shareChatGame': shareChatGame(); return;
     case 'groupHow': ui.modalBack = 'joinGroup'; ui.modal = 'help'; break;
     case 'groupResults': openGroup(S.challenge); return;

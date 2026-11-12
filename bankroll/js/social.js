@@ -406,9 +406,38 @@ function warmShares(){
   document.querySelectorAll('#modalRoot .sharebtn').forEach(b => { const m = momentOf(b.dataset.v, b.dataset.p); if (m) sharePicture(m); });
 }
 const blobB64 = b => new Promise(res => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] || null); r.onerror = () => res(null); r.readAsDataURL(b); });
+// Reddit: the moment as the player's comment under the post (the app's server writes it: reddit/src/server/)
+async function commentMoment(kind, period, btn){
+  const m = momentOf(kind, period);
+  if (!m){ toast('Nothing to comment yet'); return; }
+  const daily = !!(S && isDailyCode(S.challenge));       // the daily's cards stay a secret until tomorrow
+  const body = { kind:m.kind, mult:m.mult, level:m.level, peak:m.peak, rank:m.rank, period:m.period, labels:m.labels || [], cards:daily ? [] : (m.cards || []) };
+  const send = async message => {
+    try {
+      const r = await fetch('api/moment', { method:'POST', credentials:'same-origin', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(Object.assign({ message }, body)) });
+      const j = await r.json().catch(() => ({}));
+      const ok = r.ok && j.success;
+      toast(ok ? 'Posted as a comment' : j.error === 'not_signed_in' ? 'Log in to Reddit to comment' : j.error === 'too_many' ? 'That\'s enough comments for today' : 'Couldn\'t post the comment. Try again in a moment');
+      if (ok && btn) btn.disabled = true;
+      return ok;
+    } catch(e){ toast('Couldn\'t post the comment. Try again in a moment'); return false; }
+  };
+  const f = v => v === 'Infinity' ? '∞' : fmtFit(v);
+  const preview = /hand/.test(m.kind) ? `A ×${f(m.mult)} hand${m.labels && m.labels.length ? ': ' + m.labels.join(' × ') : ''}` : `Level ${m.level} · ${f(m.peak)} coins`;
+  if (typeof redditCompose === 'function') redditCompose(preview, send);   // (reddit/client/reddit-inline.js)
+  else send('');
+}
 async function shareMoment(kind, period){
   const m = momentOf(kind, period);
   if (!m){ toast('Nothing to share yet'); return; }
+  // Reddit: its share sheet, with a link to this post; the moment travels with it, for the post to show who shared what
+  if (redditShare()){
+    const by = LB.myName || '';
+    window.BankrollReddit.share({ title:'Bankroll', text:momentText(m).replace(/ in Bankroll/, ' in Bankroll on Reddit'),
+      data:JSON.stringify({ k:m.kind, by, mult:m.mult, level:m.level, peak:m.peak, rank:m.rank, players:m.players }).slice(0, 1000) })
+      .catch(() => toast('Couldn\'t open sharing'));
+    return;
+  }
   const text = momentText(m), link = gameLink(m.kind), tg = telegramLaunch();
   const pic = await sharePicture(m);
   try {
@@ -435,7 +464,12 @@ async function shareMoment(kind, period){
   toast(saved && copied ? 'Picture saved and text copied' : saved ? 'Picture saved' : copied ? 'Copied: paste it anywhere' : esc(text + ' ' + link));
 }
 const SHARE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/></svg>';
-const shareBtn = (kind, label, cls = 'btn', period = '') => onPortal() ? '' : `<button class="${cls} sharebtn" data-act="share" data-v="${kind}"${period ? ` data-p="${period}"` : ''}>${SHARE_SVG}<span>${label}</span></button>`;
+// (on a game portal, no share buttons: except on Reddit, where they open Reddit's own share sheet)
+const redditShare = () => PORTAL === 'reddit' && !!(window.BankrollReddit && window.BankrollReddit.share);
+// Reddit: a Comment button beside Share, for the hand or run as a comment under the post
+const commentBtn = (kind, cls, period) => `<button class="${cls} commentbtn" data-act="commentMoment" data-v="${kind}"${period ? ` data-p="${period}"` : ''}>${COMMENT_SVG}<span>Comment</span></button>`;
+const COMMENT_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>';
+const shareBtn = (kind, label, cls = 'btn', period = '') => (redditShare() && /^(hand|run|tophand|besthand|board)$/.test(kind) ? commentBtn(kind, cls, period) : '') + (onPortal() && !redditShare() ? '' : `<button class="${cls} sharebtn" data-act="share" data-v="${kind}"${period ? ` data-p="${period}"` : ''}>${SHARE_SVG}<span>${label}</span></button>`);
 
 
 /* ---------- the daily challenge ----------
@@ -490,6 +524,7 @@ function signInForDaily(){ store(DAILY_AFTER_SIGNIN, todayUTC()); ui.modal = nul
 // in for it), otherwise suggest it the first time today
 function afterDailyLoaded(){
   if (!LB.daily) return;
+  if (typeof redditHold === 'function' && redditHold()) return;   // Reddit's feed: an older day's post, or today's already played
   if (LB.period === 'today' && !LB.periodChosen) LB.period = 'daily';
   let wanted = false;
   try { wanted = new URLSearchParams(ARRIVED_QS).get('daily') === '1'; } catch(e){}
