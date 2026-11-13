@@ -267,6 +267,14 @@ function labelSpot(x1, x2, avoid, text, W){
   }
   return best ? best.c : mid;
 }
+// a card's place in the hand from the layout itself (offsets), not from the screen: a card still flying in from the deck,
+// or sliding to its sorted place, is drawn somewhere else for a moment, and the brackets would point there
+function handBox(el, hand){
+  let x = 0, y = 0, n = el;
+  while (n && n !== hand){ x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
+  if (n !== hand){ const b = el.getBoundingClientRect(), h = hand.getBoundingClientRect(); return { left:(b.left - h.left) / ZK, top:(b.top - h.top) / ZK, width:b.width / ZK, height:b.height / ZK }; }
+  return { left:x, top:y, width:el.offsetWidth, height:el.offsetHeight };
+}
 function drawComboLinks(){
   const hand = $('hand'); if (!hand) return;
   hand.querySelectorAll('.links').forEach(n => n.remove());
@@ -302,12 +310,12 @@ function drawComboLinks(){
   perRow.forEach((ks, r) => {
     if (!ks.length) return;
     const rowCards = [...hand.children].filter(el => el.matches('.card, .emptyslot') && rowOf(el) === r);
-    const base = (Math.max(...rowCards.map(el => el.getBoundingClientRect().bottom)) - hr.top) / ZK + 6;
+    const base = Math.max(...rowCards.map(el => { const b = handBox(el, hand); return b.top + b.height; })) + 6;
     // a card in several combos gets one line per combo, side by side (not on top of each other)
     const shared = new Map();
     ks.forEach(k => items[k].els.forEach(el => { if (rowOf(el) === r) shared.set(el, (shared.get(el) || []).concat(k)); }));
     const nudge = (el, k) => { const list = shared.get(el) || [k]; return (list.indexOf(k) - (list.length - 1) / 2) * 6; };
-    const allXs = ks.map(k => items[k].els.filter(el => rowOf(el) === r).map(el => { const b = el.getBoundingClientRect(); return (b.left - hr.left + b.width / 2) / ZK + nudge(el, k); }));
+    const allXs = ks.map(k => items[k].els.filter(el => rowOf(el) === r).map(el => { const b = handBox(el, hand); return b.left + b.width / 2 + nudge(el, k); }));
     ks.forEach((k, j) => {
       const it = items[k], col = LINK_COLORS[it.cb.kind] || '#f5d98c';
       const xs = allXs[j];
