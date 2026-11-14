@@ -700,7 +700,7 @@ code.seed{white-space:nowrap;font:800 14px/1 ui-monospace,SFMono-Regular,Menlo,C
 @media (max-width:420px){ .hboard .brow{grid-template-columns:22px minmax(0,1fr) 52px} .hboard .hlab{display:none} }
 
 /* ================= tutorial coach ================= */
-.coach{position:fixed;z-index:38;background:linear-gradient(180deg,#14453c,#0c2f29);border:1px solid var(--brass-hi);border-radius:16px;padding:12px 14px 10px;
+.coach{position:fixed;z-index:38;box-sizing:border-box;background:linear-gradient(180deg,#14453c,#0c2f29);border:1px solid var(--brass-hi);border-radius:16px;padding:12px 14px 10px;
   box-shadow:0 14px 40px rgba(0,0,0,.5);font-size:13.5px;line-height:1.45;animation:pop .25s ease;box-sizing:border-box}
 .coach::before{content:"";position:absolute;left:var(--ax);width:12px;height:12px;background:inherit;border:1px solid var(--brass-hi);transform:translateX(-50%) rotate(45deg)}
 .coach[data-side="below"]::before{top:-7px;border-right:0;border-bottom:0;background:#14453c}
@@ -1319,3 +1319,6 @@ html.light #lbnote{background:#fffaf0;color:#2a1c05}
 .srow.svol{display:grid;grid-template-columns:7.2em minmax(0,1fr) auto;align-items:center;gap:14px}
 .srow.svol input[type=range]{width:100%;min-width:0}
 .srow.svol input[type=range]:disabled{opacity:.35}
+
+/* a bubble taller than a short view scrolls (tutorial.js caps its height), with its Skip / Next always in sight */
+.coach .ch-actions{position:sticky;bottom:-10px;margin-bottom:-10px;padding-bottom:10px;background:#0c2f29;z-index:1}

@@ -168,8 +168,10 @@ function centerCoach(c){
   c.hidden = false; c.dataset.side = 'center';
   const cw = Math.min(460 * z, innerWidth - 24);
   c.style.width = cw / z + 'px';
+  c.style.maxHeight = (innerHeight - 16) / z + 'px';                  // (a short view: the bubble scrolls, it isn't cut off)
+  c.style.overflowY = c.scrollHeight > c.clientHeight + 1 ? 'auto' : '';
   const ch = c.offsetHeight * z;
-  c.style.left = (innerWidth - cw) / 2 / z + 'px'; c.style.top = Math.max(12, (innerHeight - ch) / 2) / z + 'px';
+  c.style.left = (innerWidth - cw) / 2 / z + 'px'; c.style.top = Math.max(8, (innerHeight - ch) / 2) / z + 'px';
 }
 
 // the practice run ends on the table, not in the run-over window, and leaves no records
@@ -213,11 +215,21 @@ function placeCoach(c, target){
   c.hidden = false;
   // measured in screen pixels; the bubble is zoomed with the game on big screens, so its lengths are divided by ZK
   const z = typeof ZK === 'number' ? ZK : 1;
+  // a target out of sight (a window's button below the fold, in a short view) is brought into view first
+  const r0 = target.getBoundingClientRect();
+  if (r0.bottom > innerHeight - 8 || r0.top < 0) try { target.scrollIntoView({ block:'nearest' }); } catch(e){}
   const r = target.getBoundingClientRect(), cw = Math.min(320 * z, innerWidth - 32);
   c.style.width = cw / z + 'px';
+  c.style.maxHeight = (innerHeight - 16) / z + 'px';                  // never taller than the view
+  c.style.overflowY = c.scrollHeight > c.clientHeight + 1 ? 'auto' : '';
   const ch = c.offsetHeight * z;
   const below = r.bottom + 12 + ch < innerHeight - 8;
-  const top = below ? r.bottom + 12 : Math.max(8, r.top - ch - 12);
+  const above = r.top - ch - 12 >= 8;
+  // below the target, else above it; with room for neither (a tall target in a short view), wherever the whole bubble
+  // fits, as far from the target's middle as possible so the target's buttons stay free
+  let top = below ? r.bottom + 12 : above ? r.top - ch - 12
+    : (r.top + r.height / 2 > innerHeight / 2 ? 8 : innerHeight - ch - 8);
+  top = Math.max(8, Math.min(top, innerHeight - ch - 8));
   const left = Math.max(16, Math.min(innerWidth - cw - 16, r.left + r.width / 2 - cw / 2));
   c.style.top = top / z + 'px'; c.style.left = left / z + 'px';
   c.dataset.side = below ? 'below' : 'above';
