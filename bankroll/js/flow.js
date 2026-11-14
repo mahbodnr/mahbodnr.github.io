@@ -21,14 +21,14 @@ function deckOut(){
   S.throwaway.push(...S.deck); S.deck = [];
   const price = levelPrice(lvl());
   if (S.coins >= price){ keepBestHand(); S.phase = 'reshuffle'; ui.modal = 'reshuffle'; sfx('win'); }
-  else gameOver(`You finished level ${lvl()}, but reaching level ${lvl() + 1} costs ${fmt(price)} coins and you have ${fmt(S.coins)}.`,
+  else gameOver(`You finished level ${lvl()}, but level ${lvl() + 1} needs ${fmt(price)} coins and you have ${fmt(S.coins)}.`,
     { cause:'level', price, have:S.coins });
 }
 
 function reshuffle(){
   const price = levelPrice(lvl());
   if (S.phase !== 'reshuffle' || S.coins < price) return;
-  coinChange(-price, 'level price'); S.throwaway = []; S.discard = [];
+  S.throwaway = []; S.discard = [];                   // (the goal is reached, not paid: the coins stay)
   S.level = lvl() + 1; S.deck = makeDeck(); S.stats.shuffles = S.level;
   ui.levelUp = true; ui.shuffleFx = true; buzz([30, 40, 30]); sfx('shuffle');
   ui.say = `Level ${S.level}. The deck has been reshuffled.`;

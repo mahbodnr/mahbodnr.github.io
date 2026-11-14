@@ -2,7 +2,7 @@
    only the one control the step asks for responds, so every new player takes the same path:
      1. the hand and the combos, a set bet (Bet and Debt highlighted), a discard, a swap and a cash-out;
      2. a Joker and the Ace boost power-up (with its upkeep);
-     3. an all-in bet that chases a card, runs the debt past the hand and loses; then the level price.
+     3. an all-in bet that chases a card, runs the debt past the hand and loses; then the level goal.
    Nobody is made to take it: new players get a Tutorial button (js/render.js, until their first hand is over) and it
    can always be skipped. The practice run is never saved or posted, and the player's own run is picked up afterwards. */
 'use strict';
@@ -127,7 +127,7 @@ const INTRO = [
   { target:'#modalRoot [data-act="bustConfirm"]', ok:['#modalRoot [data-act="bustConfirm"]'], title:'Busted', until:() => S.phase === 'over',
     text:() => 'A cash-out that can\'t cover the debt ends the run.' },
   { target:'#st-debt', title:'Run over', text:() => 'A big bet, then chasing cards, ran the debt past what the hand could pay. Keep coins back, and cash out a good hand.' },
-  { target:'#levelbar', title:'Levels', text:() => `The other way to lose: each deck is a level. When it runs out, pay the level price to reshuffle: ${coin}<b>100</b> for level 2, then 1,000, 20,000 … Short of it, the run ends. This bar shows how close you are.` },
+  { target:'#levelbar', title:'Levels', text:() => `The other way to lose: each deck is a level. When it runs out, you need a goal in coins to reshuffle into the next level (you keep them): ${coin}<b>100</b> for level 2, then 1,000, 20,000 … Short of it, the run ends. This bar shows how close you are.` },
   { title:'You\'re ready', center:true, done:true,
     text:() => `That's the game. You start with ${coin}<b>${START_COINS}</b>. Help (?) has the rules any time. Good luck!` },
 ];

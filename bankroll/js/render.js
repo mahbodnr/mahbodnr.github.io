@@ -118,14 +118,14 @@ function renderLedger(){
   setHTML($('levelbar'), `${chBar}
     <div class="lv-goal ${ok ? 'ok' : ''} ${opened ? 'opened' : ''}" role="meter" aria-label="Level ${L}. Coins toward level ${L + 1}" aria-valuemin="0" aria-valuemax="${price}" aria-valuenow="${Math.max(0, Math.min(S.coins, price))}">
       ${medal(L, 'cur', '', `Level ${L}`)}
-      <div class="lv-mid" title="${ok ? `You can pay for level ${L + 1}, with ${fmtFit(-need)} to spare` : `${fmtFit(need)} more coins needed for level ${L + 1}`}">
+      <div class="lv-mid" title="${ok ? `Goal for level ${L + 1} reached, with ${fmtFit(-need)} over` : `${fmtFit(need)} more coins to reach level ${L + 1}`}">
         <div class="lv-track"><i style="width:${pct.toFixed(1)}%"></i>
           <span class="lv-nums">${coin}<b>${fmtFit(Math.max(0, S.coins))}</b><span class="of">/ ${fmtFit(price)}</span></span>
         </div>
         <div class="lv-deck" title="${left} card${left === 1 ? '' : 's'} left in this level's deck"><i style="width:${deckPct.toFixed(1)}%"></i></div>
       </div>
-      ${medal(L + 1, 'next', `<svg class="lv-lock" viewBox="0 0 24 24" aria-hidden="true">${lock}</svg>`, ok ? `Level ${L + 1}: you can pay its price` : `Level ${L + 1} costs ${fmtFit(price)}`)}
-      <span class="lv-need">${ok ? `<b>+${fmtFit(-need)}</b> spare` : `<b>${fmtFit(need)}</b> to go`}</span>
+      ${medal(L + 1, 'next', `<svg class="lv-lock" viewBox="0 0 24 24" aria-hidden="true">${lock}</svg>`, ok ? `Level ${L + 1}: goal reached` : `Level ${L + 1}: reach ${fmtFit(price)} coins`)}
+      <span class="lv-need">${ok ? '<b>Goal</b> reached' : `<b>${fmtFit(need)}</b> to go`}</span>
     </div>`);
   if (ui.levelUp){ ui.levelUp = false; floatDelta('st-level', 'LEVEL UP', 'coin-up', 'bump'); }
 }
@@ -400,7 +400,7 @@ function renderModal(){
         <div class="rs-eyebrow">Level ${L} complete</div>
         <div class="lv-medal"><span>Level</span><b>${L + 1}</b></div>
       </div>
-      <div class="receipt"><div><span>Coins</span><b>${fmtFit(S.coins)}</b></div><div><span>Price</span><b class="neg">−${fmtFit(price)}</b></div><div class="tot"><span>Left</span><b>${fmtFit(S.coins - price)}</b></div></div>
+      <div class="receipt"><div><span>Goal</span><b>${fmtFit(price)} ✓</b></div><div class="tot"><span>Your coins</span><b>${fmtFit(S.coins)}</b></div></div>
       <div class="pricebump"><div class="pb-head">Prices <b>×10</b> in level ${L + 1}</div>
         <div class="pb-list">${PU_ORDER.map(t => { const r = PU_RANK[t], now = powerCost(r);
           return `<div class="pb-item">${puEmblem(t, 1)}<span>${Object.values(POWER).find(x => x.type === t).name}</span><s>${fmtShort(now)}</s><b>${coin}${fmtShort(now * 10)}</b></div>`; }).join('')}
@@ -576,7 +576,7 @@ function runTips(o, L){
   if (st.biggestLoss >= Math.max(8, 0.4 * (st.peak || 0))) tips.push(['bet', `Biggest loss <b>${fmtFit(st.biggestLoss)}</b>. Bet smaller.`]);
   return tips.slice(0, 2);
 }
-// On the hand result: warn when the level is about to end and the next price isn't covered.
+// On the hand result: warn when the level is about to end and the next level's goal isn't reached.
 function levelWarning(r){
   const price = levelPrice(lvl()), need = price - S.coins;
   if (need <= 0 || r.deckLeft > 14) return '';
@@ -592,7 +592,7 @@ function overHTML(){
   // 1. headline: what ended the run, in one line
   const head = {
     infinite:{ title:'You broke the bank!' },
-    level:{ title:`Couldn’t pay for level ${L + 1}` },
+    level:{ title:`Short of the goal for level ${L + 1}` },
     bust: { title:'Debt bigger than coins' },
     broke:{ title:'Out of coins' },
   }[cause];
@@ -604,7 +604,7 @@ function overHTML(){
     const have = Math.max(0, o.have ?? 0), need = cause === 'level' ? (o.price || levelPrice(L)) : (o.need || 1);
     const pct = Math.max(2, Math.min(100, have / need * 100));
     gauge = `<div class="gauge" role="img" aria-label="You had ${fmtFit(have)} of the ${fmtFit(need)} you needed; short by ${fmtFit(need - have)}">
-      <div class="g-labels"><span>You had <b>${coin}${fmtFit(have)}</b></span><span>${cause === 'level' ? 'Price' : 'Debt'} <b>${coin}${fmtFit(need)}</b></span></div>
+      <div class="g-labels"><span>You had <b>${coin}${fmtFit(have)}</b></span><span>${cause === 'level' ? 'Goal' : 'Debt'} <b>${coin}${fmtFit(need)}</b></span></div>
       <div class="g-track"><i style="--to:${pct.toFixed(1)}%"></i><span class="g-lock">${cause === 'level' ? LOCK_SVG : ''}</span></div>
       <div class="g-short">Short <b>${fmtFit(need - have)}</b></div></div>`;
   }
@@ -612,16 +612,16 @@ function overHTML(){
   // 3. journey through the levels
   const first = Math.max(1, L - 3), nodes = [];
   for (let i = first; i <= L; i++) nodes.push(i < L
-    ? `<li class="done"><span class="jn">${i}</span><small>paid ${fmtFit(levelPrice(i))}</small></li>`
+    ? `<li class="done"><span class="jn">${i}</span><small>reached ${fmtFit(levelPrice(i))}</small></li>`
     : cause === 'infinite' ? `<li class="done won"><span class="jn">${i}</span><small>won</small></li>`
     : `<li class="end"><span class="jn">${i}</span><small>ended</small></li>`);
   if (cause !== 'infinite') nodes.push(`<li class="lock"><span class="jn">${LOCK_SVG}</span><small>${L + 1}: ${fmtFit(levelPrice(L))}</small></li>`);
   const journey = `<ol class="journey" aria-label="Levels">${first > 1 ? '<li class="more">…</li>' : ''}${nodes.join('')}</ol>`;
 
-  // 4. coins over the run, with the price you had to reach
+  // 4. coins over the run, with the goal you had to reach
   const h = Array.isArray(S.history) ? S.history : [];
   const fromIdx = Math.max(0, h.findIndex(x => x.level === L));
-  const chart = h.length >= 2 ? `<h3>Coins</h3>${coinChart(h, cause === 'level' ? { v:o.price || levelPrice(L), from:fromIdx, label:'price' } : null)}` : '';
+  const chart = h.length >= 2 ? `<h3>Coins</h3>${coinChart(h, cause === 'level' ? { v:o.price || levelPrice(L), from:fromIdx, label:'goal' } : null)}` : '';
 
   // 5. tips from this run
   const tips = runTips(Object.assign({ have:S.coins }, o, { cause }), L).map(([ic, t]) =>
@@ -684,7 +684,7 @@ function helpHTML(){
     </div>
     <p>Keeping a power-up costs upkeep on every new card: <b>double its price</b>, then doubling again with each card (2×, 4×, 8× …). ✕ releases one. Their prices, and the 10's fee, go up <b>×10 each level</b>${lvl() > 1 ? ` (shown for level ${lvl()})` : ''}.</p>
     <h3>Levels</h3>
-    <p>When the deck runs out, pay the level price to reshuffle, or the run ends. Each level costs the last one ×10, then ×20, ×30 … (100, 1,000, 20,000, 600,000 …).</p>
+    <p>Each level has a goal: when the deck runs out, have at least that many coins to reshuffle into the next level (you keep them), or the run ends. Each goal is the last one ×10, then ×20, ×30 … (100, 1,000, 20,000, 600,000 …).</p>
     <div class="actions"><button class="btn" data-act="replayTutorial">Introduction</button><button class="btn gold" data-act="close">Got it</button></div>`;
 }
 

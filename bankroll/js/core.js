@@ -11,8 +11,8 @@ const POWER = {
   5: { type:'5', cost:5, name:'Extra seat',short:'+1 seat' },
 };
 const SWAP_COST = 10, START_COINS = 50;
-// price to pass level L:
-// Level 1 costs 100; each level after costs the previous price ×10, ×20, ×30 …: 100, 1,000, 20,000, 600,000, 24M …
+// the goal to pass level L: the coins to have when the deck runs out (they're kept, not paid)
+// Level 1's goal is 100; each level after is the previous goal ×10, ×20, ×30 …: 100, 1,000, 20,000, 600,000, 24M …
 const levelPrice = L => { let p = 100; for (let k = 1; k < L; k++) p *= 10 * k; return p; };
 const lvl = () => S.level || S.stats.shuffles || 1;
 // A pilot build served from /bankroll-pilot/ (for trying rule changes) keeps its own save and settings, so it never
@@ -81,7 +81,7 @@ function newGame(seed){
 /* ================= save versioning ================= */
 // Bump SAVE_VERSION when the save format changes, and teach migrate() to upgrade older saves.
 const SAVE_VERSION = 3;
-const RULES = 7;   // 7: level prices ×10, ×20, ×30 …, power-up prices and the 10's fee ×10 a level; 6: keeping a power-up costs 2×, 4×, 8× … its price per card; 5: upkeep doubled from 1×; 4: the Ace boost adds once to three/four of a kind; 3: half a bet to deal; 2: an extra bet to deal, card debt ×1.5 per card, level prices ×10 (bump when the rules change)
+const RULES = 8;   // 8: a level's price is a goal to reach, not paid; 7: level prices ×10, ×20, ×30 …, power-up prices and the 10's fee ×10 a level; 6: keeping a power-up costs 2×, 4×, 8× … its price per card; 5: upkeep doubled from 1×; 4: the Ace boost adds once to three/four of a kind; 3: half a bet to deal; 2: an extra bet to deal, card debt ×1.5 per card, level prices ×10 (bump when the rules change)
 function migrate(s){
   if (!s || !Array.isArray(s.deck) || !s.phase) return null;
   if (s.v && s.v > SAVE_VERSION) return null;            // saved by a newer version: start fresh
