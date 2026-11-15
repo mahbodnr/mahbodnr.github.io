@@ -287,7 +287,16 @@ const supabaseBackend = {
     try {
       const body = { initData:tg.initData, action:'shareresult', moment };
       if (image) body.image = image;
-      const { data, error } = await this.client.functions.invoke('bankroll-telegram', { body }); return error || !data ? null : data.id || null; }
+      const { data, error } = await this.client.functions.invoke('bankroll-telegram', { body });
+      if (error || !data || !data.id){
+        // what the bot's server said, in the error log (it explains a share that didn't open)
+        let why = data && data.error; try { if (!why && error && error.context && error.context.json) why = (await error.context.json()).error; } catch(e){}
+        try { this.client.rpc('bankroll_log_error', { p_message:'share card failed: ' + (why || (error && error.message) || 'no id'), p_source:'shareMoment ' + (moment && moment.kind), p_stack:null,
+          p_platform:'telegram', p_client:'rules ' + RULES, p_agent:navigator.userAgent.slice(0, 300), p_page:image ? 'with picture' : 'no picture' }).then(() => {}, () => {}); } catch(e){}
+        return null;
+      }
+      return data.id;
+    }
     catch(e){ return null; }
   },
   async shareGame(){

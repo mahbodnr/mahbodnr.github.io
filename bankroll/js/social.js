@@ -444,8 +444,13 @@ async function shareMoment(kind, period){
     // Telegram: the bot sends the picture with the text and a Play button
     if (tg && tg.app && tg.app.shareMessage && tg.app.isVersionAtLeast && tg.app.isVersionAtLeast('8.0') && LB.backend && LB.backend.shareMoment){
       toast('Preparing the picture…');
-      const id = await LB.backend.shareMoment(m, pic ? await blobB64(pic) : null);
+      let id = await LB.backend.shareMoment(m, pic ? await blobB64(pic) : null);
+      if (!id && pic) id = await LB.backend.shareMoment(m, null);          // without the picture: the bot's own card
       if (id){ tg.app.shareMessage(id, sent => { if (sent) toast('Shared!'); }); return; }
+    }
+    // inside Telegram, Telegram's own share (the phone's share sheet needs the tap, long gone after asking the bot)
+    if (tg && tg.app && tg.app.openTelegramLink && tg.app.isVersionAtLeast && tg.app.isVersionAtLeast('6.1')){
+      tg.app.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent(link) + '&text=' + encodeURIComponent(text)); return;
     }
     // phones: the picture through the share sheet
     if (pic && navigator.canShare){
