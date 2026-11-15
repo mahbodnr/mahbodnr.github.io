@@ -57,6 +57,20 @@ function roundRectPath(g, x, y, w, h, r){
 const matrixOf = t => { const m = /matrix\(([^)]+)\)/.exec(t || ''); return m ? m[1].split(',').map(Number) : null; };
 // draws card {rank, suit} of pack `pack` with its top-left at (x, y), w wide; lit: a gold edge (the scoring cards)
 async function drawPackCard(g, card, x, y, w, pack, lit){
+  // a picture pack: the card is its picture, drawn whole in the card's rounded shape (a Joker is drawn as below)
+  if (typeof isImgPack === 'function' && isImgPack(pack) && card.rank !== 0){
+    const im = await rasterImg(packSrc(pack, card));
+    if (!im) throw new Error('card picture missing');
+    const H = w * 1.42, rad = w * .09;
+    g.save(); g.translate(x, y);
+    g.shadowColor = lit ? 'rgba(245,217,140,.8)' : 'rgba(0,0,0,.45)'; g.shadowBlur = lit ? w * .2 : w * .12; g.shadowOffsetY = lit ? 0 : w * .04;
+    roundRectPath(g, 0, 0, w, H, rad); g.fillStyle = '#000'; g.fill(); g.shadowColor = 'transparent';
+    g.save(); roundRectPath(g, 0, 0, w, H, rad); g.clip(); g.drawImage(im, 0, 0, w, H); g.restore();
+    roundRectPath(g, 0, 0, w, H, rad);
+    g.lineWidth = lit ? Math.max(2, w * .03) : 1; g.strokeStyle = lit ? '#f5d98c' : 'rgba(0,0,0,.14)'; g.stroke();
+    g.restore();
+    return;
+  }
   const host = rasterHostEl();
   host.innerHTML = cardHTML({ id:'rc-' + Math.random().toString(36).slice(2), rank:card.rank, suit:card.suit }, { pack, track:false });
   const el = host.firstElementChild;

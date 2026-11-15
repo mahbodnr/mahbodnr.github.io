@@ -788,44 +788,11 @@ html.four-color .tc.s-C{color:#1b7a3c}
 .card.pk-tarot .ix.br{display:none}   /* it would hide the end of the card's title; the top corner is the one a fanned hand shows */
 /* classic court art is 0.614 wide per unit of height: the panel takes exactly that shape, so nothing is cropped */
 .card.pk-classic .court{inset:22.8% 26.8%}   /* 46% of the width, in the art's proportions, so the frame clears both corner indexes */
-.card.pk-deco{--paper:#f7f1e1; --paper-hi:#fffaf0; --paper-lo:#ece0c2; --ink:#1b2238; --suit-red:#b8323c; --gold:#b8913a; --line:#1b2238;
-  --skin:#f1d9bd; --cbg:#f3ead2; --idx-font:'Limelight',Georgia,serif; --court-border:#b8913a; --c4d:#d8600f; --c4c:#1d7342}
-.card.pk-deco:not(.back)::before{border:1px solid var(--gold);box-shadow:inset 0 0 0 2px var(--paper), inset 0 0 0 2.6px var(--gold)}
-.card.pk-deco .pp{stroke:var(--gold);stroke-width:5px;paint-order:stroke fill;stroke-linejoin:round}
-.card.pk-deco .ix b{letter-spacing:-.02em}
-.card.pk-deco .ace-orn{width:calc(var(--cw)*.8);height:calc(var(--cw)*.8)}
-.card.pk-botanical{--paper:#f6f3e7; --paper-hi:#fcfaf1; --paper-lo:#e9e3cc; --ink:#22392c; --suit-red:#b04a37; --gold:#a58a3c; --line:#22392c;
-  --leaf:#5f7f4b; --cbg:transparent; --idx-font:'Cormorant Garamond',Georgia,serif; --c4d:#cf6418; --c4c:#2f7d45}
-.card.pk-botanical:not(.back)::before{border-color:rgba(95,127,75,.45)}
-.card.pk-botanical .ix b{font-style:italic;font-weight:700;letter-spacing:0;font-size:calc(var(--cw)*.27)}
-.card.pk-onyx{--paper:#1b1b20; --paper-hi:#2a2a31; --paper-lo:#131317; --ink:#e6c26a; --suit-red:#ff7b6b; --gold:#c9a24a; --line:#e6c26a;
-  --idx-font:'Josefin Sans',var(--f-ui); --c4d:#ff9a4d; --c4c:#6fd39a}
-.card.pk-onyx:not(.back){box-shadow:0 1px 0 #000, 0 2px 3px rgba(0,0,0,.3), 0 8px 18px -6px rgba(0,0,0,.6), inset 0 0 0 1px rgba(201,162,74,.4)}
-.card.pk-onyx:not(.back)::before{border-color:rgba(201,162,74,.28)}
-.card.pk-onyx .ix b{font-weight:600;letter-spacing:-.04em}
-.card.pk-onyx .court{background:transparent}
-.card.pk-royal{--paper:#fbf6ef; --paper-hi:#fffdf9; --paper-lo:#efe4d6; --ink:#2a1840; --suit-red:#a8233a; --gold:#b88a2e; --line:#2a1840;
-  --cameo:#efe4f3; --cbg:#f6eef5; --idx-font:'Cinzel Decorative',Georgia,serif; --court-border:#b88a2e; --c4d:#d65a12; --c4c:#246b3c}
-.card.pk-royal:not(.back)::before{border:1px solid rgba(42,24,64,.5);box-shadow:inset 0 0 0 2px var(--paper), inset 0 0 0 3px var(--gold)}
-.card.pk-royal .pp{stroke:var(--gold);stroke-width:4px;paint-order:stroke fill;stroke-linejoin:round}
-.card.pk-royal .ix b{font-size:calc(var(--cw)*.2);letter-spacing:-.08em}
-.card.pk-deco.joker .medal,.card.pk-royal.joker .medal{box-shadow:inset 0 0 0 2px var(--gold), inset 0 0 0 4px var(--paper), inset 0 0 0 5px currentColor}
-.card.pk-botanical.joker .medal{box-shadow:inset 0 0 0 2px var(--leaf), inset 0 0 0 4px var(--paper), inset 0 0 0 5px currentColor}
-.card.pk-onyx.joker .medal{background:radial-gradient(circle at 40% 35%, #3a3a43 0 18%, #1d1d23 78%);box-shadow:inset 0 0 0 2px var(--gold), inset 0 0 0 4px #1b1b20, inset 0 0 0 5px currentColor}
 /* backs: each pack has its own pattern */
-.card.back.pk-deco{background:var(--back-medal) center / 34% auto no-repeat,
-  repeating-conic-gradient(from 0deg at 50% 50%, rgba(245,217,140,.22) 0 5deg, transparent 5deg 15deg), linear-gradient(160deg,var(--back-hi),var(--back))}
-.card.back.pk-onyx{background:var(--back-medal) center / 34% auto no-repeat,
-  repeating-linear-gradient(90deg, rgba(245,217,140,.16) 0 1px, transparent 1px 5px), linear-gradient(160deg,var(--back-hi),var(--back))}
 .card.back.pk-tarot{background:var(--back-medal) center / 34% auto no-repeat,
   radial-gradient(circle at 50% 50%, transparent 0 calc(var(--cw)*.24), rgba(245,217,140,.5) calc(var(--cw)*.24) calc(var(--cw)*.25), transparent calc(var(--cw)*.255)),
   radial-gradient(circle, rgba(255,236,180,.85) 0 .8px, transparent 1.4px) 3px 5px/17px 19px,
   radial-gradient(circle, rgba(255,236,180,.45) 0 .6px, transparent 1.1px) 11px 2px/13px 23px,
-  linear-gradient(160deg,var(--back-hi),var(--back))}
-.card.back.pk-royal{background:var(--back-medal) center / 34% auto no-repeat,
-  radial-gradient(circle, rgba(245,217,140,.32) 0 1.2px, transparent 1.8px) 0 0/7px 7px, linear-gradient(160deg,var(--back-hi),var(--back))}
-.card.back.pk-botanical{background:var(--back-medal) center / 34% auto no-repeat,
-  repeating-linear-gradient(60deg, rgba(245,217,140,.18) 0 1.5px, transparent 1.5px 7px), repeating-linear-gradient(-60deg, rgba(245,217,140,.18) 0 1.5px, transparent 1.5px 7px),
   linear-gradient(160deg,var(--back-hi),var(--back))}
 /* The frame breaks around each corner index (a paper-coloured notch painted with the card's own gradient), so labels never sit on border lines. */
 .card:not(.back) .ix{z-index:1;padding:calc(var(--cw)*.022) calc(var(--cw)*.012);margin:calc(var(--cw)*-.022) calc(var(--cw)*-.012);border-radius:calc(var(--cw)*.03);
@@ -1322,3 +1289,17 @@ html.light #lbnote{background:#fffaf0;color:#2a1c05}
 
 /* a bubble taller than a short view scrolls (tutorial.js caps its height), with its Skip / Next always in sight */
 .coach .ch-actions{position:sticky;bottom:-10px;margin-bottom:-10px;padding-bottom:10px;background:#0c2f29;z-index:1}
+
+/* the picture packs (js/packs.js, img/packs/): the picture is the whole face, and the pack's own picture is the back */
+.card.imgcard{background:#000;padding:0;overflow:hidden}
+.card.imgcard::before,.card.imgcard::after{display:none}
+.card.imgcard .cimg{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;user-select:none}
+.card.back.imgback{background-color:var(--back);background-position:center;background-size:100% 100%;background-repeat:no-repeat;
+  box-shadow:0 2px 3px rgba(0,0,0,.2), 0 8px 18px -6px rgba(0,0,0,.55)}
+/* the Classic back: the traditional red diamond lattice on a white border (img/back-classic.svg, drawn for the game) */
+.card.back.pk-classic{background:url(../img/back-classic.svg) center / 100% 100% no-repeat, #b8282f;
+  box-shadow:0 2px 3px rgba(0,0,0,.2), 0 8px 18px -6px rgba(0,0,0,.55)}
+/* a picture pack's Joker (the kits have none): the game's own, in the pack's colours */
+.card.joker.pk-deco{--paper:#100f0d; --paper-hi:#1d1b16; --paper-lo:#0a0908; --ink:#f2c870; --suit-red:#d9433d}
+.card.joker.pk-clockwork{--paper:#f3e6c9; --paper-hi:#fbf2dc; --paper-lo:#e3d0a6; --ink:#3b2f22}
+.card.joker.pk-arcade{--paper:#1b1734; --paper-hi:#2a2350; --paper-lo:#120e2a; --ink:#7ee8ff; --suit-red:#ff6fb5}

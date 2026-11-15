@@ -3,13 +3,10 @@
 
 const PREF_DEFAULTS = { sound:true, volume:0.8, music:true, musicVolume:0.8, haptics:true, speed:'normal', theme:'dark', fourColor:false, pack:'classic', felt:'green', sort:'rank' };
 
-// Card packs (js/packs.js) and table felts unlock as your best level climbs.
+// Card packs (js/packs.js) unlock as your best level climbs. One table felt for now (the others are off; a felt chosen
+// earlier falls back to it).
 const FELTS = [
   { id:'green',    name:'Classic',  level:1, c1:'#17574b', c2:'#0f3d35' },
-  { id:'ocean',    name:'Ocean',    level:2, c1:'#1f5a86', c2:'#123a5c' },
-  { id:'crimson',  name:'Crimson',  level:3, c1:'#7d2a35', c2:'#561a22' },
-  { id:'charcoal', name:'Charcoal', level:4, c1:'#3d424a', c2:'#23262b' },
-  { id:'plum',     name:'Plum',     level:5, c1:'#5d3674', c2:'#3a1f4a' },
 ];
 const bestLevel = () => Math.max((prefs.record && prefs.record.level) || 1, S ? lvl() : 1);
 const isUnlocked = item => !!item && bestLevel() >= item.level;
@@ -84,8 +81,6 @@ function settingsHTML(){
         <span class="pkcards">${demo}${back}</span>
         <span class="pkname"><b>${p.name}</b>${ok ? '' : `<small>${LOCK_SVG}Level ${p.level}</small>`}</span></button>`;
     }).join('')}</div>
-    <h3>Table felt</h3>
-    ${swatches('felt', FELTS, 'felt')}
     <h3>Seed</h3>
     <div class="srow"><span>This run</span><span class="seedline">${seedHTML()}</span></div>
     ${!CHALLENGES_ON && telegramLaunch() && groupsOn() ? `<div class="srow"><span>Chat leaderboard<small>Send a scoreboard to a group: everyone's best run shows on it</small></span><button class="btn" data-act="shareChatGame">Send</button></div>` : ''}

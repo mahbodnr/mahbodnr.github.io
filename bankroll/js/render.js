@@ -9,7 +9,14 @@ const kbd = k => `<kbd aria-hidden="true">${k}</kbd>`;
 function cardHTML(c, opts = {}){
   const pk = opts.pack || currentPack();
   const cls = ['card', 'pk-' + pk];
-  if (opts.back){ cls.push('back'); if (opts.extra) cls.push(opts.extra); return `<div class="${cls.join(' ')}"${opts.style ? ` style="${opts.style}"` : ''} aria-label="Face-down card"></div>`; }
+  if (opts.back){
+    cls.push('back'); if (opts.extra) cls.push(opts.extra);
+    // a picture pack's back is its own picture
+    // (set on the card itself: a url() in a CSS variable would be read from the stylesheet's folder)
+    const st = (isImgPack(pk) ? `background-image:url(${packSrc(pk)});` : '') + (opts.style || '');
+    if (isImgPack(pk)) cls.push('imgback');
+    return `<div class="${cls.join(' ')}"${st ? ` style="${st}"` : ''} aria-label="Face-down card"></div>`;
+  }
   if (isRed(c)) cls.push('red');
   cls.push('s-' + c.suit);
   if (c.rank === 10) cls.push('r10');
@@ -27,6 +34,10 @@ function cardHTML(c, opts = {}){
   if (isJoker(c)){
     cls.push('joker');
     return `<div class="${cls.join(' ')}"${data} data-cid="${c.id}" aria-label="${cardName(c)}"><span class="jw">JOKER</span><span class="jw b2">JOKER</span><div class="pip"><span class="medal"><svg viewBox="0 0 100 100"><use href="#jk-star"/></svg></span></div>${tag}</div>`;
+  }
+  if (isImgPack(pk)){                                        // a picture pack: the picture is the whole face
+    cls.push('imgcard');
+    return `<div class="${cls.join(' ')}"${data} data-cid="${c.id}" aria-label="${cardName(c)}">${imgCardInner(c, pk)}${tag}</div>`;
   }
   const r = RANKS[c.rank], su = suitSVG(c.suit);
   let mid;
