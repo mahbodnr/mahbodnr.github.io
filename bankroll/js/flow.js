@@ -88,9 +88,10 @@ function drawNext(waive, why){
   let first = true;
   ui.armed = null;
   while (S.deck.length){
-    // each power-up pays its current upkeep, which then doubles. A power-up just bought (waive) rides free on every card
-    // its purchase deals: an Extra seat (or a Joker) deals a card into the hand before the next one reaches the center.
-    const charges = S.powerups.map((p, i) => waive && i === S.powerups.length - 1 ? 0 : upkeepOf(p));
+    // each power-up pays its current upkeep, which then doubles. Buying a power-up (waive) always deals: the cards its
+    // purchase deals cost no upkeep for any power-up, so the new one can be used on them (an Extra seat, or a Joker,
+    // deals a card into the hand before the next one reaches the center). The card after that pays upkeep as usual.
+    const charges = S.powerups.map(p => waive ? 0 : upkeepOf(p));
     const up = charges.reduce((a, b) => a + b, 0);
     if (S.coins < up) break;
     coinChange(-up, 'upkeep');
@@ -170,12 +171,12 @@ function usePower(){
   const p = POWER[S.pending.rank]; if (!p) return;
   const cost = powerCost(S.pending.rank); if (S.coins < cost) return;
   if (p.type === '2' && S.powerups.some(x => x.type === '2')) return; // Two-tone doesn't stack
-  if (p.type === '5' && !S.deck.length) return;                         // no card left to fill the seat
+  if (!S.deck.length) return;                                           // buying deals a card: none is left to deal
   if (S.pendingCharged) refundCard(); S.pendingCharged = false;
   coinChange(-cost, 'power-up'); S.powerups.push({ card:S.pending, type:p.type }); S.pending = null; S.phase = 'idle'; ui.armed = null;
   sfx('power');
   ui.say = `${p.name} active.`;
-  // buying a power-up deals the next card right away; the purchase price covers that power-up's upkeep for this card
+  // buying a power-up deals the next card right away, whatever the upkeep: the purchase pays for that deal
   drawNext(cost, p.type === '5' ? 'five' : null);
 }
 
