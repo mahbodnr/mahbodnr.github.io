@@ -7,27 +7,29 @@
 const PACKS = [
   { id:'classic',   name:'Classic',      level:1,  back:['#b8282f', '#8e1b22'], note:'Traditional English courts' },
   { id:'clear',     name:'Clear',        level:1,  back:['#2f6db5', '#173f73'], note:'Big, easy-to-read corners for small screens' },
-  { id:'arcade',    name:'Retro Arcade', level:2,  back:['#2a2350', '#120e2a'], img:true, note:'Pixel heroes in neon' },
-  { id:'sketch',    name:'Hand Drawn',   level:5,  back:['#efe2c4', '#c9b48a'], img:true, note:'Inked birds, foxes and plants' },
-  { id:'seasons',   name:'Four Seasons', level:10, back:['#5b7c4a', '#2f4426'], img:true, note:'A suit for every season' },
-  { id:'clockwork', name:'Clockmaker',   level:15, back:['#3b2f22', '#1e1710'], img:true, note:'Gears, springs and brass' },
+  { id:'seasons',   name:'Four Seasons', level:2,  back:['#5b7c4a', '#2f4426'], img:true, note:'A suit for every season' },
+  { id:'jungle',    name:'Jungle',       level:5,  back:['#efe2c4', '#c9b48a'], img:true, note:'Inked birds, foxes and plants' },
+  { id:'clockwork', name:'Clockmaker',   level:10, back:['#3b2f22', '#1e1710'], img:true, note:'Gears, springs and brass' },
+  { id:'oneline',   name:'One Line',     level:15, back:['#f4efe6', '#d9d1c2'], img:true, note:'Every card in a single stroke' },
   { id:'deco',      name:'Art Deco',     level:20, back:['#1a1813', '#100f0d'], img:true, note:'Black and gold casino' },
+  { id:'arcade',    name:'Retro Arcade', level:25, back:['#2a2350', '#120e2a'], img:true, note:'Pixel heroes in neon' },
 ];
 // The Tarot pack is off for now (its pictures, img/tarot/, are left out of every build: tools/build-site.mjs,
 // tools/build-crazygames.mjs). To bring it back: TAROT_ON = true and remove those exclusions.
 const TAROT_ON = typeof window !== 'undefined' && window.BANKROLL_TAROT === true;   // (tests turn it on)
 if (TAROT_ON) PACKS.push({ id:'tarot', name:'Tarot', level:4, back:['#2b5d78', '#0f2a3a'], note:'The 1909 Rider–Waite–Smith pictures' });
-// earlier versions picked a card back, or a pack that has since gone: the Classic pack
+// earlier versions picked a card back, or a pack that has since gone: the Classic pack; a renamed pack: its new name
 const BACK_TO_PACK = { burgundy:'classic' };
-const packById = id => PACKS.find(p => p.id === id);
+const PACK_RENAMED = { sketch:'jungle' };
+const packById = id => PACKS.find(p => p.id === (PACK_RENAMED[id] || id));
 function currentPack(){
   const p = packById(prefs.pack);
   return p && bestLevel() >= p.level ? p.id : 'classic';
 }
 const isImgPack = pk => !!(packById(pk) || {}).img;
-// a picture pack's file for a card (S01 … C13) or its back
-const packSrc = (pk, c) => `img/packs/${pk}/${c ? c.suit + String(c.rank).padStart(2, '0') : 'back'}.svg`;
-// a card of a picture pack: the whole face is the picture (corners included). Jokers are the game's own (the kits have none)
+// a picture pack's file for a card (S01 … C13, J for both Jokers) or its back
+const packSrc = (pk, c) => `img/packs/${pk}/${!c ? 'back' : c.rank === 0 ? 'J' : c.suit + String(c.rank).padStart(2, '0')}.svg`;
+// a card of a picture pack: the whole face is the picture (corners included), the Jokers too
 function imgCardInner(c, pk){ return `<img class="cimg" src="${packSrc(pk, c)}" alt="" draggable="false" decoding="async">`; }
 
 const RANK_LETTER = { 11:'J', 12:'Q', 13:'K' };
@@ -50,7 +52,7 @@ function preloadCourts(){
   preloaded = pk; COURT_IMGS.length = 0;
   const all = f => ['S', 'H', 'D', 'C'].flatMap(s => Array.from({ length:13 }, (_, i) => f({ rank:i + 1, suit:s })));
   const srcs = pk === 'tarot' ? all(tarotSrc).concat(['img/tarot/JR.webp', 'img/tarot/JB.webp'])
-    : isImgPack(pk) ? all(c => packSrc(pk, c)).concat([packSrc(pk)])        // a picture pack: every card and its back
+    : isImgPack(pk) ? all(c => packSrc(pk, c)).concat([packSrc(pk), packSrc(pk, { rank:0 })])   // a picture pack: every card, its Joker and its back
     : ['J', 'Q', 'K'].flatMap(R => ['S', 'H', 'D', 'C'].map(s => `img/classic/${R}${s}.webp`));
   const go = () => srcs.forEach(src => {
     const im = new Image(); im.decoding = 'async'; im.src = src;

@@ -140,9 +140,10 @@ const supabaseBackend = {
       LB.tgId = md.telegram_id || null;
     };
     try { const { data } = await this.client.auth.getSession(); setSession(data && data.session); } catch(e){}
+    if (LB.signedIn) this.loadFlags();
     this.client.auth.onAuthStateChange((event, session) => {
       const was = LB.signedIn; setSession(session);
-      if (LB.signedIn && !was){ this.ensureProfile(session.user); this.claimRuns(); if (LB.backend) upgradeFreshRun(); }
+      if (LB.signedIn && !was){ this.ensureProfile(session.user); this.claimRuns(); this.loadFlags(); if (LB.backend) upgradeFreshRun(); }
       refreshBoard();
     });
     // inside Telegram: sign in with the Telegram account (Google sign-in doesn't work in Telegram's browser)
@@ -235,6 +236,14 @@ const supabaseBackend = {
       announceBoardPlace();
     } catch(e){ LB.state = LB.boards.week.length || LB.boards.today.length ? 'ready' : 'error'; }
     refreshBoard();
+  },
+  // the account's own flags: a tester has every card pack unlocked (bankroll_my_flags, tools/grant-tester.mjs)
+  async loadFlags(){
+    try {
+      const { data, error } = await this.client.rpc('bankroll_my_flags');
+      const all = !error && !!(data && data.unlock_all);
+      if (all !== !!LB.unlockAll){ LB.unlockAll = all; applyPrefs(); if (typeof render === 'function' && S) render(); }
+    } catch(e){}
   },
   // asks the server for a run: it picks the seed unless the player chose one
   async startRun(seed, challenge){

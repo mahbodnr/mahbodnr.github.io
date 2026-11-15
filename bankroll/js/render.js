@@ -31,6 +31,10 @@ function cardHTML(c, opts = {}){
     cls.push('joker');
     return `<div class="${cls.join(' ')}"${data} data-cid="${c.id}" aria-label="${cardName(c)}">${tarotHTML(c)}<div class="ix tl"><b>★</b></div><div class="ix br"><b>★</b></div>${tag}</div>`;
   }
+  if (isJoker(c) && isImgPack(pk)){                          // a picture pack's own Joker
+    cls.push('joker', 'imgcard');
+    return `<div class="${cls.join(' ')}"${data} data-cid="${c.id}" aria-label="${cardName(c)}">${imgCardInner(c, pk)}${tag}</div>`;
+  }
   if (isJoker(c)){
     cls.push('joker');
     return `<div class="${cls.join(' ')}"${data} data-cid="${c.id}" aria-label="${cardName(c)}"><span class="jw">JOKER</span><span class="jw b2">JOKER</span><div class="pip"><span class="medal"><svg viewBox="0 0 100 100"><use href="#jk-star"/></svg></span></div>${tag}</div>`;

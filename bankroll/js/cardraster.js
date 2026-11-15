@@ -57,8 +57,8 @@ function roundRectPath(g, x, y, w, h, r){
 const matrixOf = t => { const m = /matrix\(([^)]+)\)/.exec(t || ''); return m ? m[1].split(',').map(Number) : null; };
 // draws card {rank, suit} of pack `pack` with its top-left at (x, y), w wide; lit: a gold edge (the scoring cards)
 async function drawPackCard(g, card, x, y, w, pack, lit){
-  // a picture pack: the card is its picture, drawn whole in the card's rounded shape (a Joker is drawn as below)
-  if (typeof isImgPack === 'function' && isImgPack(pack) && card.rank !== 0){
+  // a picture pack: the card is its picture (the Jokers too), drawn whole in the card's rounded shape
+  if (typeof isImgPack === 'function' && isImgPack(pack)){
     const im = await rasterImg(packSrc(pack, card));
     if (!im) throw new Error('card picture missing');
     const H = w * 1.42, rad = w * .09;

@@ -8,7 +8,8 @@ const PREF_DEFAULTS = { sound:true, volume:0.8, music:true, musicVolume:0.8, hap
 const FELTS = [
   { id:'green',    name:'Classic',  level:1, c1:'#17574b', c2:'#0f3d35' },
 ];
-const bestLevel = () => Math.max((prefs.record && prefs.record.level) || 1, S ? lvl() : 1);
+// (a tester account has every pack: LB.unlockAll, from the server)
+const bestLevel = () => (typeof LB !== 'undefined' && LB.unlockAll) ? 999 : Math.max((prefs.record && prefs.record.level) || 1, S ? lvl() : 1);
 const isUnlocked = item => !!item && bestLevel() >= item.level;
 
 function effectiveTheme(){
@@ -22,7 +23,7 @@ function applyPrefs(){
   const light = effectiveTheme() === 'light';
   r.classList.toggle('light', light);
   r.style.colorScheme = light ? 'light' : 'dark';
-  r.classList.toggle('four-color', !!prefs.fourColor);
+  r.classList.add('four-color');                       // the four-colour deck, always (diamonds orange, clubs green)
   r.classList.toggle('speed-fast', prefs.speed === 'fast');
   r.classList.toggle('speed-off', prefs.speed === 'off');
   const pack = packById(currentPack());
@@ -70,7 +71,6 @@ function settingsHTML(){
     <h3>Look</h3>
     <div class="srow"><span>Theme</span>${seg('theme', [['system','System'],['dark','Dark'],['light','Light']], 'Theme')}</div>
     <div class="srow"><span>Animations</span>${seg('speed', [['normal','Normal'],['fast','Fast'],['off','Off']], 'Animations')}</div>
-    ${toggle('fourColor', 'Four-colour deck')}
     <h3>Card pack</h3>
     <div class="packs">${PACKS.map(p => {
       const ok = isUnlocked(p), on = currentPack() === p.id;
