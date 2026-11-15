@@ -649,6 +649,11 @@ code.seed{white-space:nowrap;font:800 14px/1 ui-monospace,SFMono-Regular,Menlo,C
 .chart .ch-end.short{fill:var(--debt)}
 .chart .ch-target{stroke:var(--debt);stroke-width:1.6;stroke-dasharray:5 4}
 .chart .ch-tl{fill:var(--debt);font:800 9.5px var(--f-ui)}
+/* a run that ended below zero: the last hand drops through the zero line to an arrow (js/history.js) */
+.chart .ch-fall{fill:none;stroke-width:2.4;stroke-linecap:round}
+.chart .ch-fa1{stop-color:var(--brass-hi)} .chart .ch-fa2{stop-color:var(--debt)}
+.chart .ch-head{fill:var(--debt);filter:drop-shadow(0 0 3px rgba(240,120,100,.55))}
+.chart .ch-loss{fill:var(--debt);font:800 10px var(--f-ui);font-variant-numeric:tabular-nums}
 .hsum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:6px 0 4px}
 .hsum div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
 .hsum span{display:block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:800}

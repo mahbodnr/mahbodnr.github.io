@@ -23,8 +23,12 @@ function coinChart(hist, target){
   // an infinite amount (saved as null: JSON has no Infinity) is drawn at the top of the chart
   const inf = v => v == null || v === Infinity;
   const pts = [{ v: hist[0].start, level: hist[0].level }].concat(hist.map(h => ({ v:h.coins, level:h.level })));
-  const vals = pts.map(p => p.v).filter(v => !inf(v));
-  let lo = Math.min(0, ...vals), hi = Math.max(...vals, target ? target.v * 1.08 : 0);
+  // a run that ended below zero: the last hand's loss is usually far bigger than anything before, so it isn't drawn to
+  // scale. The chart is scaled to the run, and the last hand drops through zero to an arrow below it, with its amount.
+  const bust = pts.length > 1 && !inf(pts[pts.length - 1].v) && pts[pts.length - 1].v < 0;
+  const DROP = bust ? 18 : 0;
+  const vals = pts.slice(0, bust ? -1 : undefined).map(p => p.v).filter(v => !inf(v));
+  let lo = bust ? 0 : Math.min(0, ...vals), hi = Math.max(...vals, target ? target.v * 1.08 : 0);
   if (hi === lo) hi = lo + 10;
   // round the top up to a tidy value: 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8 × a power of ten
   const nice = v => { const m = Math.pow(10, Math.floor(Math.log10(Math.max(1, Math.abs(v))))); return [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].map(k => k * m).find(c => c >= v); };
@@ -37,18 +41,35 @@ function coinChart(hist, target){
     lo = 0; hi = Math.pow(10, top);
     ticks = []; for (let k = top; k >= 0; k -= step) ticks.push(k ? Math.pow(10, k) : 0);
     if (ticks[ticks.length - 1] !== 0) ticks.push(0);
-    y = v => inf(v) ? padT : padT + (top - L(v)) * (H - padT - padB) / top;
+    y = v => inf(v) ? padT : padT + (top - L(v)) * (H - padT - padB - DROP) / top;
   } else {
     hi = nice(hi);
     ticks = [hi, (hi + lo) / 2, lo];
-    y = v => inf(v) ? padT : padT + (hi - v) * (H - padT - padB) / (hi - lo);
+    y = v => inf(v) ? padT : padT + (hi - Math.max(lo, v)) * (H - padT - padB - DROP) / (hi - lo);
   }
   // y labels; the left margin fits the longest one (about 6.2px a character at 10.5px)
   const tl = ticks.map(axisNum);
   const padL = Math.max(26, 10 + Math.ceil(Math.max(...tl.map(t => t.length)) * 6.2));
   const x = i => padL + (pts.length === 1 ? 0 : i * (W - padL - padR) / (pts.length - 1));
-  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p.v).toFixed(1)}`).join('');
-  const area = `${line}L${x(pts.length - 1).toFixed(1)} ${y(lo).toFixed(1)}L${x(0).toFixed(1)} ${y(lo).toFixed(1)}Z`;
+  const n = pts.length, kept = bust ? pts.slice(0, -1) : pts;
+  const line = kept.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p.v).toFixed(1)}`).join('');
+  const y0 = y(0);
+  let area = `${line}L${x(kept.length - 1).toFixed(1)} ${y(lo).toFixed(1)}L${x(0).toFixed(1)} ${y(lo).toFixed(1)}Z`;
+  let fall = '';
+  if (bust){
+    // the drop: from the hand before to just under the zero line, ending in an arrow; the fill follows it down to zero
+    const x1 = x(n - 2), y1 = y(pts[n - 2].v), x2 = x(n - 1), y2 = y0 + DROP - 3;
+    const xz = x1 + (x2 - x1) * Math.min(1, Math.max(0, (y0 - y1) / Math.max(1, y2 - y1)));
+    area = `${line}L${xz.toFixed(1)} ${y0.toFixed(1)}L${x(0).toFixed(1)} ${y0.toFixed(1)}Z`;
+    const ang = Math.atan2(y2 - y1, x2 - x1), a = 7, w = 4.6;            // the arrowhead, along the drop
+    const hx = x2 - a * Math.cos(ang), hy = y2 - a * Math.sin(ang);
+    const head = `M${x2.toFixed(1)} ${y2.toFixed(1)}L${(hx + w * Math.sin(ang)).toFixed(1)} ${(hy - w * Math.cos(ang)).toFixed(1)}L${(hx - w * Math.sin(ang)).toFixed(1)} ${(hy + w * Math.cos(ang)).toFixed(1)}Z`;
+    fall = `<defs><linearGradient id="chFall" gradientUnits="userSpaceOnUse" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}">
+        <stop offset="0" class="ch-fa1"/><stop offset="1" class="ch-fa2"/></linearGradient></defs>
+      <path class="ch-fall" d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${hx.toFixed(1)} ${hy.toFixed(1)}" stroke="url(#chFall)"/>
+      <path class="ch-head" d="${head}"/>
+      <text class="ch-loss" x="${(x2 - 9).toFixed(1)}" y="${(y2 + 1).toFixed(1)}" text-anchor="end">${axisNum(pts[n - 1].v)}</text>`;
+  }
   let marks = '';
   for (let i = 1; i < pts.length; i++) if (pts[i].level !== pts[i - 1].level)
     marks += `<path class="ch-lv" d="M${x(i - .5).toFixed(1)} ${padT}V${H - padB}"/><text class="ch-lt" x="${(x(i - .5) + 3).toFixed(1)}" y="${padT + 8}">L${pts[i].level}</text>`;
@@ -60,9 +81,9 @@ function coinChart(hist, target){
   const grid = ticks.map((v, i) => `<path class="ch-grid" d="M${padL} ${y(v).toFixed(1)}H${W - padR}"/><text class="ch-ax" x="${padL - 6}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end">${tl[i]}</text>`).join('');
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Coins after each hand: from ${fmtFit(pts[0].v)} to ${fmtFit(last.v)} over ${hist.length} hands">
     <defs><linearGradient id="chFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ch-f1"/><stop offset="1" class="ch-f2"/></linearGradient></defs>
-    ${grid}${lo < 0 ? `<path class="ch-zero" d="M${padL} ${y(0).toFixed(1)}H${W - padR}"/>` : ''}${marks}
-    <path class="ch-area" d="${area}" fill="url(#chFill)"/><path class="ch-line" d="${line}"/>
-    <circle class="ch-end ${target && last.v < target.v ? 'short' : ''}" cx="${x(pts.length - 1).toFixed(1)}" cy="${y(last.v).toFixed(1)}" r="4"/>
+    ${grid}${lo < 0 || bust ? `<path class="ch-zero" d="M${padL} ${y0.toFixed(1)}H${W - padR}"/>` : ''}${marks}
+    <path class="ch-area" d="${area}" fill="url(#chFill)"/><path class="ch-line" d="${line}"/>${fall}
+    ${bust ? '' : `<circle class="ch-end ${target && last.v < target.v ? 'short' : ''}" cx="${x(pts.length - 1).toFixed(1)}" cy="${y(last.v).toFixed(1)}" r="4"/>`}
     <text class="ch-ax" x="${padL}" y="${H - 6}" text-anchor="start">Start</text><text class="ch-ax" x="${W - padR}" y="${H - 6}" text-anchor="end">Hand ${hist[hist.length - 1].n}</text>
   </svg>`;
 }

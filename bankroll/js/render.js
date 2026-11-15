@@ -627,7 +627,7 @@ function overHTML(){
   // 3. journey through the levels
   const first = Math.max(1, L - 3), nodes = [];
   for (let i = first; i <= L; i++) nodes.push(i < L
-    ? `<li class="done"><span class="jn">${i}</span><small>reached ${fmtFit(levelPrice(i))}</small></li>`
+    ? `<li class="done"><span class="jn">${i}</span><small>✓ ${fmtFit(levelPrice(i))}</small></li>`
     : cause === 'infinite' ? `<li class="done won"><span class="jn">${i}</span><small>won</small></li>`
     : `<li class="end"><span class="jn">${i}</span><small>ended</small></li>`);
   if (cause !== 'infinite') nodes.push(`<li class="lock"><span class="jn">${LOCK_SVG}</span><small>${L + 1}: ${fmtFit(levelPrice(L))}</small></li>`);
