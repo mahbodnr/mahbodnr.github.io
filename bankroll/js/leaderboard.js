@@ -548,8 +548,9 @@ function puChipsHTML(powers){
   if (!list.length) return '';
   return `<div class="th-pus">${list.map(([rank, suit, type]) => `<span class="th-pu"><span class="${suit === 'H' || suit === 'D' ? 'r' : ''}">${RANKS[rank]}${(SUITS[suit] || {}).sym || ''}</span>${PU_CHIP[type]}</span>`).join('')}</div>`;
 }
-// (handPack: the deck the hand was played with, when known and still in the game; else the player's own)
-const handPackOf = p => (p && typeof packById === 'function' && packById(p) ? packById(p).id : null);
+// (handPack: the deck the hand was played with, saved with it. A hand from before decks were saved, or in a deck since
+// gone: Classic, the same for everyone, never the viewer's own deck)
+const handPackOf = p => (p && typeof packById === 'function' && packById(p) ? packById(p).id : 'classic');
 function lbHandHTML(cards, labels, powers, handPack){
   const list = (cards || []).filter(c => Array.isArray(c)).slice().sort((a, b) => lbRankVal(a) - lbRankVal(b) || String(a[1]).localeCompare(String(b[1])));
   if (!list.length) return '';
@@ -562,7 +563,7 @@ function lbHandHTML(cards, labels, powers, handPack){
   const z = typeof ZK === 'number' ? ZK : 1;
   const avail = Math.min(560, innerWidth / z - 32) - 2 * 26 - 28;  // the dialog's width, less its padding and the panel's
   const cw = Math.max(26, Math.min(58, avail / (1 + (n - 1) * STEP))), ch = cw * 1.42, step = cw * STEP;
-  const pack = handPackOf(handPack) || (cw < 46 ? 'clear' : undefined);
+  const pack = handPackOf(handPack);
   const W = cw + (n - 1) * step, ROW = 19, GAP = 15;
   // straights on top; pairs and flushes below. Wider combos nearest the cards (they have room to place their label
   // between the lines passing through), short ones further out.
@@ -588,7 +589,7 @@ function lbHandHTML(cards, labels, powers, handPack){
       <div class="links" aria-hidden="true"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${paths}</svg>${tags}</div></div>`;
 }
 const lbCards = (cards, pack) => (cards || []).filter(c => Array.isArray(c)).slice().sort((a, b) => lbRankVal(a) - lbRankVal(b) || String(a[1]).localeCompare(String(b[1])))
-  .map(([rank, suit], i) => cardHTML({ id:'lb' + i, rank:+rank, suit:String(suit) }, { track:false, pack:handPackOf(pack) || undefined })).join('');
+  .map(([rank, suit], i) => cardHTML({ id:'lb' + i, rank:+rank, suit:String(suit) }, { track:false, pack:handPackOf(pack) })).join('');
 function handsHTML(per){
   const list = LB.hands[per];
   const title = `<h3 class="lbh">Top hand</h3>`;

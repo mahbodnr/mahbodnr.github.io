@@ -352,7 +352,7 @@ function momentOf(kind, period){
     return { kind, mult:numOut(r.ev.mult), labels:r.ev.combos.map(c => plainLabel(c.label)), cards:r.hand.map(c => [c.rank, c.suit, hot.has(c.id)]),
       powers:(r.powerups || []).map(p => [p.card.rank, p.card.suit, p.type]) };
   }
-  if (kind === 'run'){ const run = (S.over && S.over.run) || {}; return { kind, level:run.level || lvl(), peak:numOut(run.peak ?? S.stats.peak), mult:numOut(S.stats.bestMult || 0), cards:(S.bestHand && S.bestHand.cards) || [], powers:(S.bestHand && S.bestHand.powers) || [], labels:((S.bestHand && S.bestHand.labels) || []).map(plainLabel) }; }
+  if (kind === 'run'){ const run = (S.over && S.over.run) || {}; return { kind, level:run.level || lvl(), peak:numOut(run.peak ?? S.stats.peak), mult:numOut(S.stats.bestMult || 0), cards:(S.bestHand && S.bestHand.cards) || [], powers:(S.bestHand && S.bestHand.powers) || [], labels:((S.bestHand && S.bestHand.labels) || []).map(plainLabel), pack:(S.bestHand && S.bestHand.pack) || null }; }
   if (kind === 'board'){
     const per = period === 'week' ? 'week' : 'today', rows = LB.boards[per] || [], i = rows.findIndex(x => x.id === LB.me);
     return i < 0 ? null : { kind, rank:i + 1, period:per, level:rows[i].level || 1, peak:numOut(rows[i].peak) };
@@ -361,7 +361,7 @@ function momentOf(kind, period){
     const list = LB.hands.today || [], i = list.findIndex(r => r.id === LB.me);
     if (i < 0) return null;
     const h = list[i];
-    return { kind, rank:i + 1, mult:numOut(h.mult), labels:(h.labels || []).map(plainLabel), cards:h.cards || [], powers:h.powers || [] };
+    return { kind, rank:i + 1, mult:numOut(h.mult), labels:(h.labels || []).map(plainLabel), cards:h.cards || [], powers:h.powers || [], pack:h.pack || null };
   }
   if (kind === 'dailyinvite') return LB.daily ? { kind, day:dayLabel(), players:(LB.boards.daily || []).length } : null;
   if (kind === 'daily'){
@@ -372,7 +372,7 @@ function momentOf(kind, period){
     if (i < 0) return null;
     return { kind, rank:i + 1, players:rows.length, level:rows[i].level || 1, peak:numOut(rows[i].peak), mult:numOut(S.stats.bestMult || 0), cards:(S.bestHand && S.bestHand.cards) || [], day:dayLabel() };
   }
-  if (kind === 'tophand'){ const r = ui.record; return r ? { kind, mult:numOut(r.mult), labels:(r.labels || []).map(plainLabel), cards:r.cards || [], powers:r.powers || [] } : null; }
+  if (kind === 'tophand'){ const r = ui.record; return r ? { kind, mult:numOut(r.mult), labels:(r.labels || []).map(plainLabel), cards:r.cards || [], powers:r.powers || [], pack:r.pack || null } : null; }
   return null;
 }
 function momentText(m){

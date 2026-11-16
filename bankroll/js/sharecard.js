@@ -34,7 +34,7 @@ function scCard(g, x, y, w, c, lit){
 const SC_PU = { A:'Ace boost +1', '2':'Two-tone', '5':'Extra seat' };
 // the hand: sorted as the player sorts it (rank or suit), scoring cards lit, every combo's line and name drawn like the
 // game's combo links (straights above the cards, pairs and flushes below)
-async function drawHand(g, cards, powers, labels, plainCards){
+async function drawHand(g, cards, powers, labels, plainCards, handPack){
   const rv = c => c.rank === 0 ? 99 : (c.rank === 1 ? 14 : c.rank);
   const objs = cards.filter(c => Array.isArray(c)).slice(0, 9).map(([rank, suit], i) => ({ id:'sh' + i, rank:+rank, suit:String(suit) }));
   if ((prefs.sort || 'rank') === 'suit') objs.sort((a, b) => ((a.rank === 0) - (b.rank === 0)) || a.suit.localeCompare(b.suit) || rv(a) - rv(b));
@@ -49,7 +49,8 @@ async function drawHand(g, cards, powers, labels, plainCards){
   const gap = n > 6 ? 8 : 12, w = Math.min(122, (areaW - gap * (n - 1)) / n), h = w * 1.42, total = n * w + (n - 1) * gap;
   const padTop = above.length ? GAP + above.length * ROW : 0, padBot = below.length ? GAP + below.length * ROW : 0;
   const x0 = areaX + (areaW - total) / 2, y0 = 135 + Math.max(0, (370 - (padTop + h + padBot)) / 2) + padTop;
-  const pack = typeof currentPack === 'function' ? currentPack() : 'classic';
+  // a hand from the boards: the deck it was played with; the player's own hand: their deck
+  const pack = handPack ? (typeof handPackOf === 'function' ? handPackOf(handPack) : handPack) : typeof currentPack === 'function' ? currentPack() : 'classic';
   for (let i = 0; i < n; i++){
     g.save(); if (lit.size && !lit.has(objs[i].id)) g.globalAlpha = .5;
     try { if (plainCards) throw 0; await drawPackCard(g, objs[i], x0 + i * (w + gap), y0, w, pack, lit.has(objs[i].id)); }
@@ -138,7 +139,7 @@ async function shareImageOnce(m, plainCards){
     g.fillText(c.medal, mx, my + 26);
   }
   // the cards, on the right: the player's pack, sorted their way, combos drawn as in the game
-  if (hasCards) await drawHand(g, c.cards, m.powers || [], m.labels || [], plainCards);
+  if (hasCards) await drawHand(g, c.cards, m.powers || [], m.labels || [], plainCards, m.pack || (m.kind === 'tophand' || m.kind === 'besthand' ? 'unknown' : null));
   // where to play
   g.fillStyle = 'rgba(217,171,76,.18)'; g.fillRect(40, SC.h - 112, SC.w - 80, 2);
   scText(g, 'Bet, chase combos that multiply each other, cash out before the debt catches you.', 60, SC.h - 62, 24, F_UI, '600', SC.muted, 660);
