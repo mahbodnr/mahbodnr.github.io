@@ -493,9 +493,14 @@ async function flushProgress(){
 /* ---------- top hand of the day ---------- */
 // When the board comes back with this player on top of today's hands, for the hand they just made in this run,
 // a celebration opens (once per day and multiplier). It shows over whatever dialog is open and returns to it.
+// While a run is under way, only the big ones interrupt: best hands above ×10, a place on the board once past level 1
+// (at the run's end everything shows). Held back for now, they can still come later.
+const midRun = () => !!(S && !S.intro && S.phase !== 'over');
+const BIG_HAND = 10;
 function checkTopHand(){
   const top = LB.hands.today[0];
   if (!top || !LB.me || top.id !== LB.me || !S || !S.bestHand || top.mult !== S.bestHand.mult) return;
+  if (midRun() && !(Number(top.mult) > BIG_HAND || top.mult === 'Infinity')) return;
   const key = todayUTC() + ':' + top.mult;
   if (prefs.topHandSeen === key) return;
   prefs.topHandSeen = key; store(PREF_KEY, prefs);
@@ -661,10 +666,14 @@ function announceBoardPlace(){
   const day = todayUTC(), seen = load(LB_SEEN_KEY), prev = seen && seen.day === day ? seen : { day };
   const run = LB.boards.today.findIndex(r => r.id === LB.me) + 1, hand = LB.hands.today.findIndex(r => r.id === LB.me) + 1;
   const better = (now, was) => now > 0 && (!was || now < was);
+  // mid-run: a best hand only above ×10, a place on the board only past level 1 (held back, they're not marked seen)
+  const handMult = hand ? LB.hands.today[hand - 1].mult : 0;
+  const handOk = !midRun() || Number(handMult) > BIG_HAND || handMult === 'Infinity';
+  const runOk = !midRun() || lvl() >= 2;
   let note = null;
-  if (better(hand, prev.hand) && hand > 1) note = { kind:'besthand', rank:hand, text:`Your ×${fmtFit(LB.hands.today[hand - 1].mult)} hand is <b>#${hand}</b> of today's best hands` };
-  else if (better(run, prev.run)) note = { kind:'board', rank:run, text:`You're <b>#${run}</b> on today's leaderboard` };
-  store(LB_SEEN_KEY, { day, run: run && (!prev.run || run < prev.run) ? run : (prev.run || 0), hand: hand && (!prev.hand || hand < prev.hand) ? hand : (prev.hand || 0) });
+  if (handOk && better(hand, prev.hand) && hand > 1) note = { kind:'besthand', rank:hand, text:`Your ×${fmtFit(handMult)} hand is <b>#${hand}</b> of today's best hands` };
+  else if (runOk && better(run, prev.run)) note = { kind:'board', rank:run, text:`You're <b>#${run}</b> on today's leaderboard` };
+  store(LB_SEEN_KEY, { day, run: runOk && run && (!prev.run || run < prev.run) ? run : (prev.run || 0), hand: handOk && hand && (!prev.hand || hand < prev.hand) ? hand : (prev.hand || 0) });
   if (note){ showLbNote(note); if (typeof Portal !== 'undefined') Portal.happytime(); }
 }
 let lbNoteTimer = null;
