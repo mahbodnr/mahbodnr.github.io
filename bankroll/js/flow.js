@@ -34,7 +34,7 @@ function reshuffle(){
   ui.say = `Level ${S.level}. The deck has been reshuffled.`;
   applyPrefs(); // a new level can unlock card packs and felts
   reportProgress();
-  ui.modal = null; sfx('coin'); newSet();
+  ui.modal = null; newSet();                          // (no coin sound: nothing is paid)
   if (typeof checkUnlocks === 'function') checkUnlocks();   // announce any card pack or felt this level unlocked
 }
 

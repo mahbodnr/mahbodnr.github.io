@@ -1309,3 +1309,9 @@ html.light #lbnote{background:#fffaf0;color:#2a1c05}
 #hand .card.nudge{animation:nudge .45s cubic-bezier(.36,.07,.19,.97) both}
 @keyframes nudge{20%{transform:translateY(-4px) rotate(-2deg)}45%{transform:translateY(0) rotate(2deg)}70%{transform:translateY(-2px) rotate(-1deg)}100%{transform:none}}
 @media (prefers-reduced-motion:reduce){#hand .card.nudge{animation:none;outline:2px solid var(--brass-hi)}}
+
+/* a new level: the coins bar fills up from empty to where the coins are against the new goal (nothing drains: the
+   coins are kept), with a short glow */
+.lv-goal.lv-new .lv-track > i{transition:none;transform-origin:left center;animation:lv-new .9s cubic-bezier(.2,.8,.3,1) both}
+@keyframes lv-new{0%{transform:scaleX(0);filter:brightness(1.8)}60%{filter:brightness(1.35)}100%{transform:scaleX(1);filter:none}}
+@media (prefers-reduced-motion:reduce){.lv-goal.lv-new .lv-track > i{animation:none}}

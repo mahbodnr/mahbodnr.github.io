@@ -124,6 +124,8 @@ function renderLedger(){
   // medallion, locked until the coins cover its price (then the lock opens). A thin strip under the coins shows how
   // much of the deck is left: the level ends when it runs out.
   const L = lvl(), price = levelPrice(L), need = price - S.coins, left = S.deck.length;
+  // a new level: the bar starts over against the new goal (the coins stay): it jumps there, it doesn't drain
+  const fresh = ui.lvShown !== L; ui.lvShown = L;
   const ok = need <= 0, pct = Math.max(0, Math.min(100, S.coins / price * 100)), deckPct = Math.max(0, Math.min(100, left / 54 * 100));
   const opened = ok && ui.lvOk === false; ui.lvOk = ok;            // the lock opens now: a little celebration
   const medal = (n, cls, inner, tip) => `<span class="lv-med ${cls} ${String(n).length > 2 ? 'long' : ''}" title="${tip}"${cls === 'cur' ? ' id="st-level"' : ''}>${inner}<b>${n}</b></span>`;
@@ -131,7 +133,7 @@ function renderLedger(){
   const chBar = typeof playBarHTML === 'function' ? playBarHTML() : '';
   $('levelbar').classList.toggle('has-ch', !!chBar);
   setHTML($('levelbar'), `${chBar}
-    <div class="lv-goal ${ok ? 'ok' : ''} ${opened ? 'opened' : ''}" role="meter" aria-label="Level ${L}. Coins toward level ${L + 1}" aria-valuemin="0" aria-valuemax="${price}" aria-valuenow="${Math.max(0, Math.min(S.coins, price))}">
+    <div class="lv-goal ${ok ? 'ok' : ''} ${opened ? 'opened' : ''} ${fresh ? 'lv-new' : ''}" role="meter" aria-label="Level ${L}. Coins toward level ${L + 1}" aria-valuemin="0" aria-valuemax="${price}" aria-valuenow="${Math.max(0, Math.min(S.coins, price))}">
       ${medal(L, 'cur', '', `Level ${L}`)}
       <div class="lv-mid" title="${ok ? `Goal for level ${L + 1} reached, with ${fmtFit(-need)} over` : `${fmtFit(need)} more coins to reach level ${L + 1}`}">
         <div class="lv-track"><i style="width:${pct.toFixed(1)}%"></i>
@@ -420,7 +422,7 @@ function renderModal(){
         <div class="pb-list">${PU_ORDER.map(t => { const r = PU_RANK[t], now = powerCost(r);
           return `<div class="pb-item">${puEmblem(t, 1)}<span>${Object.values(POWER).find(x => x.type === t).name}</span><s>${fmtShort(now)}</s><b>${coin}${fmtShort(now * 10)}</b></div>`; }).join('')}
           <div class="pb-item"><span class="pb-ten">10</span><span>Take back</span><s>${fmtShort(swapCost())}</s><b>${coin}${fmtShort(swapCost() * 10)}</b></div></div></div>
-      <div class="actions"><button class="btn gold grow" data-act="reshuffle">Pay ${fmtFit(price)}</button></div>`;
+      <div class="actions"><button class="btn gold grow" data-act="reshuffle">${ico('up')}${bl('Next level')}</button></div>`;
   }
   else if (m === 'tracker') html = trackerHTML();
   else if (m === 'history') html = historyHTML();
