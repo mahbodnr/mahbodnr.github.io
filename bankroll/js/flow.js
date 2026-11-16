@@ -41,7 +41,11 @@ function reshuffle(){
 // the last cash-out's hand becomes the run's biggest multiplier once the run goes on past it
 function keepBestHand(){
   const b = S.bestCandidate; S.bestCandidate = null;
-  if (b && b.mult > (S.stats.bestMult || 0)){ S.stats.bestMult = b.mult; S.bestHand = b; reportProgress(); }   // post it to the boards now
+  if (b && b.mult > (S.stats.bestMult || 0)){
+    S.stats.bestMult = b.mult; S.bestHand = b;
+    if (typeof currentPack === 'function') b.pack = currentPack();          // the deck it was played with (the boards show it)
+    reportProgress();                                                        // post it to the boards now
+  }
 }
 
 function gameOver(reason, extra){

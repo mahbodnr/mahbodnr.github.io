@@ -1304,3 +1304,8 @@ html.light #lbnote{background:#fffaf0;color:#2a1c05}
 /* the Classic back: the traditional red diamond lattice on a white border (img/back-classic.svg, drawn for the game) */
 .card.back.pk-classic{background:url(../img/back-classic.svg) center / 100% 100% no-repeat, #b8282f;
   box-shadow:0 2px 3px rgba(0,0,0,.2), 0 8px 18px -6px rgba(0,0,0,.55)}
+
+/* a tap on the card in the center: the hand's cards jitter a little, to show where a tap swaps it in (js/input.js) */
+#hand .card.nudge{animation:nudge .45s cubic-bezier(.36,.07,.19,.97) both}
+@keyframes nudge{20%{transform:translateY(-4px) rotate(-2deg)}45%{transform:translateY(0) rotate(2deg)}70%{transform:translateY(-2px) rotate(-1deg)}100%{transform:none}}
+@media (prefers-reduced-motion:reduce){#hand .card.nudge{animation:none;outline:2px solid var(--brass-hi)}}

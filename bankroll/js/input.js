@@ -163,6 +163,13 @@ document.addEventListener('pointerup', () => stopHold());
 document.addEventListener('click', e => {
   if (ui.dragEnded && Date.now() - ui.dragEnded < 400) return;
   const t = e.target.closest('[data-act]');
+  // a tap on the card in the center: the hand's cards give a little jitter (that's where a tap swaps it in)
+  if (!t && S && S.phase === 'decide' && e.target.closest('#pit .stage .card')){
+    document.querySelectorAll('#hand .card').forEach((c, i) => { c.style.animationDelay = (i * 25) + 'ms'; c.classList.remove('nudge'); void c.offsetWidth; c.classList.add('nudge'); });
+    clearTimeout(ui.nudgeT); ui.nudgeT = setTimeout(() => document.querySelectorAll('#hand .card.nudge').forEach(c => { c.classList.remove('nudge'); c.style.animationDelay = ''; }), 700);
+    buzz(8);
+    return;
+  }
   if (!t){ if (ui.armed){ ui.armed = null; render(); } return; }
   if (!introAllows(t)) return;                     // the introduction: only the control it asks for works
   const action = t.dataset.act;

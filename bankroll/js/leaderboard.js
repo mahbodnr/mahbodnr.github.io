@@ -226,10 +226,11 @@ const supabaseBackend = {
       if (seeded !== LB.seeded) return;                       // the toggle changed while this was loading
       const row = r => ({ id:r.user_id, name:r.username || 'Player', avatar:r.avatar_url, level:r.level, peak:+r.peak, biggestWin:+r.biggest_win, seeded:!!r.seeded });
       const hand = r => ({ id:r.user_id, name:r.username || 'Player', avatar:r.avatar_url, mult:+r.mult, seeded:!!r.seeded, powers:(r.hand && r.hand.powers) || [],
-        cards:(r.hand && r.hand.cards) || [], labels:(r.hand && r.hand.labels) || [], at:Date.parse(r.achieved_at) || 0 });
+        cards:(r.hand && r.hand.cards) || [], labels:(r.hand && r.hand.labels) || [], pack:(r.hand && r.hand.pack) || null, at:Date.parse(r.achieved_at) || 0 });
       LB.boards.today = (today.data || []).map(row); LB.boards.week = (week.data || []).map(row);
       LB.hands.today = (todayHands.data || []).map(hand); LB.hands.week = (weekHands.data || []).map(hand);
-      LB.boards.daily = ((daily.data && daily.data.players) || []).map(r => ({ id:r.user_id, name:r.name || 'Player', avatar:r.avatar_url || null, level:r.level, peak:+r.peak, biggestWin:+r.biggest_win, seeded:false, playing:!r.finished }));
+      LB.boards.daily = ((daily.data && daily.data.players) || []).map(r => ({ id:r.user_id, name:r.name || 'Player', avatar:r.avatar_url || null, level:r.level, peak:+r.peak, biggestWin:+r.biggest_win, seeded:false,
+        playing:!r.finished && Date.now() - (Date.parse(r.at) || 0) < 30 * 60e3 }));   // (not touched for half an hour: gone, not playing)
       LB.hands.daily = [];
       LB.state = 'ready';
       checkTopHand();
@@ -318,7 +319,7 @@ const supabaseBackend = {
     if (!LB.signedIn && !LB.anon) return 'not_signed_in';
     if (!p.official) return 'unofficial';
     try {
-      const { data, error } = await this.client.functions.invoke('bankroll-verify', { body:{ run_id:p.runId, moves:p.moves } });
+      const { data, error } = await this.client.functions.invoke('bankroll-verify', { body:{ run_id:p.runId, moves:p.moves, pack:p.pack } });
       if (error){
         const res = error.context, status = res && res.status;
         let code = '';
@@ -454,11 +455,13 @@ async function upgradeFreshRun(){
 // one request at a time; a newer report replaces one that is still waiting.
 const SCORE_KEYS = ['level', 'peak', 'biggestWin', 'bestPayout', 'bestMult'];
 function reportProgress(finished){
-  if (!S || !S.runId || !(S.stats.cashouts > 0)) return;
+  // (a run that ends before any cash-out is reported too: otherwise the server keeps it "playing" forever)
+  if (!S || !S.runId || !(S.stats.cashouts > 0 || finished || S.phase === 'over')) return;
   if (LB.kind === 'supabase' && (!S.official || !Array.isArray(S.log) || LB.closedRun === S.runId)) return;
   const p = { runId:S.runId, seed:S.seed, seeded:!!S.seedChosen, official:!!S.official, level:lvl(), peak:S.stats.peak || 0,
     biggestWin:S.stats.biggestWin || 0, bestPayout:S.stats.bestPayout || 0, bestMult:S.stats.bestMult || 0, hands:S.stats.cashouts || 0,
-    hand:S.bestHand || null, finished:!!finished || S.phase === 'over', challenge:S.challenge || null };
+    hand:S.bestHand || null, finished:!!finished || S.phase === 'over', challenge:S.challenge || null,
+    pack:(S.bestHand && S.bestHand.pack) || currentPack() };                  // the deck the best hand was played with
   const last = S.lbSent || {};
   if (last.runId === p.runId && last.finished) return;
   if (LB.kind === 'supabase'){ if (last.runId === p.runId && !p.finished && last.moves === S.log.length) return; }   // every hand is recorded
@@ -504,7 +507,7 @@ function checkTopHand(){
   const key = todayUTC() + ':' + top.mult;
   if (prefs.topHandSeen === key) return;
   prefs.topHandSeen = key; store(PREF_KEY, prefs);
-  ui.record = { mult:top.mult, cards:top.cards, powers:top.powers || [], labels:top.labels || [], name:top.name, second:LB.hands.today[1] || null };
+  ui.record = { mult:top.mult, cards:top.cards, powers:top.powers || [], labels:top.labels || [], name:top.name, pack:top.pack || null, second:LB.hands.today[1] || null };
   if (ui.modal !== 'record') ui.modalBack = ui.modal;
   ui.modal = 'record';
   render();
@@ -520,7 +523,7 @@ function recordHTML(){
       <div class="rs-eyebrow">Top hand of the day</div>
       <h2 class="rec-title">Nobody has beaten it today!</h2>
       <div class="rec-mult"><span class="x">×</span>${fmtFit(r.mult)}</div>
-      <div class="minihand rec-cards">${lbCards(r.cards)}</div>${puChipsHTML(r.powers)}
+      <div class="minihand rec-cards">${lbCards(r.cards, r.pack)}</div>${puChipsHTML(r.powers)}
       ${r.labels.length ? `<p class="rec-labels">${r.labels.map(esc).join(' <span>×</span> ')}</p>` : ''}
     </div>
     <div class="actions"><button class="btn" data-act="recordBoard">See leaderboard</button>${shareBtn('tophand', 'Share')}<button class="btn gold" data-act="close">Keep playing</button></div>`;
@@ -545,7 +548,9 @@ function puChipsHTML(powers){
   if (!list.length) return '';
   return `<div class="th-pus">${list.map(([rank, suit, type]) => `<span class="th-pu"><span class="${suit === 'H' || suit === 'D' ? 'r' : ''}">${RANKS[rank]}${(SUITS[suit] || {}).sym || ''}</span>${PU_CHIP[type]}</span>`).join('')}</div>`;
 }
-function lbHandHTML(cards, labels, powers){
+// (handPack: the deck the hand was played with, when known and still in the game; else the player's own)
+const handPackOf = p => (p && typeof packById === 'function' && packById(p) ? packById(p).id : null);
+function lbHandHTML(cards, labels, powers, handPack){
   const list = (cards || []).filter(c => Array.isArray(c)).slice().sort((a, b) => lbRankVal(a) - lbRankVal(b) || String(a[1]).localeCompare(String(b[1])));
   if (!list.length) return '';
   const objs = list.map(([rank, suit], i) => ({ id:'lh' + i, rank:+rank, suit:String(suit) }));
@@ -557,7 +562,7 @@ function lbHandHTML(cards, labels, powers){
   const z = typeof ZK === 'number' ? ZK : 1;
   const avail = Math.min(560, innerWidth / z - 32) - 2 * 26 - 28;  // the dialog's width, less its padding and the panel's
   const cw = Math.max(26, Math.min(58, avail / (1 + (n - 1) * STEP))), ch = cw * 1.42, step = cw * STEP;
-  const pack = cw < 46 ? 'clear' : undefined;
+  const pack = handPackOf(handPack) || (cw < 46 ? 'clear' : undefined);
   const W = cw + (n - 1) * step, ROW = 19, GAP = 15;
   // straights on top; pairs and flushes below. Wider combos nearest the cards (they have room to place their label
   // between the lines passing through), short ones further out.
@@ -582,8 +587,8 @@ function lbHandHTML(cards, labels, powers){
       ${objs.map((o, i) => cardHTML(o, { track:false, pack, style:'' }).replace('class="card', `style="left:${i * step}px;top:${padTop}px" class="card`)).join('')}
       <div class="links" aria-hidden="true"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${paths}</svg>${tags}</div></div>`;
 }
-const lbCards = cards => (cards || []).filter(c => Array.isArray(c)).slice().sort((a, b) => lbRankVal(a) - lbRankVal(b) || String(a[1]).localeCompare(String(b[1])))
-  .map(([rank, suit], i) => cardHTML({ id:'lb' + i, rank:+rank, suit:String(suit) }, { track:false })).join('');
+const lbCards = (cards, pack) => (cards || []).filter(c => Array.isArray(c)).slice().sort((a, b) => lbRankVal(a) - lbRankVal(b) || String(a[1]).localeCompare(String(b[1])))
+  .map(([rank, suit], i) => cardHTML({ id:'lb' + i, rank:+rank, suit:String(suit) }, { track:false, pack:handPackOf(pack) || undefined })).join('');
 function handsHTML(per){
   const list = LB.hands[per];
   const title = `<h3 class="lbh">Top hand</h3>`;
@@ -591,7 +596,7 @@ function handsHTML(per){
   const [top, ...rest] = list;
   const best = `<div class="tophand ${top.id === LB.me ? 'me' : ''}">
       <div class="th-head"><b class="th-mult"><small>×</small>${fmtFit(top.mult)}</b>${lbName(top)}</div>
-      ${lbHandHTML(top.cards, top.labels, top.powers)}${puChipsHTML(top.powers)}
+      ${lbHandHTML(top.cards, top.labels, top.powers, top.pack)}${puChipsHTML(top.powers)}
       <p class="th-labels">${top.labels.map(esc).join(' <span>×</span> ')}</p></div>`;
   const others = rest.length ? `<div class="board hboard" role="table" aria-label="Runner-up hands">${rest.map((r, i) => `<div class="brow ${r.id === LB.me ? 'me' : ''}" role="row">
       <span>${i + 2}</span>${lbName(r)}<span class="hm">×${fmtFit(r.mult)}</span><span class="hlab">${r.labels.map(esc).join(' + ')}${(r.powers || []).filter(p => Array.isArray(p) && PU_CHIP[p[2]]).map(p => ` + ${PU_CHIP[p[2]]}`).join('')}</span></div>`).join('')}</div>` : '';
