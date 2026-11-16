@@ -522,7 +522,6 @@ function recordHTML(){
       <div class="rec-mult"><span class="x">×</span>${fmtFit(r.mult)}</div>
       <div class="minihand rec-cards">${lbCards(r.cards)}</div>${puChipsHTML(r.powers)}
       ${r.labels.length ? `<p class="rec-labels">${r.labels.map(esc).join(' <span>×</span> ')}</p>` : ''}
-      <div class="rec-name"><span>Your name is on top of today’s leaderboard</span><b>${esc(r.name || LB.myName || 'You')}</b></div>
     </div>
     <div class="actions"><button class="btn" data-act="recordBoard">See leaderboard</button>${shareBtn('tophand', 'Share')}<button class="btn gold" data-act="close">Keep playing</button></div>`;
 }
