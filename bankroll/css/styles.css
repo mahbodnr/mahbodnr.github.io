@@ -576,7 +576,8 @@ kbd{display:none;font:700 10.5px/1 var(--f-ui);padding:3px 5px;border-radius:5px
 .tlegend b{font-variant-numeric:tabular-nums;color:var(--text)}
 .tlegend i{width:12px;height:16px;border-radius:3px;display:inline-block}
 .tlegend .k-deck, .tr-bar .k-deck{background:linear-gradient(170deg,var(--paper-hi),var(--paper))}
-.tlegend .k-play, .tr-bar .k-play{background:var(--brass-hi);box-shadow:0 0 6px rgba(245,217,140,.6)}
+.tlegend .k-play, .tr-bar .k-play{background:linear-gradient(160deg,#ffe9a8,#f2c862 55%,#d6a33f);box-shadow:0 0 6px rgba(245,217,140,.6)}
+.tlegend .k-play{box-shadow:0 0 0 1.5px #fff3cf,0 0 0 2.5px #b8862a}
 .tlegend .k-disc, .tr-bar .k-disc{background:#7d7666}
 .tlegend .k-out{border:1px dashed rgba(157,184,173,.6)} .tr-bar .k-out{background:repeating-linear-gradient(-45deg, rgba(157,184,173,.35) 0 3px, transparent 3px 6px)}
 /* the split of the deck, at a glance */
@@ -599,7 +600,8 @@ kbd{display:none;font:700 10.5px/1 var(--f-ui);padding:3px 5px;border-radius:5px
 .tc .su{width:clamp(7px,1.9vw,11px);height:clamp(7px,1.9vw,11px);align-self:flex-end}
 .tr-row.s-S .tc{--sc:#22262e} .tr-row.s-H .tc{--sc:#c22a2f} .tr-row.s-D .tc{--sc:#d9570c} .tr-row.s-C .tc{--sc:#1f7a3a}
 .tc.s-deck{background:linear-gradient(170deg,var(--paper-hi),var(--paper) 60%,var(--paper-lo));box-shadow:0 1px 0 var(--paper-edge),0 2px 3px rgba(0,0,0,.35)}
-.tc.s-play{background:linear-gradient(170deg,var(--paper-hi),var(--paper));box-shadow:0 0 0 1.5px var(--brass-hi),0 0 9px rgba(245,217,140,.55);transform:translateY(-1px)}
+.tc.s-play{background:linear-gradient(160deg,#ffe9a8,#f2c862 55%,#d6a33f);box-shadow:0 0 0 2px #fff3cf,0 0 0 3.5px #b8862a,0 0 12px rgba(245,217,140,.75);transform:translateY(-2px);z-index:1}
+.tr-row .tc.s-play{--sc:#3a2704}
 .tc.s-disc{background:#5d584c;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
 .tr-row .tc.s-disc{--sc:rgba(243,234,213,.42)}
 .tc.s-out{background:transparent;border:1px dashed rgba(157,184,173,.3)}
