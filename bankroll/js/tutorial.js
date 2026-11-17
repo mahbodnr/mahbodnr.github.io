@@ -154,8 +154,8 @@ function introTick(){
   c.dataset.step = key; c.dataset.tip = '';
   c.classList.toggle('wide', !!st.center);
   const h = Math.min(3, introHand());
-  c.innerHTML = `<div class="ch-step">${st.center && intro.i === 0 ? 'Introduction' : `Practice hand ${h} of 3`}</div><b>${st.title}</b>${st.panel ? st.panel() : ''}<p>${st.text()}</p>
-    <div class="ch-actions"><button class="ch-skip" data-act="introSkip">Skip</button>
+  c.innerHTML = `<button class="ch-x" data-act="introSkip" aria-label="Close the tutorial">${ico('cancel')}</button><div class="ch-step">${st.center && intro.i === 0 ? 'Introduction' : `Practice hand ${h} of 3`}</div><b>${st.title}</b>${st.panel ? st.panel() : ''}<p>${st.text()}</p>
+    <div class="ch-actions"><button class="ch-skip" data-act="introSkip">Skip tutorial</button>
     ${st.until ? '' : `<button class="btn gold ch-next" data-act="introNext">${st.done ? 'Start playing' : 'Next'}</button>`}</div>`;
   const target = st.target && document.querySelector(st.target);
   if (target) target.classList.add('coach-on');
@@ -168,8 +168,7 @@ function centerCoach(c){
   c.hidden = false; c.dataset.side = 'center';
   const cw = Math.min(460 * z, innerWidth - 24);
   c.style.width = cw / z + 'px';
-  c.style.maxHeight = (innerHeight - 16) / z + 'px';                  // (a short view: the bubble scrolls, it isn't cut off)
-  c.style.overflowY = c.scrollHeight > c.clientHeight + 1 ? 'auto' : '';
+  fitCoach(c, (innerHeight - 16) / z);                                // (a short view: the bubble scrolls, it isn't cut off)
   const ch = c.offsetHeight * z;
   c.style.left = (innerWidth - cw) / 2 / z + 'px'; c.style.top = Math.max(8, (innerHeight - ch) / 2) / z + 'px';
 }
@@ -200,7 +199,7 @@ function tipTick(){
   const tip = TIPS[k], target = document.querySelector(tip.target), c = $('coach');
   const fresh = c.hidden || c.dataset.tip !== k;
   c.dataset.tip = k; c.dataset.step = '';
-  c.innerHTML = `<b>${tip.title}</b><p>${tip.text}</p><div class="ch-actions"><span></span><button class="btn gold ch-next" data-act="tipDone" data-v="${k}">Got it</button></div>`;
+  c.innerHTML = `<button class="ch-x" data-act="tipDone" data-v="${k}" aria-label="Close">${ico('cancel')}</button><b>${tip.title}</b><p>${tip.text}</p><div class="ch-actions"><span></span><button class="btn gold ch-next" data-act="tipDone" data-v="${k}">Got it</button></div>`;
   placeCoach(c, target);
   if (fresh) setTimeout(() => { if (!c.hidden && c.dataset.tip === k && target.isConnected) placeCoach(c, target); }, dur(700));   // after the card lands
 }
@@ -208,6 +207,13 @@ function tipTick(){
 // Runs after every render: the intro's current step, or a one-time tip.
 function tutorialTick(){ if (intro) introTick(); else tipTick(); }
 
+// Caps the bubble's height; only a bubble that really is taller than that scrolls
+function fitCoach(c, maxH){
+  c.style.maxHeight = 'none'; c.style.overflowY = ''; c.classList.remove('scroll');
+  const tall = c.offsetHeight > maxH + 1;                              // (its own height: the arrow sticking out doesn't count)
+  c.style.maxHeight = maxH + 'px';
+  if (tall){ c.classList.add('scroll'); c.style.overflowY = 'auto'; }
+}
 // Shows the bubble next to its target: below it when there is room, otherwise above it.
 function placeCoach(c, target){
   document.querySelectorAll('.coach-on').forEach(n => { if (n !== target) n.classList.remove('coach-on'); });
@@ -220,8 +226,7 @@ function placeCoach(c, target){
   if (r0.bottom > innerHeight - 8 || r0.top < 0) try { target.scrollIntoView({ block:'nearest' }); } catch(e){}
   const r = target.getBoundingClientRect(), cw = Math.min(320 * z, innerWidth - 32);
   c.style.width = cw / z + 'px';
-  c.style.maxHeight = (innerHeight - 16) / z + 'px';                  // never taller than the view
-  c.style.overflowY = c.scrollHeight > c.clientHeight + 1 ? 'auto' : '';
+  fitCoach(c, (innerHeight - 16) / z);                                // never taller than the view
   const ch = c.offsetHeight * z;
   const below = r.bottom + 12 + ch < innerHeight - 8;
   const above = r.top - ch - 12 >= 8;
