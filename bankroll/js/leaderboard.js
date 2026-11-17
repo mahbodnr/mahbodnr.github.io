@@ -580,7 +580,8 @@ function lbHandHTML(cards, labels, powers, handPack){
     const edge = up ? padTop - 2 : padTop + ch + 2, y = up ? padTop - GAP - k * ROW : padTop + ch + GAP + k * ROW;
     paths += `<path d="M${x1} ${y}H${x2}" style="stroke:${col}"/>` + xs.map(x => `<path d="M${x} ${edge}V${y}" style="stroke:${col}"/><circle cx="${x}" cy="${edge}" r="2" style="fill:${col}"/>`).join('');
     const outer = (up ? above : below).slice(k + 1).flatMap(c => c.ids.map(id => cx(id) + nudge(id, c, up ? above : below)));
-    tags += `<span class="lk" style="left:${labelSpot(x1, x2, outer, cb.label, W)}px;top:${y}px;--lc:${col}">${esc(cb.label)}</span>`;
+    const text = `${cb.label} ×${fmt(cb.factor)}`;             // with its multiplier (Ace boosts included), as in play
+    tags += `<span class="lk" style="left:${labelSpot(x1, x2, outer, text, W)}px;top:${y}px;--lc:${col}">${esc(text)}</span>`;
   };
   below.forEach((cb, k) => draw(cb, k, false)); above.forEach((cb, k) => draw(cb, k, true));
   const H = padTop + ch + padBot;
@@ -597,8 +598,7 @@ function handsHTML(per){
   const [top, ...rest] = list;
   const best = `<div class="tophand ${top.id === LB.me ? 'me' : ''}">
       <div class="th-head"><b class="th-mult"><small>×</small>${fmtFit(top.mult)}</b>${lbName(top)}</div>
-      ${lbHandHTML(top.cards, top.labels, top.powers, top.pack)}${puChipsHTML(top.powers)}
-      <p class="th-labels">${top.labels.map(esc).join(' <span>×</span> ')}</p></div>`;
+      ${lbHandHTML(top.cards, top.labels, top.powers, top.pack)}${puChipsHTML(top.powers)}</div>`;
   const others = rest.length ? `<div class="board hboard" role="table" aria-label="Runner-up hands">${rest.map((r, i) => `<div class="brow ${r.id === LB.me ? 'me' : ''}" role="row">
       <span>${i + 2}</span>${lbName(r)}<span class="hm">×${fmtFit(r.mult)}</span><span class="hlab">${r.labels.map(esc).join(' + ')}${(r.powers || []).filter(p => Array.isArray(p) && PU_CHIP[p[2]]).map(p => ` + ${PU_CHIP[p[2]]}`).join('')}</span></div>`).join('')}</div>` : '';
   return title + best + others;

@@ -721,8 +721,6 @@ code.seed{white-space:nowrap;font:800 14px/1 ui-monospace,SFMono-Regular,Menlo,C
 .th-hand{position:relative;margin:12px auto 8px}
 .th-hand > .card{position:absolute;margin:0;box-shadow:0 2px 6px rgba(0,0,0,.4)}
 .th-hand .links{position:absolute;inset:0;width:auto}
-.th-labels{margin:0;text-align:center;font-size:13px;font-weight:700;color:var(--muted)}
-.th-labels span{color:var(--brass)}
 .hboard{margin-top:8px}
 .hboard .brow{grid-template-columns:28px minmax(0,1fr) 56px minmax(0,1.1fr)}
 .hboard .hm{font-weight:800;color:var(--brass-hi)}
