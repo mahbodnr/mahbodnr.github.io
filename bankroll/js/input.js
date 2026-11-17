@@ -46,6 +46,7 @@ document.addEventListener('pointermove', e => {
   if (!drag.on){
     if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 10) return;
     drag.on = true;
+    sfx('lift');                                     // picked up off the felt
     const r = drag.src.getBoundingClientRect();
     drag.dx = drag.x0 - r.left; drag.dy = drag.y0 - r.top;
     drag.ghost = drag.src.cloneNode(true); drag.ghost.classList.add('ghost'); drag.ghost.classList.remove('armed', 'enter', 'flip', 'coach-on', 'intro-ok');
@@ -83,6 +84,7 @@ function endDrag(e, cancel){
     const order = sortedHand().map(c => c.id).filter(x => x !== id);
     order.splice(dropIndex(e).i, 0, id);
     S.order = order;
+    sfx('place');                                      // set down where it was dropped
     render();
   }
 }
@@ -230,8 +232,8 @@ document.addEventListener('click', e => {
     case 'resumeStash': resumeStash(); return;
     case 'newRun': dropStash(); beginRun(); return;
     case 'acceptChallenge': { const s = ui.challengeSeed; ui.challengeSeed = null; ui.modal = null; beginRun(s); return; }
-    case 'sortRank': prefs.sort = 'rank'; S.order = null; store(PREF_KEY, prefs); break;
-    case 'sortSuit': prefs.sort = 'suit'; S.order = null; store(PREF_KEY, prefs); break;
+    case 'sortRank': if (prefs.sort !== 'rank' || S.order) sfx('riffle'); prefs.sort = 'rank'; S.order = null; store(PREF_KEY, prefs); break;
+    case 'sortSuit': if (prefs.sort !== 'suit' || S.order) sfx('riffle'); prefs.sort = 'suit'; S.order = null; store(PREF_KEY, prefs); break;
     case 'betKey': if (e.detail === 0) stepBet(+t.dataset.hold); return; // keyboard; pointer presses are handled on pointerdown
     case 'throw': throwWithReveal(); return;
     case 'deal': act('deal', S.betInput); break;

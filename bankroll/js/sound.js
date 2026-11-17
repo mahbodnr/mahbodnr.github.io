@@ -34,10 +34,16 @@ function sfx(kind){
       g.gain.exponentialRampToValueAtTime(0.0001, t + at + d);
       s.connect(f).connect(g).connect(master); s.start(t + at, Math.random() * 0.2); s.stop(t + at + d + 0.02);
     };
+    const vary = 0.94 + Math.random() * 0.12;           // each card a little different, so repeated moves don't sound mechanical
     const chime = (f, at, v) => { tone(f, .5, 'sine', v, at); tone(f * 2.01, .32, 'sine', v * .35, at); tone(f * 3.02, .18, 'triangle', v * .12, at); };
     switch (kind){
       case 'deal':  flick(0, 2600, .07, .5); flick(.012, 1200, .05, .2); tone(180, .06, 'sine', .08, 0, 90); break;
-      case 'place': flick(0, 1500, .05, .35, .9); tone(240, .05, 'sine', .07, 0, 140); break;
+      // a card set down: a crisp snap of its edge, the card's body, a soft knock on the felt, and a short settle
+      case 'place': flick(0, 5200 * vary, .018, .4, 2.2); flick(.004, 1900 * vary, .06, .3, 1); tone(150 * vary, .08, 'sine', .11, 0, 82); flick(.034, 950 * vary, .05, .07, .8); break;
+      // a card picked up: a light lift off the felt
+      case 'lift':  flick(0, 4300 * vary, .03, .14, 1.8); flick(.008, 2500 * vary, .045, .08, 1.1); break;
+      // the hand re-sorted: a quick riffle that lands with a snap
+      case 'riffle': for (let i = 0; i < 5; i++) flick(i * .026, (2400 + (i % 2) * 700) * vary, .04, .2 - i * .025, 1.3); flick(.15, 5000 * vary, .018, .3, 2.2); tone(150 * vary, .07, 'sine', .08, .15, 85); break;
       case 'swish': flick(0, 3400, .16, .28, .6); break;
       case 'shuffle': for (let i = 0; i < 9; i++) flick(i * .045, 2200 + (i % 3) * 400, .05, .3); break;
       case 'coin':  chime(1568, 0, .07); chime(2093, .06, .06); break;
