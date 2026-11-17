@@ -167,7 +167,7 @@ function renderPit(){
     ? top.map((c, i) => cardHTML(c, { track:false }).replace('class="card', `style="left:${i * 14}px;transform:rotate(${(i - 1) * 6}deg)" class="card`)).join('')
     : `<div class="emptyslot" style="position:absolute;left:14px;top:0"></div>`;
   setHTML($('pit'), `
-    <div class="zone"><button class="deckbtn" data-act="viewOut" aria-label="Deck: open the card tracker" title="Card tracker">${deck}</button><div class="lbl dk"><span>Deck <b>${dl}</b></span><span class="dk-bar ${dl <= 10 ? 'low' : ''}" aria-hidden="true">${Array.from({ length: 9 }, (_, i) => {
+    <div class="zone"><button class="deckbtn" data-act="viewOut" aria-label="Deck: see which cards are left" title="See which cards are left">${deck}<span class="deck-peek" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.8"/></svg></span></button><div class="lbl dk"><span>Deck <b>${dl}</b></span><span class="dk-bar ${dl <= 10 ? 'low' : ''}" aria-hidden="true">${Array.from({ length: 9 }, (_, i) => {
       // nine cells of six cards each: full at the start, emptying from the right as cards are dealt
       const f = Math.max(0, Math.min(1, (dl - i * 6) / 6));
       return `<i style="--f:${f.toFixed(2)}"></i>`; }).join('')}</span></div></div>
@@ -360,11 +360,11 @@ function renderDock(){
       btns += `<button class="btn warn grow" data-act="discard">${ico('discard')}${bl('Discard', discCost)}${kbd('D')}</button>`;
       if (P){
         const dup = P.type === '2' && S.powerups.some(x => x.type === '2');
-        const noSeatCard = !S.deck.length;                              // buying deals a card: none is left
+        const noSeatCard = P.type === '5' && !S.deck.length;            // an Extra seat with nothing left to deal into it
         btns += dup
           ? `<button class="btn power grow" disabled title="Already active">${ico('power')}${bl(P.name, 'active')}</button>`
           : noSeatCard
-          ? `<button class="btn power grow" disabled title="The deck is empty: buying deals a card, and none is left">${ico('power')}${bl(P.name, 'deck empty')}</button>`
+          ? `<button class="btn power grow" disabled title="The deck is empty: no card could fill the seat">${ico('power')}${bl(P.name, 'deck empty')}</button>`
           : `<button class="btn power grow" data-act="power" data-tip="${P.type}" ${S.coins < powerCost(c.rank) ? 'disabled' : ''}>${ico('power')}${bl(P.name, `${coin}${fmtFit(powerCost(c.rank))} · ${P.short}`)}${kbd('P')}</button>`;
       }
       if (dealt && c.rank === 10) btns += `<button class="btn power grow" data-act="swap" ${S.coins < swapCost() || !S.discard.length ? 'disabled' : ''} title="Take a card back from the discard pile">${ico('back')}${bl('Take back', `${coin}${fmtFit(swapCost())} · from discard`)}${kbd('W')}</button>`;
@@ -502,22 +502,31 @@ function trackerHTML(){
   const key = c => c.suit + c.rank;
   const status = {}; all.forEach(c => status[key(c)] = where[c.id] || 'deck');
   const count = st => Object.values(status).filter(v => v === st).length;
+  const total = Math.max(1, Object.keys(status).length);
   const order = [1,2,3,4,5,6,7,8,9,10,11,12,13];
+  const STATE = { deck:'Unseen: still in the deck', play:'In play', disc:'In the discard pile', out:'Out (thrown away)' };
+  // a suit per row: its mark and how many are still to come, then its thirteen cards as small cards
   const rows = ['S','H','D','C'].map(su => {
     const left = order.filter(r => status[su + r] === 'deck').length;
-    return `<div class="sl ${SUITS[su].red ? 'r' : ''}" title="${SUITS[su].name}">${suitSVG(su)}<small>${left}</small></div>` +
-      order.map(r => `<div class="tc s-${status[su + r] || 'deck'} ${SUITS[su].red ? 'red' : ''}" title="${RANKS[r]}${SUITS[su].sym}">${RANKS[r]}</div>`).join('');
+    return `<div class="tr-row s-${su}">
+      <div class="tr-suit" title="${SUITS[su].name}: ${left} still in the deck">${suitSVG(su)}<b>${left}</b><i style="--f:${(left / 13).toFixed(2)}"></i></div>
+      <div class="tr-cards">${order.map(r => `<div class="tc s-${status[su + r] || 'deck'}" title="${RANKS[r]}${SUITS[su].sym} · ${STATE[status[su + r] || 'deck']}"><b>${RANKS[r]}</b>${suitSVG(su)}</div>`).join('')}</div>
+    </div>`;
   }).join('');
-  const jk = [['JR','Red'],['JB','Black']].map(([k, n]) => `<div class="tc s-${status[k + 0]} ${k === 'JR' ? 'red' : ''}" title="${n} Joker">★</div>`).join('');
-  return `<h2>Card tracker</h2>
+  const jk = [['JR','Red'],['JB','Black']].map(([k, n]) => `<div class="tc jk s-${status[k + 0] || 'deck'} ${k === 'JR' ? 'jr' : 'jb'}" title="${n} Joker · ${STATE[status[k + 0] || 'deck']}"><b>★</b></div>`).join('');
+  const seg = st => { const n = count(st); return n ? `<i class="k-${st}" style="flex:${n}"></i>` : ''; };
+  return `<h2>Cards</h2>
+    <div class="tr-bar" aria-hidden="true">${seg('deck')}${seg('play')}${seg('disc')}${seg('out')}</div>
     <div class="tlegend">
       <span><i class="k-deck"></i>Unseen <b>${count('deck')}</b></span>
       <span><i class="k-play"></i>In play <b>${count('play')}</b></span>
       <span><i class="k-disc"></i>Discard <b>${count('disc')}</b></span>
       <span><i class="k-out"></i>Out <b>${count('out')}</b></span>
     </div>
-    <div class="tgrid">${rows}</div>
-    <div class="tjok"><div class="sl" style="width:24px;font-size:12px;color:var(--muted);font-weight:800">JKR</div>${jk}</div>
+    <div class="tgrid">${rows}
+      <div class="tr-row tr-jk"><div class="tr-suit" title="Jokers"><span class="jkmark">★</span><b>${['JR','JB'].filter(k => status[k + 0] === 'deck').length}</b></div><div class="tr-cards">${jk}</div></div>
+    </div>
+    <p class="snote">${count('deck')} of ${total} cards still to come this level.</p>
     <div class="actions"><button class="btn gold" data-act="close">Close</button></div>`;
 }
 

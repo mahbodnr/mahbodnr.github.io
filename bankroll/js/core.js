@@ -81,7 +81,7 @@ function newGame(seed){
 /* ================= save versioning ================= */
 // Bump SAVE_VERSION when the save format changes, and teach migrate() to upgrade older saves.
 const SAVE_VERSION = 3;
-const RULES = 9;   // 9: buying a power-up always deals (no upkeep for that deal), and can't be bought with the deck empty; 8: a level's price is a goal to reach, not paid; 7: level prices ×10, ×20, ×30 …, power-up prices and the 10's fee ×10 a level; 6: keeping a power-up costs 2×, 4×, 8× … its price per card; 5: upkeep doubled from 1×; 4: the Ace boost adds once to three/four of a kind; 3: half a bet to deal; 2: an extra bet to deal, card debt ×1.5 per card, level prices ×10 (bump when the rules change)
+const RULES = 10;  // 10: with the deck empty, only an Extra seat can't be bought (it needs a card); 9: buying a power-up always deals (no upkeep for that deal); 8: a level's price is a goal to reach, not paid; 7: level prices ×10, ×20, ×30 …, power-up prices and the 10's fee ×10 a level; 6: keeping a power-up costs 2×, 4×, 8× … its price per card; 5: upkeep doubled from 1×; 4: the Ace boost adds once to three/four of a kind; 3: half a bet to deal; 2: an extra bet to deal, card debt ×1.5 per card, level prices ×10 (bump when the rules change)
 function migrate(s){
   if (!s || !Array.isArray(s.deck) || !s.phase) return null;
   if (s.v && s.v > SAVE_VERSION) return null;            // saved by a newer version: start fresh

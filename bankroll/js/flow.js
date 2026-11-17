@@ -175,7 +175,7 @@ function usePower(){
   const p = POWER[S.pending.rank]; if (!p) return;
   const cost = powerCost(S.pending.rank); if (S.coins < cost) return;
   if (p.type === '2' && S.powerups.some(x => x.type === '2')) return; // Two-tone doesn't stack
-  if (!S.deck.length) return;                                           // buying deals a card: none is left to deal
+  if (p.type === '5' && !S.deck.length) return;                         // an Extra seat needs a card to fill it: none left
   if (S.pendingCharged) refundCard(); S.pendingCharged = false;
   coinChange(-cost, 'power-up'); S.powerups.push({ card:S.pending, type:p.type }); S.pending = null; S.phase = 'idle'; ui.armed = null;
   sfx('power');
