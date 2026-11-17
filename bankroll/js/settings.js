@@ -9,7 +9,8 @@ const FELTS = [
   { id:'green',    name:'Classic',  level:1, c1:'#17574b', c2:'#0f3d35' },
 ];
 // (a tester account has every pack: LB.unlockAll, from the server)
-const bestLevel = () => (typeof LB !== 'undefined' && LB.unlockAll) ? 999 : Math.max((prefs.record && prefs.record.level) || 1, S ? lvl() : 1);
+// (the account's best level, from the server, counts too: packs follow the player to another device)
+const bestLevel = () => (typeof LB !== 'undefined' && LB.unlockAll) ? 999 : Math.max((prefs.record && prefs.record.level) || 1, (typeof LB !== 'undefined' && LB.bestLevel) || 1, S ? lvl() : 1);
 const isUnlocked = item => !!item && bestLevel() >= item.level;
 
 function effectiveTheme(){
@@ -100,7 +101,7 @@ function settingsHTML(){
 // The first time a level is reached (beyond any earlier run), the card packs and felts it unlocks are announced,
 // with a button to start using each one. prefs.unlockedUpTo remembers the highest level already announced.
 function checkUnlocks(){
-  const seen = Math.max(prefs.unlockedUpTo || 0, (prefs.record && prefs.record.level) || 1);
+  const seen = Math.max(prefs.unlockedUpTo || 0, (prefs.record && prefs.record.level) || 1, (typeof LB !== 'undefined' && LB.bestLevel) || 1);
   const L = lvl();
   if (L <= seen) return;
   prefs.unlockedUpTo = L; store(PREF_KEY, prefs);

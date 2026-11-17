@@ -243,7 +243,8 @@ const supabaseBackend = {
     try {
       const { data, error } = await this.client.rpc('bankroll_my_flags');
       const all = !error && !!(data && data.unlock_all);
-      if (all !== !!LB.unlockAll){ LB.unlockAll = all; applyPrefs(); if (typeof render === 'function' && S) render(); }
+      const best = !error && data && +data.best_level > 0 ? Math.floor(+data.best_level) : 0;   // the account's best level, on any device
+      if (all !== !!LB.unlockAll || best !== (LB.bestLevel || 0)){ LB.unlockAll = all; LB.bestLevel = best; applyPrefs(); if (typeof render === 'function' && S) render(); }
     } catch(e){}
   },
   // asks the server for a run: it picks the seed unless the player chose one
