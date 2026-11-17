@@ -169,7 +169,7 @@ document.addEventListener('click', e => {
   if (early){
     early.classList.remove('nudge'); void early.offsetWidth; early.classList.add('nudge');
     const dock = $('dock'); if (dock){ dock.classList.remove('point'); void dock.offsetWidth; dock.classList.add('point'); }
-    clearTimeout(ui.pointT); ui.pointT = setTimeout(() => { early.classList.remove('nudge'); if (dock) dock.classList.remove('point'); }, 1100);
+    clearTimeout(ui.pointT); ui.pointT = setTimeout(() => { early.classList.remove('nudge'); if (dock) dock.classList.remove('point'); }, 2000);
     buzz(8);
     return;
   }

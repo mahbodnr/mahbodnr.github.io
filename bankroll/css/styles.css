@@ -1347,6 +1347,22 @@ html.light #lbnote{background:#fffaf0;color:#2a1c05}
 @keyframes lv-new{0%{transform:scaleX(0);filter:brightness(1.8)}60%{filter:brightness(1.35)}100%{transform:scaleX(1);filter:none}}
 @media (prefers-reduced-motion:reduce){.lv-goal.lv-new .lv-track > i{animation:none}}
 
-/* a tap on a card before the deal: the controls light up, the bet and the buttons (js/input.js) */
-#dock.point .betbox, #dock.point .btn:not([disabled]){animation:pointGlow 1s ease-out}
-@keyframes pointGlow{0%{box-shadow:0 0 0 0 rgba(245,217,140,0)}30%{box-shadow:0 0 0 2px var(--gold-1),0 0 18px rgba(245,217,140,.55)}100%{box-shadow:0 0 0 0 rgba(245,217,140,0)}}
+/* a tap on a card before the deal: the controls light up in the order they're used, the bet, Throw away, then Deal
+   (js/input.js): a soft gold halo that swells and fades, and a band of light passing across each */
+#dock.point .betbox, #dock.point .btn:not([disabled]){animation:pointHalo 1.6s cubic-bezier(.45,0,.25,1) both}
+#dock.point .row .btn:not([disabled]):nth-child(1){animation-delay:.12s}
+#dock.point .row .btn:not([disabled]):nth-child(2){animation-delay:.24s}
+#dock.point [data-act="deal"]:not([disabled]){animation-name:pointHaloStrong}
+#dock.point .betbox{position:relative}
+#dock.point .betbox::after, #dock.point .btn:not([disabled])::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(105deg,transparent 30%,rgba(255,244,214,.20) 46%,rgba(255,244,214,.32) 50%,rgba(255,244,214,.20) 54%,transparent 70%) no-repeat;
+  background-size:250% 100%;animation:pointSheen 1.15s cubic-bezier(.4,0,.2,1) both;animation-delay:inherit}
+@keyframes pointHalo{0%{box-shadow:0 0 0 0 rgba(245,217,140,0),0 0 0 0 rgba(245,217,140,0)}
+  40%{box-shadow:0 0 0 1px rgba(245,217,140,.55),0 0 18px 2px rgba(245,217,140,.22)}
+  100%{box-shadow:0 0 0 1px rgba(245,217,140,0),0 0 24px 6px rgba(245,217,140,0)}}
+@keyframes pointHaloStrong{0%{box-shadow:0 0 0 0 rgba(245,217,140,0),0 0 0 0 rgba(245,217,140,0);transform:none}
+  40%{box-shadow:0 0 0 2px rgba(255,236,178,.8),0 0 26px 4px rgba(245,217,140,.42);transform:translateY(-1px)}
+  100%{box-shadow:0 0 0 2px rgba(255,236,178,0),0 0 34px 10px rgba(245,217,140,0);transform:none}}
+@keyframes pointSheen{0%{background-position:130% 0;opacity:0}20%{opacity:1}80%{opacity:1}100%{background-position:-30% 0;opacity:0}}
+@media (prefers-reduced-motion:reduce){#dock.point .betbox::after, #dock.point .btn::after{display:none}
+  #dock.point [data-act="deal"]:not([disabled]){animation-name:pointHalo}}
