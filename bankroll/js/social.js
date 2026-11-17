@@ -57,7 +57,13 @@ function incomingSeed(){
   try { const q = new URLSearchParams(location.search); raw = q.get('seed'); group = q.get('challenge'); } catch(e){}
   const tg = telegramLaunch();
   if (!raw && !group && tg && tg.startParam){ if (/^c_/i.test(tg.startParam)) group = tg.startParam.slice(2); else raw = tg.startParam; }
-  try { if (location.search) history.replaceState(null, '', location.pathname + location.hash); } catch(e){}
+  // (only the link's own parameters go: others say how the game is shown, e.g. Reddit's ?inline=1, and must survive a reload)
+  try {
+    const q = new URLSearchParams(location.search);
+    const own = ['seed', 'challenge'].concat(typeof RINLINE === 'undefined' ? ['daily'] : []);   // (on Reddit, daily=1 is the post's own)
+    if (own.some(k => q.has(k))){ own.forEach(k => q.delete(k)); const rest = q.toString();
+      history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash); }
+  } catch(e){}
   if (!CHALLENGES_ON) return null;
   // only once per link: a reload (or Telegram keeping its launch data) doesn't ask again
   const once = v => { try { const key = 'bankroll-challenge-seen' + KEY_NS; if (sessionStorage.getItem(key) === v) return false; sessionStorage.setItem(key, v); } catch(e){} return true; };

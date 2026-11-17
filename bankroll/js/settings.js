@@ -43,6 +43,7 @@ function setPref(k, v){
   if (k === 'pack' && !isUnlocked(packById(v))) return;
   if (k === 'felt' && !isUnlocked(FELTS.find(x => x.id === v))) return;
   prefs[k] = v; if (k === 'theme') prefs.themeChosen = true;
+  if (k === 'sound' || k === 'music') prefs.audioChosen = true;     // the player's own choice (see AUDIO_OPT_IN)
   store(PREF_KEY, prefs); applyPrefs();
   if (k === 'sound' && v) sfx('coin');
   if (k === 'music'){ applyMusic(); musicBtnState(); }

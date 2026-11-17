@@ -7,6 +7,8 @@ function start(data){
   prefs = Object.assign({}, PREF_DEFAULTS, prefs, savedPrefs);
   if (prefs.sort !== 'rank' && prefs.sort !== 'suit') prefs.sort = 'rank';
   if (!prefs.themeChosen) prefs.theme = 'dark';   // dark unless the player picked a theme
+  // where audio must be opted into (Reddit: js/reddit-inline.js), no sound or music until the player turns it on
+  if (typeof AUDIO_OPT_IN !== 'undefined' && AUDIO_OPT_IN && !savedPrefs.audioChosen){ prefs.sound = false; prefs.music = false; }
   if (!savedPrefs.pack && savedPrefs.back) prefs.pack = BACK_TO_PACK[savedPrefs.back] || 'classic';   // older saves chose a card back
   // first visit: a guided first hand instead of the rules page; returning players skip it
   if (prefs.tutDone === undefined) prefs.tutDone = !!load('bankroll-seen-help' + KEY_NS);
