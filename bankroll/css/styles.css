@@ -1346,3 +1346,7 @@ html.light #lbnote{background:#fffaf0;color:#2a1c05}
 .lv-goal.lv-new .lv-track > i{transition:none;transform-origin:left center;animation:lv-new .9s cubic-bezier(.2,.8,.3,1) both}
 @keyframes lv-new{0%{transform:scaleX(0);filter:brightness(1.8)}60%{filter:brightness(1.35)}100%{transform:scaleX(1);filter:none}}
 @media (prefers-reduced-motion:reduce){.lv-goal.lv-new .lv-track > i{animation:none}}
+
+/* a tap on a card before the deal: the controls light up, the bet and the buttons (js/input.js) */
+#dock.point .betbox, #dock.point .btn:not([disabled]){animation:pointGlow 1s ease-out}
+@keyframes pointGlow{0%{box-shadow:0 0 0 0 rgba(245,217,140,0)}30%{box-shadow:0 0 0 2px var(--gold-1),0 0 18px rgba(245,217,140,.55)}100%{box-shadow:0 0 0 0 rgba(245,217,140,0)}}

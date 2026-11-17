@@ -164,6 +164,15 @@ document.addEventListener('click', e => {
   if (ui.dragEnded && Date.now() - ui.dragEnded < 400) return;
   const t = e.target.closest('[data-act]');
   // a tap on the card in the center: the hand's cards give a little jitter (that's where a tap swaps it in)
+  // a tap on a card before the deal: that card gives a little jitter and the controls light up (bet, then Deal)
+  const early = !t && S && S.phase === 'bet' && e.target.closest('#hand .card');
+  if (early){
+    early.classList.remove('nudge'); void early.offsetWidth; early.classList.add('nudge');
+    const dock = $('dock'); if (dock){ dock.classList.remove('point'); void dock.offsetWidth; dock.classList.add('point'); }
+    clearTimeout(ui.pointT); ui.pointT = setTimeout(() => { early.classList.remove('nudge'); if (dock) dock.classList.remove('point'); }, 1100);
+    buzz(8);
+    return;
+  }
   if (!t && S && S.phase === 'decide' && e.target.closest('#pit .stage .card')){
     document.querySelectorAll('#hand .card').forEach((c, i) => { c.style.animationDelay = (i * 25) + 'ms'; c.classList.remove('nudge'); void c.offsetWidth; c.classList.add('nudge'); });
     clearTimeout(ui.nudgeT); ui.nudgeT = setTimeout(() => document.querySelectorAll('#hand .card.nudge').forEach(c => { c.classList.remove('nudge'); c.style.animationDelay = ''; }), 700);
