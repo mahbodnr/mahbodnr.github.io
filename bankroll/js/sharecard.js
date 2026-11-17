@@ -32,47 +32,121 @@ function scCard(g, x, y, w, c, lit){
   g.restore();
 }
 const SC_PU = { A:'Ace boost +1', '2':'Two-tone', '5':'Extra seat' };
-// the hand: sorted as the player sorts it (rank or suit), scoring cards lit, every combo's line and name drawn like the
-// game's combo links (straights above the cards, pairs and flushes below)
-async function drawHand(g, cards, powers, labels, plainCards, handPack){
+const SC_MAX_CARDS = 24;                                // (more than any hand can hold: a hand is never cut short)
+// the hand's cards and combos, worked out once: sorted as the player sorts them, scoring cards lit, the combos that pay
+function handModel(cards, powers, labels){
   const rv = c => c.rank === 0 ? 99 : (c.rank === 1 ? 14 : c.rank);
-  const objs = cards.filter(c => Array.isArray(c)).slice(0, 9).map(([rank, suit], i) => ({ id:'sh' + i, rank:+rank, suit:String(suit) }));
+  const objs = cards.filter(c => Array.isArray(c)).slice(0, SC_MAX_CARDS).map(([rank, suit], i) => ({ id:'sh' + i, rank:+rank, suit:String(suit) }));
   if ((prefs.sort || 'rank') === 'suit') objs.sort((a, b) => ((a.rank === 0) - (b.rank === 0)) || a.suit.localeCompare(b.suit) || rv(a) - rv(b));
   else objs.sort((a, b) => rv(a) - rv(b) || a.suit.localeCompare(b.suit));
   const pus = powers.filter(p => Array.isArray(p)).map(p => ({ type:p[2] }));
   const ev = evaluate(objs, pus);
   const plain = l => String(l).replace(/<[^>]*>/g, '');
   const combos = ev.combos.filter(cb => cb.ids.length > 1 && (!labels.length || labels.some(l => plain(l) === plain(cb.label))));
-  const lit = new Set(combos.flatMap(cb => cb.ids));
+  return { objs, combos, plain, lit:new Set(combos.flatMap(cb => cb.ids)) };
+}
+// the hand in a box: the cards in a row, as big as the box allows, with every combo's line and name drawn like the
+// game's combo links (straights above the cards, pairs and flushes below), each on its own row so nothing overlaps
+async function drawHand(g, hm, box, plainCards, handPack){
+  const { objs, combos, plain, lit } = hm;
   const above = combos.filter(cb => cb.kind === 'straight'), below = combos.filter(cb => cb.kind !== 'straight');
-  const n = objs.length, areaX = 596, areaW = 568, ROW = 30, GAP = 18;
-  const gap = n > 6 ? 8 : 12, w = Math.min(122, (areaW - gap * (n - 1)) / n), h = w * 1.42, total = n * w + (n - 1) * gap;
-  const padTop = above.length ? GAP + above.length * ROW : 0, padBot = below.length ? GAP + below.length * ROW : 0;
-  const x0 = areaX + (areaW - total) / 2, y0 = 135 + Math.max(0, (370 - (padTop + h + padBot)) / 2) + padTop;
+  const n = objs.length; if (!n) return;
+  const ROW = 30, GAP = 16, rows = above.length + below.length, MIN_H = 104;
+  // more combos than lines fit with readable cards: the cards big and lit, the combos as chips under them (grouped)
+  const lineRoom = box.h - MIN_H - (above.length ? GAP : 0) - (below.length ? GAP : 0);
+  if (rows && rows * ROW > lineRoom + 20) return drawHandCompact(g, hm, box, plainCards, handPack);
+  const padTop = above.length ? GAP + (above.length - 1) * ROW + 16 : 0, padBot = below.length ? GAP + (below.length - 1) * ROW + 16 : 0;
+  const gap = n > 10 ? 6 : n > 6 ? 9 : 14;
+  const w = Math.max(24, Math.min(132, (box.h - padTop - padBot) / 1.42, (box.w - gap * (n - 1)) / n)), h = w * 1.42;
+  const total = n * w + (n - 1) * gap;
+  const x0 = box.x + (box.w - total) / 2, y0 = box.y + Math.max(0, (box.h - (padTop + h + padBot)) / 2) + padTop;
   // a hand from the boards: the deck it was played with; the player's own hand: their deck
   const pack = handPack ? (typeof handPackOf === 'function' ? handPackOf(handPack) : handPack) : typeof currentPack === 'function' ? currentPack() : 'classic';
   for (let i = 0; i < n; i++){
-    g.save(); if (lit.size && !lit.has(objs[i].id)) g.globalAlpha = .5;
+    g.save(); if (lit.size && !lit.has(objs[i].id)) g.globalAlpha = .45;
     try { if (plainCards) throw 0; await drawPackCard(g, objs[i], x0 + i * (w + gap), y0, w, pack, lit.has(objs[i].id)); }
     catch (e) { scCard(g, x0 + i * (w + gap), y0, w, [objs[i].rank, objs[i].suit], lit.has(objs[i].id)); }   // a plain card if the pack can't be drawn
     g.restore();
   }
+  if (!rows) return;
   const cx = id => { const i = objs.findIndex(o => o.id === id); return x0 + i * (w + gap) + w / 2; };
+  const spread = Math.min(8, gap + w * 0.1);
   const draw = (cb, k, up) => {
     const col = (typeof LINK_COLORS !== 'undefined' && LINK_COLORS[cb.kind]) || SC.gold;
     const side = up ? above : below;
-    const xs = cb.ids.map(id => cx(id) + (side.filter(c2 => c2.ids.includes(id)).indexOf(cb) - (side.filter(c2 => c2.ids.includes(id)).length - 1) / 2) * 8);
+    const xs = cb.ids.map(id => { const on = side.filter(c2 => c2.ids.includes(id)); return cx(id) + (on.indexOf(cb) - (on.length - 1) / 2) * spread; });
     const x1 = Math.min(...xs), x2 = Math.max(...xs), edge = up ? y0 - 4 : y0 + h + 4, y = up ? y0 - GAP - k * ROW : y0 + h + GAP + k * ROW;
     g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 3; g.lineCap = 'round';
     g.beginPath(); g.moveTo(x1, y); g.lineTo(x2, y); xs.forEach(x => { g.moveTo(x, edge); g.lineTo(x, y); }); g.stroke();
-    xs.forEach(x => { g.beginPath(); g.arc(x, edge, 4, 0, Math.PI * 2); g.fill(); });
-    // its name, on a dark pill in the middle of the line
-    const text = plain(cb.label) + '  ×' + cb.factor;
-    g.font = scFont(17, F_UI, '800'); const tw = g.measureText(text).width + 18, mx = Math.min(Math.max((x1 + x2) / 2, areaX + tw / 2), areaX + areaW - tw / 2);
+    xs.forEach(x => { g.beginPath(); g.arc(x, edge, 3.5, 0, Math.PI * 2); g.fill(); });
+    // its name and multiplier, on a dark pill on its line (kept inside the picture)
+    const text = plain(cb.label) + '  ×' + fmtFit(cb.factor);
+    g.font = scFont(17, F_UI, '800'); const tw = g.measureText(text).width + 20;
+    const mx = Math.min(Math.max((x1 + x2) / 2, box.x + tw / 2), box.x + box.w - tw / 2);
     scRound(g, mx - tw / 2, y - 13, tw, 26, 13); g.fillStyle = '#0a2a23'; g.fill(); g.lineWidth = 2; g.strokeStyle = col; g.stroke();
     g.fillStyle = col; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, mx, y + 1);
   };
   below.forEach((cb, k) => draw(cb, k, false)); above.forEach((cb, k) => draw(cb, k, true));
+}
+// the compact hand: cards in a row (scoring ones lit), then each combo with its multiplier in chips, alike ones
+// grouped ("10 straights ×8 each"), as many as two rows hold
+async function drawHandCompact(g, hm, box, plainCards, handPack){
+  const { objs, combos, plain, lit } = hm, n = objs.length;
+  const CHIPS = 2 * 34 + 8 + 14;
+  const gap = n > 10 ? 6 : n > 6 ? 9 : 14;
+  const w = Math.max(24, Math.min(132, (box.h - CHIPS) / 1.42, (box.w - gap * (n - 1)) / n)), h = w * 1.42;
+  const total = n * w + (n - 1) * gap, x0 = box.x + (box.w - total) / 2, y0 = box.y + Math.max(0, (box.h - CHIPS - h) / 2);
+  const pack = handPack ? (typeof handPackOf === 'function' ? handPackOf(handPack) : handPack) : typeof currentPack === 'function' ? currentPack() : 'classic';
+  for (let i = 0; i < n; i++){
+    g.save(); if (lit.size && !lit.has(objs[i].id)) g.globalAlpha = .45;
+    try { if (plainCards) throw 0; await drawPackCard(g, objs[i], x0 + i * (w + gap), y0, w, pack, lit.has(objs[i].id)); }
+    catch (e) { scCard(g, x0 + i * (w + gap), y0, w, [objs[i].rank, objs[i].suit], lit.has(objs[i].id)); }
+    g.restore();
+  }
+  const NAME = { straight:['straight', 'straights'], flush:['flush', 'flushes'], pair:['combo', 'combos'] };
+  const groups = [];
+  combos.forEach(cb => {
+    const k = cb.kind === 'straight' ? 'straight:' + cb.factor : cb.label;
+    const gr = groups.find(x => x.k === k); if (gr) gr.n++; else groups.push({ k, cb, n:1 });
+  });
+  const items = groups.map(({ cb, n:cnt }) => ({ text:cnt > 1 ? `${cnt} ${NAME[cb.kind][1]}  ×${fmtFit(cb.factor)} each` : `${plain(cb.label)}  ×${fmtFit(cb.factor)}`,
+    color:(typeof LINK_COLORS !== 'undefined' && LINK_COLORS[cb.kind]) || SC.gold, edge:(typeof LINK_COLORS !== 'undefined' && LINK_COLORS[cb.kind]) || SC.gold }));
+  // what doesn't fit in two rows: "+N more"
+  const fit = [];
+  g.font = scFont(18, F_UI, '800');
+  let row = 0, used = 0;
+  for (const it of items){
+    const wd = g.measureText(it.text).width + 26;
+    if (used && used + 8 + wd > box.w - 140){ row++; used = 0; }
+    if (row > 1) break;
+    fit.push(it); used += (used ? 8 : 0) + wd;
+  }
+  if (fit.length < items.length) fit.push({ text:`+${items.length - fit.length} more`, bare:true, color:SC.muted });
+  scChips(g, fit, box.x + box.w / 2, y0 + h + 18, box.w, 2, true);
+}
+// chips in rows inside a width (right-aligned), as many as fit in `lines` rows; returns the height used
+function scChips(g, items, right, top, maxW, lines, center){
+  const H = 34, GAPX = 8, GAPY = 8, rowsOut = [[]];
+  g.font = scFont(18, F_UI, '800');
+  const widths = items.map(it => g.measureText(it.text).width + (it.bare ? 6 : 26));
+  let used = 0;
+  items.forEach((it, i) => {
+    if (used && used + GAPX + widths[i] > maxW){ rowsOut.push([]); used = 0; }
+    rowsOut[rowsOut.length - 1].push(i); used += (used ? GAPX : 0) + widths[i];
+  });
+  const shown = rowsOut.slice(0, lines);
+  shown.forEach((row, r) => {
+    const rw = row.reduce((a, i, k) => a + widths[i] + (k ? GAPX : 0), 0);
+    let x = center ? right - rw / 2 : right - rw, y = top + r * (H + GAPY);
+    row.forEach(i => {
+      const it = items[i], wd = widths[i];
+      if (!it.bare){ scRound(g, x, y, wd, H, H / 2); g.fillStyle = it.fill || 'rgba(4,26,21,.65)'; g.fill(); g.lineWidth = 1.5; g.strokeStyle = it.edge || 'rgba(217,171,76,.45)'; g.stroke(); }
+      g.fillStyle = it.color || '#eaf3ee'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = scFont(18, F_UI, '800');
+      g.fillText(it.text, x + wd / 2, y + H / 2 + 1);
+      x += wd + GAPX;
+    });
+  });
+  return shown.length * (H + GAPY) - GAPY;
 }
 // fits text into a width by shrinking it
 function scText(g, text, x, y, size, fam, weight, color, maxW, align = 'left'){
@@ -102,48 +176,72 @@ async function shareImageOnce(m, plainCards){
   try { await Promise.all([`64px ${F_DISPLAY}`, `800 64px ${F_CARD}`, `700 30px ${F_CARD}`, `800 30px ${F_UI}`, `30px ${F_UI}`].map(f => document.fonts.load(f))); } catch(e){}
   const cv = document.createElement('canvas'); cv.width = SC.w; cv.height = SC.h;
   const g = cv.getContext('2d'), c = scContent(m);
-  // felt, a rail of brass, a soft light from above
-  const bg = g.createRadialGradient(SC.w / 2, SC.h * 0.35, 60, SC.w / 2, SC.h / 2, SC.w * 0.75);
-  bg.addColorStop(0, '#22644f'); bg.addColorStop(0.6, '#0f3b31'); bg.addColorStop(1, '#061c18');
+  // felt with a soft light from above, a darker floor, and a brass rail
+  const bg = g.createRadialGradient(SC.w * 0.42, SC.h * 0.18, 40, SC.w / 2, SC.h * 0.55, SC.w * 0.8);
+  bg.addColorStop(0, '#2a6f58'); bg.addColorStop(0.55, '#113f34'); bg.addColorStop(1, '#05190f');
   g.fillStyle = bg; g.fillRect(0, 0, SC.w, SC.h);
-  g.lineWidth = 3; g.strokeStyle = 'rgba(217,171,76,.55)'; scRound(g, 18, 18, SC.w - 36, SC.h - 36, 28); g.stroke();
-  // the name: a gold coin with a spade, and the word
-  const cx = 74, cy = 78;
-  const coinG = g.createRadialGradient(cx - 8, cy - 10, 4, cx, cy, 30); coinG.addColorStop(0, '#fff3c4'); coinG.addColorStop(0.5, SC.brass); coinG.addColorStop(1, '#9b7426');
-  g.beginPath(); g.arc(cx, cy, 28, 0, Math.PI * 2); g.fillStyle = coinG; g.fill();
-  g.fillStyle = '#3b2a08'; g.font = scFont(30, F_UI); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('♠', cx, cy + 1);
-  scText(g, 'Bankroll', 118, 98, 54, F_DISPLAY, '', SC.gold, 400);
+  const vig = g.createLinearGradient(0, SC.h * 0.55, 0, SC.h); vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,.28)');
+  g.fillStyle = vig; g.fillRect(0, 0, SC.w, SC.h);
+  g.lineWidth = 2; g.strokeStyle = 'rgba(217,171,76,.5)'; scRound(g, 16, 16, SC.w - 32, SC.h - 32, 26); g.stroke();
+  // the header: a gold coin with a spade and the name; where to play, in a pill on the right
+  const cx = 68, cy = 64;
+  const coinG = g.createRadialGradient(cx - 7, cy - 9, 3, cx, cy, 24); coinG.addColorStop(0, '#fff3c4'); coinG.addColorStop(0.5, SC.brass); coinG.addColorStop(1, '#9b7426');
+  g.beginPath(); g.arc(cx, cy, 23, 0, Math.PI * 2); g.fillStyle = coinG; g.fill();
+  g.fillStyle = '#3b2a08'; g.font = scFont(25, F_UI); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('♠', cx, cy + 1);
+  scText(g, 'Bankroll', 104, 80, 44, F_DISPLAY, '', SC.gold, 360);
+  const cta = 'Play free · @TheBankrollBot';
+  g.font = scFont(22, F_UI, '800'); const ctw = g.measureText(cta).width + 36;
+  scRound(g, SC.w - 52 - ctw, cy - 22, ctw, 44, 22);
+  const cg = g.createLinearGradient(0, cy - 22, 0, cy + 22); cg.addColorStop(0, '#f7dc94'); cg.addColorStop(1, '#d4a548');
+  g.fillStyle = cg; g.fill();
+  g.fillStyle = '#2b1e05'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(cta, SC.w - 52 - ctw / 2, cy + 1);
   const hasCards = Array.isArray(c.cards) && c.cards.length;
-  // what happened: an eyebrow, the big number, a line under it
-  const top = hasCards ? 190 : 270;
-  scText(g, c.eyebrow.toUpperCase(), 60, top, 26, F_UI, '800', SC.muted, 700);
-  // the big line: a symbol (× or #) in the sturdy UI font, then the number in the display font
-  const bigY = top + (hasCards ? 96 : 120), bigSize = hasCards ? 108 : 132;
-  let bx = 58;
-  if (c.pre){ g.font = scFont(bigSize * 0.55, F_UI, '800'); g.fillStyle = SC.brass; g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.fillText(c.pre, bx, bigY - bigSize * 0.08); bx += g.measureText(c.pre).width + 6; }
-  scText(g, c.big, bx, bigY, bigSize, F_UI, '800', SC.gold, 500 - (bx - 58));     // a sturdy face: the display serif's 4 reads as a 1
-  if (c.sub) scText(g, c.sub, 60, bigY + 50, 34, F_UI, '700', '#eaf3ee', 520);
-  // the power-ups the hand used
   const pus = (m.powers || []).filter(p => Array.isArray(p) && SC_PU[p[2]]);
-  if (pus.length) scText(g, 'With ' + pus.map(p => `${SC_RANK(p[0])}${SC_SUIT[p[1]] || ''} ${SC_PU[p[2]]}`).join(' · '), 60, bigY + 96, 28, F_UI, '700', SC.brass, 520);
-  // no cards to show: a gold medal on the right
-  if (!hasCards && c.medal){
-    const mx = 880, my = 300, R = 150;
-    g.save(); g.shadowColor = 'rgba(245,217,140,.45)'; g.shadowBlur = 60;
-    const mg = g.createRadialGradient(mx - 40, my - 50, 10, mx, my, R); mg.addColorStop(0, '#fff3c4'); mg.addColorStop(0.45, SC.brass); mg.addColorStop(1, '#8a6420');
-    g.beginPath(); g.arc(mx, my, R, 0, Math.PI * 2); g.fillStyle = mg; g.fill(); g.restore();
-    g.beginPath(); g.arc(mx, my, R - 16, 0, Math.PI * 2); g.lineWidth = 4; g.strokeStyle = 'rgba(90,60,10,.45)'; g.stroke();
-    g.fillStyle = '#3b2a08'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    if (c.medalSub){ g.font = scFont(24, F_UI, '800'); g.fillText(c.medalSub, mx, my - 92); }
-    let ms = 128; g.font = scFont(ms, F_UI, '800'); while (g.measureText(c.medal).width > R * 1.4 && ms > 40){ ms -= 8; g.font = scFont(ms, F_UI, '800'); }
-    g.fillText(c.medal, mx, my + 26);
+  if (hasCards){
+    const hm = handModel(c.cards, m.powers || [], m.labels || []);
+    // what happened, on the left: an eyebrow and the big number
+    scText(g, c.eyebrow.toUpperCase(), 60, 150, 22, F_UI, '800', SC.muted, 460);
+    let bx = 58; const bigY = 226, bigSize = 88;
+    if (c.pre){ g.font = scFont(bigSize * 0.5, F_UI, '800'); g.fillStyle = SC.brass; g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.fillText(c.pre, bx, bigY - bigSize * 0.08); bx += g.measureText(c.pre).width + 6; }
+    scText(g, c.big, bx, bigY, bigSize, F_UI, '800', SC.gold, 470 - (bx - 58));
+    // (a hand's combos are the chips on the right; a run, a daily or a place has its numbers here)
+    if (m.kind === 'besthand') scText(g, `×${m.mult === 'Infinity' ? '∞' : fmtFit(m.mult)} today`, 60, bigY + 32, 24, F_UI, '700', '#eaf3ee', 470);
+    else if (c.sub && m.kind !== 'hand' && m.kind !== 'tophand') scText(g, c.sub, 60, bigY + 32, 24, F_UI, '700', '#eaf3ee', 470);
+    // the power-ups the hand used, on the right (grouped: Ace boost ×2); the combos are named on their lines below
+    const kinds = {};
+    pus.forEach(p => { kinds[p[2]] = (kinds[p[2]] || 0) + 1; });
+    const items = ['A', '2', '5'].filter(t => kinds[t]).map(t => ({ text:kinds[t] > 1 ? `${SC_PU[t].replace(' +1', '')}  ×${kinds[t]}` : SC_PU[t].replace(' +1', ''),
+      color:SC.brass, fill:'rgba(217,171,76,.12)', edge:'rgba(217,171,76,.55)' }));
+    if (items.length){
+      scText(g, 'POWER-UPS', SC.w - 60, 150, 18, F_UI, '800', SC.muted, 300, 'right');
+      scChips(g, items, SC.w - 60, 166, 560, 2);
+    }
+    // the hand, across the bottom
+    g.fillStyle = 'rgba(217,171,76,.16)'; g.fillRect(48, 270, SC.w - 96, 2);
+    await drawHand(g, hm, { x:60, y:286, w:SC.w - 120, h:SC.h - 286 - 30 }, plainCards, m.pack || (m.kind === 'tophand' || m.kind === 'besthand' ? 'unknown' : null));
+  } else {
+    // no cards: the moment on the left, a gold medal on the right, and what the game is underneath
+    const top = 230;
+    scText(g, c.eyebrow.toUpperCase(), 60, top, 26, F_UI, '800', SC.muted, 640);
+    const bigY = top + 112, bigSize = 120;
+    let bx = 58;
+    if (c.pre){ g.font = scFont(bigSize * 0.55, F_UI, '800'); g.fillStyle = SC.brass; g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.fillText(c.pre, bx, bigY - bigSize * 0.08); bx += g.measureText(c.pre).width + 6; }
+    scText(g, c.big, bx, bigY, bigSize, F_UI, '800', SC.gold, 600 - (bx - 58));
+    if (c.sub) scText(g, c.sub, 60, bigY + 54, 32, F_UI, '700', '#eaf3ee', 620);
+    if (c.medal){
+      const mx = 930, my = 330, R = 150;
+      g.save(); g.shadowColor = 'rgba(245,217,140,.45)'; g.shadowBlur = 60;
+      const mg = g.createRadialGradient(mx - 40, my - 50, 10, mx, my, R); mg.addColorStop(0, '#fff3c4'); mg.addColorStop(0.45, SC.brass); mg.addColorStop(1, '#8a6420');
+      g.beginPath(); g.arc(mx, my, R, 0, Math.PI * 2); g.fillStyle = mg; g.fill(); g.restore();
+      g.beginPath(); g.arc(mx, my, R - 16, 0, Math.PI * 2); g.lineWidth = 4; g.strokeStyle = 'rgba(90,60,10,.45)'; g.stroke();
+      g.fillStyle = '#3b2a08'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      if (c.medalSub){ g.font = scFont(24, F_UI, '800'); g.fillText(c.medalSub, mx, my - 92); }
+      let ms = 128; g.font = scFont(ms, F_UI, '800'); while (g.measureText(c.medal).width > R * 1.4 && ms > 40){ ms -= 8; g.font = scFont(ms, F_UI, '800'); }
+      g.fillText(c.medal, mx, my + 26);
+    }
+    g.fillStyle = 'rgba(217,171,76,.16)'; g.fillRect(48, SC.h - 96, SC.w - 96, 2);
+    scText(g, 'Bet, chase combos that multiply each other, and cash out before the debt catches you.', 60, SC.h - 52, 24, F_UI, '600', SC.muted, SC.w - 120);
   }
-  // the cards, on the right: the player's pack, sorted their way, combos drawn as in the game
-  if (hasCards) await drawHand(g, c.cards, m.powers || [], m.labels || [], plainCards, m.pack || (m.kind === 'tophand' || m.kind === 'besthand' ? 'unknown' : null));
-  // where to play
-  g.fillStyle = 'rgba(217,171,76,.18)'; g.fillRect(40, SC.h - 112, SC.w - 80, 2);
-  scText(g, 'Bet, chase combos that multiply each other, cash out before the debt catches you.', 60, SC.h - 62, 24, F_UI, '600', SC.muted, 660);
-  scText(g, 'Play free · @TheBankrollBot', SC.w - 60, SC.h - 62, 28, F_UI, '800', SC.gold, 360, 'right');
   cv.getContext('2d').getImageData(0, 0, 1, 1);           // throws on a tainted canvas (then: plain cards)
-  return new Promise(res => cv.toBlob(b => res(b), 'image/jpeg', 0.9));
+  return new Promise(res => cv.toBlob(b => res(b), 'image/jpeg', 0.88));
 }
