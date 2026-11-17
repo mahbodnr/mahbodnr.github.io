@@ -143,7 +143,7 @@ const supabaseBackend = {
     if (LB.signedIn) this.loadFlags();
     this.client.auth.onAuthStateChange((event, session) => {
       const was = LB.signedIn; setSession(session);
-      if (LB.signedIn && !was){ this.ensureProfile(session.user); this.claimRuns(); this.loadFlags(); if (LB.backend) upgradeFreshRun(); }
+      if (LB.signedIn && !was){ this.ensureProfile(session.user); this.claimRuns(); this.loadFlags(); if (LB.backend) syncRuns().then(() => upgradeFreshRun()); }
       refreshBoard();
     });
     // inside Telegram: sign in with the Telegram account (Google sign-in doesn't work in Telegram's browser)
@@ -247,6 +247,13 @@ const supabaseBackend = {
       if (all !== !!LB.unlockAll || best !== (LB.bestLevel || 0)){ LB.unlockAll = all; LB.bestLevel = best; applyPrefs(); if (typeof render === 'function' && S) render(); }
     } catch(e){}
   },
+  // the player's own latest runs (normal and daily), with every move recorded so far: another device's progress
+  async myRuns(){
+    try {
+      const { data, error } = await this.client.rpc('bankroll_my_runs');
+      return error || !data ? null : data;
+    } catch(e){ return null; }
+  },
   // asks the server for a run: it picks the seed unless the player chose one
   async startRun(seed, challenge){
     try {
@@ -326,7 +333,8 @@ const supabaseBackend = {
         let code = '';
         try { code = (await res.json()).error || ''; } catch(e){}
         if (status === 401) return 'not_signed_in';
-        if (status >= 400 && status < 500){ LB.closedRun = p.runId; return code || 'closed'; }   // this run can't be posted
+        // this run can't be posted: most likely another device has moved on with it (or started a newer one), so catch up
+        if (status >= 400 && status < 500){ LB.closedRun = p.runId; setTimeout(() => syncRuns(), 0); return code || 'closed'; }
         return 'error';
       }
       if (data && data.success === false) return data.error || 'error';
@@ -390,7 +398,7 @@ async function initLeaderboard(){
   // posting starts only once the backend (and the player's sign-in) is ready
   if (ok) LB.backend = backend; else LB.state = 'off';
   refreshBoard();
-  if (LB.backend){ await upgradeFreshRun(); reportProgress(); }
+  if (LB.backend){ await syncRuns(); await upgradeFreshRun(); reportProgress(); }
   if (ui.pendingGroup){ const c = ui.pendingGroup; ui.pendingGroup = null; offerGroup(c); }
   if (!LB.backend && ui.modal === 'joinGroup' && ui.group && ui.group.loading){ ui.group = { code:ui.group.code, error:'offline' }; render(); }
   if (LB.backend){ await loadDaily(); if (LB.daily && LB.backend.refresh) LB.backend.refresh(); refreshBoard(); afterDailyLoaded(); }
@@ -422,7 +430,11 @@ async function beginRun(seed, challenge){
   if (run.error === 'rate_limited'){ await new Promise(r => setTimeout(r, 2100)); run = await ask(); }
   runStarting = false; ui.starting = false; ui.modal = null;
   if (challenge && !run.run_id){                    // a challenge is played on the server or not at all
-    if (run.error === 'already_played'){ openGroup(run.challenge || challenge); toast(isDailyCode(challenge) ? 'You\'ve played today\'s daily challenge' : 'You\'ve played this challenge'); }
+    if (run.error === 'already_played'){
+      // started on another device and not finished: carry on with it here
+      if (isDailyCode(challenge) && await syncRuns() && isDailyRun()) return;
+      openGroup(run.challenge || challenge); toast(isDailyCode(challenge) ? 'You\'ve played today\'s daily challenge' : 'You\'ve played this challenge');
+    }
     else if (run.error === 'sign_in_required'){ ui.modal = 'dailySignIn'; }
     else toast(run.error === 'unknown_challenge' ? 'That challenge doesn\'t exist' : 'Couldn\'t start the challenge. Try again in a moment');
     render(); return;
@@ -451,13 +463,104 @@ async function upgradeFreshRun(){
   render();
 }
 
+/* ---------- the same run on another device ----------
+   A run lives on the server as its seed and every move (each report sends them). When the game opens, comes back into
+   view, or a report is refused, it asks for the player's latest runs: a run another device has played on is rebuilt
+   here by replaying its moves (the same rules code, with sound, effects and reporting off), so the player carries on
+   where they left off; a run that has been replaced by a newer one gives way to it; and a daily challenge in progress
+   is picked up, with the normal run kept aside as usual. One run and one daily try per player, on any device. */
+let syncing = false, syncedAt = 0;
+const todayDailyCode = () => 'DAY' + todayUTC().slice(2).replace(/-/g, '');
+const sameMove = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// the server's copy is ahead of (or has gone another way from) this one: replay it
+function serverAhead(st, x){
+  const L = Array.isArray(st.log) ? st.log : [], M = x.moves;
+  if (M.length > L.length) return true;
+  for (let i = 0; i < M.length; i++) if (!sameMove(M[i], L[i])) return true;   // gone another way: the server's run counts
+  return false;                                                                   // the same, or this device is ahead
+}
+// a run's state, from its seed and moves (the global S and the screen are left as they were)
+function rebuildRun(x){
+  const MUTE = ['sfx', 'buzz', 'toast', 'announce', 'reportProgress', 'applyPrefs', 'checkUnlocks', 'store', 'unstore', 'render'];
+  const saved = MUTE.map(n => window[n]), prevS = S, prevUi = Object.assign({}, ui);
+  const rec = prefs.record ? JSON.parse(JSON.stringify(prefs.record)) : prefs.record;
+  let built = null;
+  try {
+    MUTE.forEach(n => { window[n] = () => {}; });
+    S = null;
+    useServerRun({ run_id:x.run_id, seed:x.seed, seeded:x.seeded, challenge:x.challenge || null });
+    x.moves.forEach(m => { if (Array.isArray(m) && typeof m[0] === 'string') act(m[0], m[1]); });
+    built = S;
+  } catch(e){ built = null; }
+  finally {
+    MUTE.forEach((n, i) => { window[n] = saved[i]; });
+    S = prevS; Object.keys(ui).forEach(k => { if (!(k in prevUi)) delete ui[k]; }); Object.assign(ui, prevUi);
+    prefs.record = rec;                                                  // (a run that ended there was counted there)
+  }
+  if (!built) return null;
+  if (built.bestHand && x.best_hand && x.best_hand.pack) built.bestHand.pack = x.best_hand.pack;   // the deck it was played with
+  built.lbSent = { runId:built.runId, finished:built.phase === 'over', moves:built.log.length };       // the server has all of it
+  return built;
+}
+function showRun(st){
+  S = st; ui.modal = null; ui.prev = null; ui.armed = null; ui.seen.clear();
+  ['dealFx', 'swapFx', 'coinEv', 'upkeepFx', 'celebrate', 'shake', 'levelUp', 'shuffleFx'].forEach(k => { ui[k] = null; });
+  if (LB.closedRun === S.runId) LB.closedRun = null;
+  resumeModal(); store(SAVE_KEY, S);
+}
+async function syncRuns(){
+  if (syncing || runStarting || !LB.backend || !LB.backend.myRuns || !officialPossible()) return false;
+  if ((S && S.intro) || (typeof intro !== 'undefined' && intro)) return false;
+  syncing = true;
+  let r = null;
+  try { r = await LB.backend.myRuns(); } catch(e){}
+  syncing = false; syncedAt = Date.now();
+  if (!r || runStarting || (S && S.intro) || (typeof intro !== 'undefined' && intro)) return false;
+  const usable = x => !!(x && x.run_id && x.seed && Array.isArray(x.moves) && (!x.rules || x.rules === RULES) && x.status !== 'abandoned');
+  const hasPlay = st => !!(st && st.phase !== 'over' && (st.stats.sets > 0 || st.stats.cashouts > 0 || (st.log && st.log.length)));
+  // the normal run: here (or kept aside for the daily) and on the server
+  const n = usable(r.run) ? r.run : null, inDaily = isDailyRun();
+  const local = inDaily ? migrate(stashed()) : S;
+  let normal = null;
+  if (n){
+    if (local && local.runId === n.run_id){ if (serverAhead(local, n)) normal = rebuildRun(n); }
+    // a newer run on the server (this one was replaced, or this device has none of its own yet); a run played here
+    // without the server (offline, signed out) is left alone
+    else if (n.status === 'active' && (!local || local.official || !hasPlay(local) || local.phase === 'over')) normal = rebuildRun(n);
+  }
+  // today's daily: carried on here when it's under way, or caught up when this device is on it
+  const d = usable(r.daily) && r.daily.challenge === todayDailyCode() ? r.daily : null;
+  let daily = null;
+  if (d){
+    if (inDaily && S.runId === d.run_id){ if (serverAhead(S, d)) daily = rebuildRun(d); }
+    else if (!inDaily && d.status === 'active') daily = rebuildRun(d);
+  }
+  if (!normal && !daily) return false;
+  if (daily){
+    const keep = normal || (inDaily ? null : S);                         // the normal run waits for the daily, as usual
+    if (keep && hasPlay(keep) && !keep.intro) store(STASH_KEY, JSON.parse(JSON.stringify(keep)));
+    showRun(daily);
+    if (LB.daily) LB.daily.played = true;
+  } else if (inDaily) store(STASH_KEY, JSON.parse(JSON.stringify(normal)));
+  else showRun(normal);
+  if (daily || !inDaily){ render(); toast(daily ? 'Back to your daily challenge, where you left off' : 'Your run, where you left off'); }
+  return true;
+}
+// back to the game (another tab, app or device in between): anything played elsewhere is picked up; leaving it, what
+// has been played here goes to the server first
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden){ if (LB.kind === 'supabase') reportProgress(false, true); return; }
+  if (Date.now() - syncedAt > 3000) syncRuns();
+});
+
 /* ---------- posting progress ---------- */
 // Called after cash-outs, level-ups and when a run ends. Posts only when something improved,
 // one request at a time; a newer report replaces one that is still waiting.
 const SCORE_KEYS = ['level', 'peak', 'biggestWin', 'bestPayout', 'bestMult'];
-function reportProgress(finished){
-  // (a run that ends before any cash-out is reported too: otherwise the server keeps it "playing" forever)
-  if (!S || !S.runId || !(S.stats.cashouts > 0 || finished || S.phase === 'over')) return;
+function reportProgress(finished, leaving){
+  // (a run that ends before any cash-out is reported too: otherwise the server keeps it "playing" forever; and when the
+  // player leaves the game, whatever has been played so far, so another device can carry on from there)
+  if (!S || !S.runId || !(S.stats.cashouts > 0 || finished || S.phase === 'over' || (leaving && Array.isArray(S.log) && S.log.length))) return;
   if (LB.kind === 'supabase' && (!S.official || !Array.isArray(S.log) || LB.closedRun === S.runId)) return;
   const p = { runId:S.runId, seed:S.seed, seeded:!!S.seedChosen, official:!!S.official, level:lvl(), peak:S.stats.peak || 0,
     biggestWin:S.stats.biggestWin || 0, bestPayout:S.stats.bestPayout || 0, bestMult:S.stats.bestMult || 0, hands:S.stats.cashouts || 0,
