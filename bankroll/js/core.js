@@ -81,6 +81,9 @@ function newGame(seed){
 /* ================= save versioning ================= */
 // Bump SAVE_VERSION when the save format changes, and teach migrate() to upgrade older saves.
 const SAVE_VERSION = 3;
+// Older rules whose move logs replay to exactly the same game under the current rules, so their runs stay on the
+// boards: 9 → 10 only allows more power-ups on an empty deck, which a rules-9 game can't contain.
+const RULES_SAME = [9];
 const RULES = 10;  // 10: with the deck empty, only an Extra seat can't be bought (it needs a card); 9: buying a power-up always deals (no upkeep for that deal); 8: a level's price is a goal to reach, not paid; 7: level prices ×10, ×20, ×30 …, power-up prices and the 10's fee ×10 a level; 6: keeping a power-up costs 2×, 4×, 8× … its price per card; 5: upkeep doubled from 1×; 4: the Ace boost adds once to three/four of a kind; 3: half a bet to deal; 2: an extra bet to deal, card debt ×1.5 per card, level prices ×10 (bump when the rules change)
 function migrate(s){
   if (!s || !Array.isArray(s.deck) || !s.phase) return null;
@@ -88,6 +91,8 @@ function migrate(s){
   ['throwaway','discard','hand','faceDown','powerups','jokerSeen'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
   // saved under the old debt rules (no extra bet to deal, 1 bet per card): carry on from the debt as card debt, and
   // keep the run off the leaderboard, since the server replays every run under the current rules
+  // older rules whose games replay exactly the same under the current ones (RULES_SAME) carry on as they were
+  if (s.rules !== RULES && RULES_SAME.includes(s.rules)) s.rules = RULES;
   if (s.rules !== RULES){ if (!Array.isArray(s.cardSteps)) s.cardSteps = s.phase !== 'bet' && s.debt > 0 ? [s.debt] : []; s.official = null; s.rules = RULES; }
   s.stats = Object.assign({ sets:0, cashouts:0, bestPayout:0, peak:s.coins || 0, shuffles:1, discards:0, biggestWin:0, biggestLoss:0 }, s.stats || {});
   s.level = s.level || s.stats.shuffles || 1;
