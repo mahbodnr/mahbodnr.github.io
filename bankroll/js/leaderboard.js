@@ -729,7 +729,7 @@ function leaderboardHTML(){
   const per = LB.period === 'week' ? 'week' : LB.period === 'daily' && hasDaily ? 'daily' : 'today';
   const rows = LB.boards[per];
   const toggle = `<div class="lbbar"><div class="sg lbper" role="group" aria-label="Leaderboard period">
-      ${hasDaily ? `<button class="lbper-daily" data-act="lbPeriod" data-v="daily" aria-pressed="${per === 'daily'}">Daily Challenge</button>` : ''}
+      ${hasDaily ? `<button class="lbper-daily" data-act="lbPeriod" data-v="daily" aria-pressed="${per === 'daily'}">Daily Challenge${dailyStreak() >= 2 ? `<i class="streak-mini" title="Daily streak: ${dailyStreak()} days">${FLAME}${dailyStreak()}</i>` : ''}</button>` : ''}
       <button data-act="lbPeriod" data-v="today" aria-pressed="${per === 'today'}">Today</button>
       <button data-act="lbPeriod" data-v="week" aria-pressed="${per === 'week'}">This week</button></div>
 </div>`;
@@ -767,7 +767,7 @@ function dailyHeadHTML(rows){
   const me = LB.me ? rows.findIndex(r => r.id === LB.me) : -1;
   // challenge friends to today's deck: with your place when you're on the board, an invitation otherwise
   const invite = shareBtn(me >= 0 ? 'daily' : 'dailyinvite', 'Challenge your friends', 'btn gold-line');
-  return `<div class="dailyhead"><div><div class="rs-eyebrow">Daily Challenge · ${dayLabel()}</div>
+  return `<div class="dailyhead"><div><div class="rs-eyebrow">Daily Challenge · ${dayLabel()}${streakChip(dailyStreak())}</div>
       <p>Same deck for everyone, one try each. ${rows.length} ${rows.length === 1 ? 'player' : 'players'} so far · new deck in ${resetIn()}.</p></div>
       <div class="dh-acts">${dailyTodo() ? '<button class="btn gold" data-act="playDaily">Play today\'s deck</button>' : ''}${invite}</div></div>`;
 }

@@ -274,7 +274,7 @@ function overPlayHTML(){
       } else { headline = `You placed <b>#${me + 1}</b> of ${rows.length}${i.kind === 'daily' ? ' today' : ''}`; sub = me === 0 ? 'Top of the table, for now.' : i.kind === 'daily' ? `The board stays open until the new deck in ${resetIn()}.` : ''; }
     } else if (g && g.error) headline = 'The results can\'t be reached right now';
     const duelDone = i.kind === 'duel' && rows.length >= 2 && rows.every(p => p.finished);
-    if (i.kind === 'daily') return `<div class="ro-ch daily"><div class="rs-eyebrow">${chTitle(i)}</div>
+    if (i.kind === 'daily') return `<div class="ro-ch daily"><div class="rs-eyebrow">${chTitle(i)}${streakChip(dailyStreak(), LB.daily && LB.daily.grew)}</div>
       <div class="roc-head">${headline}</div>${sub ? `<p class="snote">${sub}</p>` : ''}
       ${rows.length ? groupBoardHTML({ ...g, data:{ ...g.data, players:rows.slice(0, 5) } }, '') : ''}
       <div class="roc-actions"><button class="btn" data-act="groupResults">Today's full board</button>${mine && mine.finished ? shareBtn('daily', 'Share my result', 'btn gold') : ''}</div></div>`;
@@ -497,7 +497,7 @@ const stashed = () => { const s = load(STASH_KEY); return s && s.phase && s.phas
 async function loadDaily(){
   if (!dailyOn()) return;
   const r = await LB.backend.daily();
-  if (r && r.success) LB.daily = { code:r.code, played:!!r.played, finished:!!r.finished, players:r.players || 0 };
+  if (r && r.success) LB.daily = { code:r.code, played:!!r.played, finished:!!r.finished, players:r.players || 0, streak:Math.max(0, r.streak | 0) };
 }
 // the first time today: suggest the daily (once the screen is free: not over the introduction or another window)
 function maybeOfferDaily(){
@@ -513,12 +513,23 @@ function maybeOfferDaily(){
   };
   tryShow(150);
 }
+/* ---------- the daily streak: days in a row with the daily played (LB.daily.streak, from the server) ---------- */
+const FLAME = '<svg class="flame" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="flameG" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#e8743b"/><stop offset=".55" stop-color="#f2b049"/><stop offset="1" stop-color="#ffe7a3"/></linearGradient></defs>'
+  + '<path d="M12.6 2.2c.4 3-1.2 4.6-2.7 6.2C8.3 10 6.8 11.7 6.8 14.6A5.2 5.2 0 0 0 12 20a5.2 5.2 0 0 0 5.2-5.3c0-2.2-1-3.7-2-4.9.2 1.4-.3 2.7-1.4 3.2.4-3.4-.4-7.7-1.2-10.8z" fill="url(#flameG)"/>'
+  + '<path d="M12.2 12.6c.2 1.4-.6 2.1-1.2 2.8-.4.4-.7.9-.7 1.6A1.8 1.8 0 0 0 12 18.8a1.9 1.9 0 0 0 1.9-1.9c0-1.3-.8-2.4-1.7-4.3z" fill="#fff4d0" opacity=".85"/></svg>';
+const dailyStreak = () => (LB.daily && LB.daily.streak) || 0;
+// a small gold pill: the flame and "N-day streak" (from 2 days; `grew`: a little pop, the day it went up)
+function streakChip(n, grew){
+  if (!(n >= 2)) return '';
+  return `<span class="streak${grew ? ' grew' : ''}" title="Daily streak: ${n} days in a row with the daily challenge played">${FLAME}<span><b>${n}</b>-day streak</span></span>`;
+}
 const runInProgress = () => !!(S && !S.intro && S.phase !== 'over' && (S.stats.sets > 0 || S.stats.cashouts > 0));
 function dailyOfferHTML(){
   const n = LB.daily && LB.daily.players;
   return `<div class="daily-offer"><div class="rs-eyebrow">Daily challenge · ${dayLabel()}</div><h2>Today's deck is ready</h2>
     <ul class="ghow"><li>Everyone plays <b>the same deck</b> today.</li><li>You get <b>one try</b>: make it count.</li>
       <li>Your run goes on <b>today's daily board</b>${n ? `, where ${n} ${n === 1 ? 'player is' : 'players are'} already` : ''}.</li></ul>
+    ${dailyStreak() >= 1 ? `<p class="streakline">${FLAME}<span>Keep your <b>${dailyStreak()}-day</b> streak going</span></p>` : ''}
     ${runInProgress() && !isDailyRun() ? '<p class="snote">Your current run is saved. You\'ll carry on with it after the daily.</p>' : ''}
     <p class="snote">New deck in ${resetIn()}.</p>
     <div class="actions"><button class="btn" data-act="close">Not now</button><button class="btn gold" data-act="playDaily">${LB.signedIn ? 'Play the daily' : 'Sign in and play'}</button></div></div>`;
@@ -553,7 +564,7 @@ async function startDaily(){
   if (runInProgress() && !isDailyRun()) store(STASH_KEY, JSON.parse(JSON.stringify(S)));
   ui.modal = null; ui.modalBack = null;
   await beginRun(null, LB.daily.code);
-  if (isDailyRun()){ LB.daily.played = true; store(SAVE_KEY, S); if (LB.backend.dailyStarted) LB.backend.dailyStarted(); }   // (Telegram: the bot's message shows the board)
+  if (isDailyRun()){ if (!LB.daily.played){ LB.daily.streak = (LB.daily.streak || 0) + 1; LB.daily.grew = true; } LB.daily.played = true; store(SAVE_KEY, S); if (LB.backend.dailyStarted) LB.backend.dailyStarted(); }   // (Telegram: the bot's message shows the board)
   else if (LB.daily) await loadDaily();
   render();
 }
