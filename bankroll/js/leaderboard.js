@@ -516,16 +516,16 @@ async function syncRuns(){
   try { r = await LB.backend.myRuns(); } catch(e){}
   syncing = false; syncedAt = Date.now();
   if (!r || runStarting || (S && S.intro) || (typeof intro !== 'undefined' && intro)) return false;
-  const usable = x => !!(x && x.run_id && x.seed && Array.isArray(x.moves) && (!x.rules || x.rules === RULES || RULES_SAME.includes(x.rules)) && x.status !== 'abandoned');
+  const usable = x => !!(x && x.run_id && x.seed && Array.isArray(x.moves) && (!x.rules || x.rules >= RULES_FLOOR) && x.status !== 'abandoned');
   const hasPlay = st => !!(st && st.phase !== 'over' && (st.stats.sets > 0 || st.stats.cashouts > 0 || (st.log && st.log.length)));
   // the normal run: here (or kept aside for the daily) and on the server
   const n = usable(r.run) ? r.run : null, inDaily = isDailyRun();
   const local = inDaily ? migrate(stashed()) : S;
   let normal = null;
-  // a run this device stopped posting when the rules changed (before RULES_SAME knew those rules replay the same):
+  // a run this device stopped posting when the rules changed (before runs of earlier rules were kept by default):
   // still open on the server and carrying on from the moves it has, so it posts again
   if (n && local && local === S && !local.official && local.runId === n.run_id && n.status === 'active'
-      && RULES_SAME.concat(RULES).includes(n.rules || RULES) && !serverAhead(local, n)){
+      && (n.rules || RULES) >= RULES_FLOOR && !serverAhead(local, n)){
     S.official = { runId:n.run_id, seeded:!!n.seeded }; if (LB.closedRun === S.runId) LB.closedRun = null;
     store(SAVE_KEY, S); setTimeout(() => reportProgress(S.phase === 'over'), 0);
   }
