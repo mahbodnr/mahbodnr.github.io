@@ -128,6 +128,8 @@ const supabaseBackend = {
     if (!window.supabase || !window.supabase.createClient) return false;
     this.cfg = cfg;
     this.client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true,
+      // inside Telegram, each Telegram account its own sign-in on the device (js/core.js: TG_ID)
+      ...(TG_ID ? { storageKey:'sb-bankroll-auth' + KEY_NS } : {}),
       // on CrazyGames the account's session is kept with the game's other saves (the data module), so it follows the player
       ...(SAVE_AREA ? { storage:{ getItem:k => rawGet(k), setItem:(k, v) => rawSet(k, v), removeItem:k => unstore(k) } } : {}) } });
     this.logVisit();
@@ -729,7 +731,7 @@ function leaderboardHTML(){
   const per = LB.period === 'week' ? 'week' : LB.period === 'daily' && hasDaily ? 'daily' : 'today';
   const rows = LB.boards[per];
   const toggle = `<div class="lbbar"><div class="sg lbper" role="group" aria-label="Leaderboard period">
-      ${hasDaily ? `<button class="lbper-daily" data-act="lbPeriod" data-v="daily" aria-pressed="${per === 'daily'}">Daily Challenge${dailyStreak() >= 2 ? `<i class="streak-mini" title="Daily streak: ${dailyStreak()} days">${FLAME}${dailyStreak()}</i>` : ''}</button>` : ''}
+      ${hasDaily ? `<button class="lbper-daily" data-act="lbPeriod" data-v="daily" aria-pressed="${per === 'daily'}">Daily Challenge</button>` : ''}
       <button data-act="lbPeriod" data-v="today" aria-pressed="${per === 'today'}">Today</button>
       <button data-act="lbPeriod" data-v="week" aria-pressed="${per === 'week'}">This week</button></div>
 </div>`;

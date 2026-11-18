@@ -1376,9 +1376,7 @@ html.light #lbnote{background:#fffaf0;color:#2a1c05}
 @keyframes flicker{0%,100%{transform:scale(1) rotate(0)}30%{transform:scale(1.06,.96) rotate(-2deg)}60%{transform:scale(.97,1.05) rotate(2deg)}}
 .streak.grew{animation:streakPop .9s cubic-bezier(.2,.9,.3,1.4) .3s both}
 @keyframes streakPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.12);opacity:1}100%{transform:none}}
-.streak-mini{display:inline-flex;align-items:center;gap:1px;margin-left:5px;font-style:normal;font-weight:900;font-size:11px;color:#f7dc94}
-.streak-mini .flame{width:12px;height:12px}
 .streakline{display:flex;align-items:center;gap:6px;margin:10px 0 0;font-size:14px;color:var(--muted)}
 .streakline .flame{width:18px;height:18px} .streakline b{color:#f7dc94}
-html.light .streak{color:#8a5a12;background:linear-gradient(180deg,rgba(242,176,73,.22),rgba(232,116,59,.12))} html.light .streak b, html.light .streakline b, html.light .streak-mini{color:#8a5a12}
+html.light .streak{color:#8a5a12;background:linear-gradient(180deg,rgba(242,176,73,.22),rgba(232,116,59,.12))} html.light .streak b, html.light .streakline b{color:#8a5a12}
 @media (prefers-reduced-motion:reduce){.flame,.streak.grew{animation:none}}

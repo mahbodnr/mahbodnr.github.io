@@ -17,7 +17,18 @@ const levelPrice = L => { let p = 100; for (let k = 1; k < L; k++) p *= 10 * k; 
 const lvl = () => S.level || S.stats.shuffles || 1;
 // A pilot build served from /bankroll-pilot/ (for trying rule changes) keeps its own save and settings, so it never
 // touches the live game's. See README: Pilot builds.
-const KEY_NS = typeof location !== 'undefined' && /\/bankroll-pilot\//.test(location.pathname || '') ? '-pilot' : '';
+// Inside Telegram, everything saved on the device is the Telegram account's own: one device can play with several
+// accounts (Telegram's account switcher), and each keeps its own run, settings, progress and sign-in. The account comes
+// from Telegram's launch data (as js/telegram.js reads it), here because the keys are needed before anything loads.
+const TG_ID = (() => {
+  try {
+    const d = new URLSearchParams((location.hash || '').slice(1)).get('tgWebAppData') || sessionStorage.getItem('bankroll-tg') || '';
+    const u = d ? JSON.parse(new URLSearchParams(d).get('user') || 'null') : null;
+    return u && /^\d{1,15}$/.test(String(u.id)) ? String(u.id) : '';
+  } catch(e){ return ''; }
+})();
+const PILOT_NS = typeof location !== 'undefined' && /\/bankroll-pilot\//.test(location.pathname || '') ? '-pilot' : '';
+const KEY_NS = PILOT_NS + (TG_ID ? '-tg' + TG_ID : '');
 const SAVE_KEY = 'bankroll-save-v1' + KEY_NS, PREF_KEY = 'bankroll-prefs-v1' + KEY_NS;
 
 /* ================= state ================= */
@@ -41,6 +52,30 @@ function rawSet(k, v){
 function unstore(k){ try { saveArea().removeItem(k); } catch(e){} try { localStorage.removeItem(k); } catch(e){} }
 function store(k, v){ rawSet(k, JSON.stringify(v)); }
 function load(k){ try{ const v = rawGet(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
+
+// Saves from before Telegram accounts were kept apart: they go to the account they belonged to (the one signed in on
+// this device then); any other account takes only the device's settings (sound, speed, theme, the tutorial seen).
+(function splitTelegramSaves(){
+  if (!TG_ID) return;
+  try {
+    const ls = localStorage, mine = k => k.startsWith('bankroll-') && !/-tg\d+$/.test(k) && (PILOT_NS ? k.endsWith(PILOT_NS) : !k.endsWith('-pilot'));
+    if (ls.getItem('bankroll-split' + KEY_NS)) return;
+    ls.setItem('bankroll-split' + KEY_NS, '1');
+    const old = Object.keys(ls).filter(mine);
+    if (!old.length) return;
+    let owner = '';
+    for (const k of Object.keys(ls)) if (/^sb-.*-auth-token$/.test(k)){
+      try { const v = JSON.parse(ls.getItem(k)); owner = String(((v && v.user) || {}).user_metadata && v.user.user_metadata.telegram_id || ''); } catch(e){}
+    }
+    const to = k => (PILOT_NS ? k.slice(0, -PILOT_NS.length) : k) + KEY_NS;
+    if (owner === TG_ID){ old.forEach(k => { if (ls.getItem(to(k)) == null) ls.setItem(to(k), ls.getItem(k)); ls.removeItem(k); }); return; }
+    const p = JSON.parse(ls.getItem('bankroll-prefs-v1' + PILOT_NS) || 'null');
+    if (p && ls.getItem(PREF_KEY) == null){
+      const keep = {}; ['sound', 'volume', 'music', 'musicVolume', 'haptics', 'speed', 'theme', 'themeChosen', 'sort', 'tutDone', 'tips', 'audioChosen'].forEach(k => { if (k in p) keep[k] = p[k]; });
+      ls.setItem(PREF_KEY, JSON.stringify(keep));
+    }
+  } catch(e){}
+})();
 
 function makeDeck(){
   const d = [];
