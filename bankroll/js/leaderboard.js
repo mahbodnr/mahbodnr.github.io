@@ -289,6 +289,12 @@ const supabaseBackend = {
     try { const { data, error } = await this.client.functions.invoke('bankroll-telegram', { body:{ action:'gamescores', token } }); return error || !data ? { error:'error' } : data; }
     catch(e){ return { error:'error' }; }
   },
+  // Telegram: the daily has started (or ended), so the bot's message about it becomes today's leaderboard
+  async dailyStarted(){
+    const tg = telegramLaunch();
+    if (!tg) return;
+    try { await this.client.functions.invoke('bankroll-telegram', { body:{ initData:tg.initData, action:'dailystarted' } }); } catch(e){}
+  },
   // a moment to share, as the bot's card (Telegram)
   async shareMoment(moment, image){
     const tg = telegramLaunch();
@@ -594,6 +600,7 @@ async function flushProgress(){
   }
   // a finished run: the challenge's result, or the chat leaderboard's score
   if (res === 'ok' && p.finished && p.challenge) loadGroup(p.challenge);
+  if (res === 'ok' && p.finished && isDailyCode(p.challenge) && LB.backend.dailyStarted) LB.backend.dailyStarted();   // its final place in the bot's chat
   if (res === 'ok' && p.finished && !p.challenge && !p.seeded && typeof gameToken !== 'undefined' && gameToken) postGameRun(p.runId);
   // a challenge run: the chat cards show the new score (at most every 30 seconds, and always when the run ends)
   if (res === 'ok' && p.challenge && LB.backend.pingChallenge){

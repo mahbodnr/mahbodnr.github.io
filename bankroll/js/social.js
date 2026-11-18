@@ -553,7 +553,7 @@ async function startDaily(){
   if (runInProgress() && !isDailyRun()) store(STASH_KEY, JSON.parse(JSON.stringify(S)));
   ui.modal = null; ui.modalBack = null;
   await beginRun(null, LB.daily.code);
-  if (isDailyRun()){ LB.daily.played = true; store(SAVE_KEY, S); }
+  if (isDailyRun()){ LB.daily.played = true; store(SAVE_KEY, S); if (LB.backend.dailyStarted) LB.backend.dailyStarted(); }   // (Telegram: the bot's message shows the board)
   else if (LB.daily) await loadDaily();
   render();
 }
