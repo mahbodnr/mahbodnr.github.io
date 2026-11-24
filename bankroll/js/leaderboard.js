@@ -393,7 +393,13 @@ const supabaseBackend = {
   },
 };
 
+// the account's own state is in (its card packs, a run carried over from another device): js/main.js shows the table
+let markAccountReady = () => {};
+const accountReady = new Promise(r => { markAccountReady = r; });
 async function initLeaderboard(){
+  try { await initLeaderboardSteps(); } finally { markAccountReady(); }
+}
+async function initLeaderboardSteps(){
   const host = window.claude, cfg = window.BANKROLL_CONFIG;
   let backend = null;
   if (host && typeof host.use === 'function') backend = claudeBackend;
@@ -406,7 +412,9 @@ async function initLeaderboard(){
   // posting starts only once the backend (and the player's sign-in) is ready
   if (ok) LB.backend = backend; else LB.state = 'off';
   refreshBoard();
+  if (LB.backend && LB.signedIn && LB.backend.loadFlags) await LB.backend.loadFlags();   // (the packs this account has unlocked)
   if (LB.backend){ await syncRuns(); await upgradeFreshRun(); reportProgress(); }
+  markAccountReady();                                     // (the daily and the boards can follow while the game shows)
   if (ui.pendingGroup){ const c = ui.pendingGroup; ui.pendingGroup = null; offerGroup(c); }
   if (!LB.backend && ui.modal === 'joinGroup' && ui.group && ui.group.loading){ ui.group = { code:ui.group.code, error:'offline' }; render(); }
   if (LB.backend){ await loadDaily(); if (LB.daily && LB.backend.refresh) LB.backend.refresh(); refreshBoard(); afterDailyLoaded(); }

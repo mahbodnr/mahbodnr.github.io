@@ -1385,3 +1385,17 @@ html.light .streak{color:#8a5a12;background:linear-gradient(180deg,rgba(242,176,
 /* Reddit: the button for a notification when each new daily is posted (reddit/client/reddit-inline.js) */
 .rc-acts .notifybtn{grid-column:1 / -1}
 .btn.notifybtn.on{border-color:var(--line);color:var(--text);background:var(--panel-solid);box-shadow:none}   /* on: a plain button (only "off" is highlighted) */
+
+/* a smooth start (js/main.js: revealWhenReady): the game hidden until it's ready, then faded in; a small spinner only if
+   that takes a moment; and shown after 4 seconds whatever happens */
+html:not(.ready) .app, html:not(.ready) #modalRoot, html:not(.ready) #coach{opacity:0;animation:bootShow 0s linear 4s forwards}
+html.ready .app, html.ready #modalRoot, html.ready #coach{animation:bootIn .28s ease-out}
+@keyframes bootShow{to{opacity:1}}
+@keyframes bootIn{from{opacity:0}to{opacity:1}}
+html:not(.ready) body::after{content:"";position:fixed;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
+  border:2px solid rgba(245,217,140,.14);border-top-color:rgba(245,217,140,.6);opacity:0;pointer-events:none;
+  animation:bootSpin .9s linear infinite, bootLoader .3s ease .6s forwards, bootLoaderOut 0s linear 4s forwards}
+@keyframes bootSpin{to{transform:rotate(360deg)}}
+@keyframes bootLoader{to{opacity:1}}
+@keyframes bootLoaderOut{to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){html.ready .app, html.ready #modalRoot{animation:none}}

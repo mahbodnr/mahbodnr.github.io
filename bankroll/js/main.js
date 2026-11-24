@@ -38,9 +38,30 @@ function start(data){
   render();
   refreshBoard();
   initLeaderboard();
+  revealWhenReady();
   preloadCourts();
   offerChallenge(incoming);   // opened from a shared challenge link (js/social.js)
   if (onPortal()) Portal.loadingStop();
+}
+/* ---------- a smooth start ----------
+   The table stays invisible (css: html:not(.ready)) until what would make it jump is in: the fonts, the account's own
+   state (its card packs, a run from another device) and the pictures of the cards on screen. Then it fades in. Usually
+   that's a moment; a small spinner shows only if it takes longer, and after 1.8 seconds the game shows regardless. */
+function cardPictures(root){
+  const urls = new Set();
+  root.querySelectorAll('img').forEach(im => { if (im.src) urls.add(im.src); });
+  root.querySelectorAll('[style*="background-image"]').forEach(el => { const m = /url\(["']?([^"')]+)/.exec(el.style.backgroundImage || ''); if (m) urls.add(m[1]); });
+  return Promise.all([...urls].map(u => new Promise(res => { const im = new Image(); im.onload = im.onerror = res; im.src = u; if (im.complete) res(); })));
+}
+async function revealWhenReady(){
+  const root = document.documentElement, wait = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);
+  try {
+    const t0 = Date.now();
+    await wait(Promise.all([document.fonts ? document.fonts.ready : null, typeof accountReady !== 'undefined' ? accountReady : null]), 1800);
+    render();                                              // (the account's packs or run may have changed the table)
+    await wait(cardPictures(document.getElementById('app')), Math.max(150, 1800 - (Date.now() - t0)));
+  } catch(e){}
+  requestAnimationFrame(() => requestAnimationFrame(() => root.classList.add('ready')));
 }
 const boot = () => window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 // CrazyGames: the SDK first (it loads the player's saved data), then the game, from the data module. If the SDK doesn't
