@@ -46,8 +46,11 @@ async function copyText(t){
   } catch(e){ return false; }
 }
 async function copySeed(){ toast(await copyText(S.seed) ? `Seed <b>${esc(S.seed)}</b> copied` : `Seed: <b>${esc(S.seed)}</b>`); }
-const seedHTML = () => `<code class="seed">${esc(S.seed)}</code><button class="seedcopy" data-act="copySeed" aria-label="Copy the seed" title="Copy the seed">
-  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg></button>`;
+// (replay: a small button to play the same cards again, beside the copy button)
+const seedHTML = replay => `<code class="seed">${esc(S.seed)}</code><button class="seedcopy" data-act="copySeed" aria-label="Copy the seed" title="Copy the seed">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg></button>`
+  + (replay ? `<button class="seedcopy" data-act="replaySeed" aria-label="Play the same cards again" title="Play the same cards again">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg></button>` : '');
 
 /* ---------- opening a shared challenge ---------- */
 // A link with ?seed= (website) or a Telegram start parameter: play those cards. A fresh table switches straight away;
@@ -478,9 +481,10 @@ const SHARE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4
 // (on a game portal, no share buttons: except on Reddit, where they open Reddit's own share sheet)
 const redditShare = () => PORTAL === 'reddit' && !!(window.BankrollReddit && window.BankrollReddit.share);
 // Reddit: a Comment button beside Share, for the hand or run as a comment under the post
-const commentBtn = (kind, cls, period) => `<button class="${cls} commentbtn" data-act="commentMoment" data-v="${kind}"${period ? ` data-p="${period}"` : ''}>${COMMENT_SVG}<span>Comment</span></button>`;
+const commentBtn = (kind, cls, period, label = 'Comment') => `<button class="${cls} commentbtn" data-act="commentMoment" data-v="${kind}"${period ? ` data-p="${period}"` : ''}>${COMMENT_SVG}<span>${label}</span></button>`;
 const COMMENT_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>';
-const shareBtn = (kind, label, cls = 'btn', period = '') => (redditShare() && /^(hand|run|tophand|besthand|board)$/.test(kind) ? commentBtn(kind, cls, period) : '') + (onPortal() && !redditShare() ? '' : `<button class="${cls} sharebtn" data-act="share" data-v="${kind}"${period ? ` data-p="${period}"` : ''}>${SHARE_SVG}<span>${label}</span></button>`);
+// (on Reddit, a Comment button first: "Share your run" → "Comment your run")
+const shareBtn = (kind, label, cls = 'btn', period = '') => (redditShare() && /^(hand|run|tophand|besthand|board)$/.test(kind) ? commentBtn(kind, cls, period, /^Share\b/.test(label) ? label.replace(/^Share/, 'Comment') : 'Comment') : '') + (onPortal() && !redditShare() ? '' : `<button class="${cls} sharebtn" data-act="share" data-v="${kind}"${period ? ` data-p="${period}"` : ''}>${SHARE_SVG}<span>${label}</span></button>`);
 
 
 /* ---------- the daily challenge ----------

@@ -565,8 +565,9 @@ kbd{display:none;font:700 10.5px/1 var(--f-ui);padding:3px 5px;border-radius:5px
 /* run over: Play again stays pinned at the bottom; Leaderboard and Same cards sit at the end of the page, half and half */
 .modal .ro-actions{display:flex}
 .ro-actions > .btn{width:100%}
-.ro-more{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
-.ro-more > .btn:first-child:nth-last-child(odd){grid-column:1 / -1}   /* odd count: the first (Challenge friends) takes a full row */
+.ro-more{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.ro-row{display:flex;gap:8px} .ro-row:empty{display:none}
+.ro-row > .btn{flex:1 1 0;min-width:0;padding-left:8px;padding-right:8px;white-space:nowrap;font-size:clamp(12.5px, 3.7vw, 15px)}
 .btn.gold-line{border-color:var(--brass-hi);color:var(--brass-hi)}
 .ro-more > .btn{width:100%;min-width:0}
 
@@ -1382,5 +1383,5 @@ html.light .streak{color:#8a5a12;background:linear-gradient(180deg,rgba(242,176,
 @media (prefers-reduced-motion:reduce){.flame,.streak.grew{animation:none}}
 
 /* Reddit: the button for a notification when each new daily is posted (reddit/client/reddit-inline.js) */
-.ro-more .notifybtn, .rc-acts .notifybtn{grid-column:1 / -1}
-.notifybtn.on{color:var(--gain);border-color:rgba(147,231,168,.45)}
+.rc-acts .notifybtn{grid-column:1 / -1}
+.btn.notifybtn.on{border-color:var(--line);color:var(--text);background:var(--panel-solid);box-shadow:none}   /* on: a plain button (only "off" is highlighted) */
