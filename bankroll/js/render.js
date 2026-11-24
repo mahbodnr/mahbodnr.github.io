@@ -674,7 +674,8 @@ function overHTML(){
     <h3>This run</h3>${stats}
     <p class="snote seedline">${isDailyRun() ? 'Today\'s daily deck' : `Seed ${seedHTML()}`}</p>
     <div class="ro-more">${shareBtn('run', 'Share this run', 'btn gold-line')}${CHALLENGES_ON ? `<button class="btn" data-act="createGroup" data-v="run">${S.challenge ? 'Invite more friends' : 'Challenge friends'}</button>` : ''}
-      ${leaderboardAvailable() ? `<button class="btn" data-act="openBoard">Leaderboard</button>` : ''}${S.challenge ? '' : '<button class="btn" data-act="replaySeed">Same cards</button>'}</div>
+      ${leaderboardAvailable() ? `<button class="btn" data-act="openBoard">Leaderboard</button>` : ''}${S.challenge ? '' : '<button class="btn" data-act="replaySeed">Same cards</button>'}
+      ${typeof redditNotifyHTML === 'function' ? redditNotifyHTML() : ''}</div>
     <div class="actions ro-actions">${stashed() && isDailyRun()
       ? '<button class="btn" data-act="newRun">New run</button><button class="btn gold grow" data-act="resumeStash">Back to my run</button>'
       : `${dailyTodo() ? '<button class="btn gold-line grow" data-act="playDaily">Play the daily challenge</button>' : ''}<button class="btn gold grow" data-act="restartNow">Play again</button>`}</div>`;
