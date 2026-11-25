@@ -670,7 +670,8 @@ function overHTML(){
     ${meRow >= 0 ? `<p class="ro-best"><b>#${meRow + 1}</b> today ${shareBtn('board', 'Share', 'linkshare', 'today')}</p>` : ''}
     ${chart}
     ${tips ? `<h3>Tips</h3><ul class="tips">${tips}</ul>` : ''}
-    ${r ? `<details class="ro-hand"><summary>Last hand</summary>${handBody(r)}</details>` : ''}
+    ${S.bestHand && Array.isArray(S.bestHand.cards) && S.bestHand.cards.length ? `<details class="ro-hand"><summary>Best hand · ×${fmtFit(S.bestHand.mult)}</summary>
+      <div class="ro-besthand">${lbHandHTML(S.bestHand.cards, S.bestHand.labels, S.bestHand.powers, S.bestHand.pack)}${puChipsHTML(S.bestHand.powers)}</div></details>` : ''}
     <h3>This run</h3>${stats}
     <p class="snote seedline">${isDailyRun() ? 'Today\'s daily deck' : `Seed ${seedHTML(!S.challenge)}`}</p>
     <div class="ro-more"><div class="ro-row">${shareBtn('run', 'Share your run', 'btn')}${CHALLENGES_ON ? `<button class="btn" data-act="createGroup" data-v="run">${S.challenge ? 'Invite more friends' : 'Challenge friends'}</button>` : ''}</div>

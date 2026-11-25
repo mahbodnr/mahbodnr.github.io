@@ -420,7 +420,8 @@ async function commentMoment(kind, period, btn){
   const m = momentOf(kind, period);
   if (!m){ toast('Nothing to comment yet'); return; }
   const daily = !!(S && isDailyCode(S.challenge));       // the daily's cards stay a secret until tomorrow
-  const body = { kind:m.kind, mult:m.mult, level:m.level, peak:m.peak, rank:m.rank, period:m.period, labels:m.labels || [], cards:daily ? [] : (m.cards || []) };
+  const body = { kind:m.kind, mult:m.mult, level:m.level, peak:m.peak, rank:m.rank, period:m.period, labels:m.labels || [], cards:daily ? [] : (m.cards || []),
+    run_id:(S && S.runId) || null };   // (the server takes a run's numbers from that run: the daily is kept apart from the normal run)
   const send = async message => {
     try {
       const r = await fetch('api/moment', { method:'POST', credentials:'same-origin', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(Object.assign({ message }, body)) });
@@ -436,12 +437,20 @@ async function commentMoment(kind, period, btn){
   if (typeof redditCompose === 'function') redditCompose(preview, send);   // (reddit/client/reddit-inline.js)
   else send('');
 }
+// Reddit's share sheet passes on only the post's link, so the run's records go to the clipboard as well, to paste with it
+function copyShareText(text){
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(text).then(() => toast('Your records are copied too: paste them with the link'), () => {});
+  } catch(e){}
+}
 async function shareMoment(kind, period){
   const m = momentOf(kind, period);
   if (!m){ toast('Nothing to share yet'); return; }
   // Reddit: its share sheet, with a link to this post; the moment travels with it, for the post to show who shared what
   if (redditShare()){
     const by = LB.myName || '';
+    copyShareText(momentText(m));
     window.BankrollReddit.share({ title:'Bankroll', text:momentText(m).replace(/ in Bankroll/, ' in Bankroll on Reddit'),
       data:JSON.stringify({ k:m.kind, by, mult:m.mult, level:m.level, peak:m.peak, rank:m.rank, players:m.players }).slice(0, 1000) })
       .catch(() => toast('Couldn\'t open sharing'));

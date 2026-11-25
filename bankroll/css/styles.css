@@ -1383,7 +1383,6 @@ html.light .streak{color:#8a5a12;background:linear-gradient(180deg,rgba(242,176,
 @media (prefers-reduced-motion:reduce){.flame,.streak.grew{animation:none}}
 
 /* Reddit: the button for a notification when each new daily is posted (reddit/client/reddit-inline.js) */
-.rc-acts .notifybtn{grid-column:1 / -1}
 .btn.notifybtn.on{border-color:var(--line);color:var(--text);background:var(--panel-solid);box-shadow:none}   /* on: a plain button (only "off" is highlighted) */
 
 /* a smooth start (js/main.js: revealWhenReady): the game hidden until it's ready, then faded in; a small spinner only if
@@ -1399,3 +1398,6 @@ html:not(.ready) body::after{content:"";position:fixed;left:50%;top:50%;width:26
 @keyframes bootLoader{to{opacity:1}}
 @keyframes bootLoaderOut{to{opacity:0;visibility:hidden}}
 @media (prefers-reduced-motion:reduce){html.ready .app, html.ready #modalRoot{animation:none}}
+
+/* the run's best hand on the run-over page (drawn as on the leaderboard) */
+.ro-besthand{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0 4px}
