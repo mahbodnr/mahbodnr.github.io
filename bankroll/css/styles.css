@@ -1227,6 +1227,7 @@ html.light .lv-deck{background:rgba(0,0,0,.1)} html.light .lv-deck > i{backgroun
 .roc-head{font-size:20px;font-weight:800;margin:4px 0 8px;color:var(--brass-hi)}
 .roc-head b{font-size:1.25em}
 .ro-ch .gboard{margin:6px 0 10px}
+.m-over .ro-ch:first-child{margin-top:20px}   /* (the run-over window has no top padding: its header normally runs to the edge) */
 .roc-actions{display:flex;gap:8px;flex-wrap:wrap}
 .roc-actions .btn{flex:1 1 auto}
 .cboard .brow{grid-template-columns:28px minmax(0,1fr) 96px}
