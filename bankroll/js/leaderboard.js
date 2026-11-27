@@ -643,10 +643,14 @@ async function flushProgress(){
 // (at the run's end everything shows). Held back for now, they can still come later.
 const midRun = () => !!(S && !S.intro && S.phase !== 'over');
 const BIG_HAND = 10;
+// a hand worth a notice: ×10 or more (always, not only mid-run)
+const bigHand = m => m === 'Infinity' || Number(m) >= BIG_HAND;
+const inTutorial = () => !!((S && S.intro) || (typeof intro !== 'undefined' && intro));
 function checkTopHand(){
+  if (inTutorial()) return;                                // (practice hands count nowhere)
   const top = LB.hands.today[0];
   if (!top || !LB.me || top.id !== LB.me || !S || !S.bestHand || top.mult !== S.bestHand.mult) return;
-  if (midRun() && !(Number(top.mult) > BIG_HAND || top.mult === 'Infinity')) return;
+  if (!bigHand(top.mult)) return;
   const key = todayUTC() + ':' + top.mult;
   if (prefs.topHandSeen === key) return;
   prefs.topHandSeen = key; store(PREF_KEY, prefs);
@@ -810,13 +814,13 @@ function dailyBoardHTML(rows){
    says so for a few seconds, with Share and View. Top hand of the day has its own celebration (checkTopHand). */
 const LB_SEEN_KEY = 'bankroll-lb-seen' + KEY_NS;
 function announceBoardPlace(){
-  if (!LB.me || !LB.signedIn || (S && S.intro)) return;
+  if (!LB.me || !LB.signedIn || inTutorial()) return;
   const day = todayUTC(), seen = load(LB_SEEN_KEY), prev = seen && seen.day === day ? seen : { day };
   const run = LB.boards.today.findIndex(r => r.id === LB.me) + 1, hand = LB.hands.today.findIndex(r => r.id === LB.me) + 1;
   const better = (now, was) => now > 0 && (!was || now < was);
-  // mid-run: a best hand only above ×10, a place on the board only past level 1 (held back, they're not marked seen)
+  // a best hand only from ×10; mid-run, a place on the board only past level 1 (held back, they're not marked seen)
   const handMult = hand ? LB.hands.today[hand - 1].mult : 0;
-  const handOk = !midRun() || Number(handMult) > BIG_HAND || handMult === 'Infinity';
+  const handOk = bigHand(handMult);
   const runOk = !midRun() || lvl() >= 2;
   let note = null;
   if (handOk && better(hand, prev.hand) && hand > 1) note = { kind:'besthand', rank:hand, text:`Your ×${fmtFit(handMult)} hand is <b>#${hand}</b> of today's best hands` };
