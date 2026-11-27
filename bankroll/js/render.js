@@ -442,6 +442,9 @@ function renderModal(){
   else if (m === 'newChallenge') html = newChallengeHTML();
   else if (m === 'chatScores') html = chatScoresHTML();
   else if (m === 'dailyOffer') html = dailyOfferHTML();
+  else if (m === 'tutOffer') html = `<div class="tutoffer"><h2>Tough first hand</h2>
+      <p class="lead">The tutorial shows how combos, bets and debt work in three practice hands. You can skip it any time.</p>
+      <div class="actions"><button class="btn" data-act="tutNo">${ui.tutNext === 'over' ? 'See my run' : 'See my result'}</button><button class="btn gold" data-act="startTutorial">Take the tutorial</button></div></div>`;
   else if (m === 'dailySignIn') html = dailySignInHTML();
   else if (m === 'privacy') html = privacyHTML();
   else if (m === 'restart') html = `<h2>New game?</h2><p class="lead">${isDailyRun() ? 'This ends your one try at today\'s daily challenge.' : 'This run will be lost.'}</p>
@@ -480,7 +483,7 @@ function renderModal(){
 }
 
 const CLOSABLE = ['help', 'view', 'tracker', 'history', 'settings', 'bust', 'restart', 'release5', 'record', 'unlock', 'challenge', 'group', 'joinGroup', 'newChallenge', 'chatScores', 'dailyOffer', 'dailySignIn', 'privacy'];
-const MODAL_NAMES = { help:'How to play', result:'Hand result', over:'Run over', reshuffle:'Level complete', tracker:'Card tracker', view:'Discard pile', pick:'Take a card back', history:'History', settings:'Settings', bust:'Cash-out warning', restart:'New game', release5:'Release Extra seat', record:'Top hand of the day', unlock:'Unlocked', privacy:'Privacy' };
+const MODAL_NAMES = { help:'How to play', result:'Hand result', over:'Run over', reshuffle:'Level complete', tracker:'Card tracker', view:'Discard pile', pick:'Take a card back', history:'History', settings:'Settings', bust:'Cash-out warning', restart:'New game', release5:'Release Extra seat', record:'Top hand of the day', tutOffer:'Tutorial', unlock:'Unlocked', privacy:'Privacy' };
 // closing a dialog that opened over another (the top-hand celebration) returns to the one underneath
 function closeModal(){ ui.modal = (ui.modal === 'record' || ui.modal === 'help' || ui.modal === 'dailyOffer' || ui.modal === 'privacy') && ui.modalBack ? ui.modalBack : null; ui.modalBack = null; }
 function bustHTML(){
@@ -569,9 +572,7 @@ function resultHTML(){
     </div>
     ${handBody(r)}
     ${levelWarning(r)}
-    ${ui.tutOffer ? `<div class="tutoffer"><b>Tough first hand.</b> The tutorial shows how combos, bets and debt work in three practice hands. You can skip it any time.
-      <div class="tutoffer-acts"><button class="btn" data-act="tutNo">No thanks</button><button class="btn gold" data-act="startTutorial">Take the tutorial</button></div></div>` : ''}
-    <div class="actions rs-actions">${r.ev && r.ev.mult >= 10 ? shareBtn('hand', 'Share') : ''}<button class="btn ${ui.tutOffer ? '' : 'gold'}" data-act="nextSet">Next hand</button></div>`;
+    <div class="actions rs-actions">${r.ev && r.ev.mult >= 10 ? shareBtn('hand', 'Share') : ''}<button class="btn gold" data-act="nextSet">Next hand</button></div>`;
 }
 /* ---------- run over ----------
    Leads with a picture of what happened (what you had against what you needed), then the run's path

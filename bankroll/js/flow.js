@@ -64,6 +64,14 @@ function gameOver(reason, extra){
   reportProgress(true);
 }
 
+// a new player's first hand is over: the Tutorial button goes. If the hand lost (or ended the run), the tutorial is
+// offered on a screen of its own first; skipping it goes on to the hand's result or the run-over screen (ui.tutNext).
+function firstHandOver(res){
+  if (S.intro || !prefs.tutHint) return;
+  prefs.tutHint = false; store(PREF_KEY, prefs);
+  if (res.net < 0 && !prefs.tutDone){ ui.tutNext = ui.modal; ui.modal = 'tutOffer'; }
+}
+
 function throwAway(){
   if (S.phase !== 'bet') return;
   const thrown = S.hand.slice();
@@ -288,19 +296,20 @@ function cashOut(force){
     S.infinite = true;
     keepBestHand();                       // the hand that broke the bank counts: the run is won, not lost
     ui.celebrate = true; buzz([25, 40, 25, 40, 60, 40, 120]);
-    return gameOver('Your coins went past anything that can be counted: infinity. The bank is broken.', { res, cause:'infinite', won:true });
+    gameOver('Your coins went past anything that can be counted: infinity. The bank is broken.', { res, cause:'infinite', won:true });
+    return firstHandOver(res);
   }
   if (total < 0){
     S.debt = 0; ui.shake = true; buzz([80, 50, 120]);
-    return gameOver(`Your coins plus the payout (${fmt(before + payout)}) couldn’t cover a debt of ${fmt(res.debt)}.`,
+    gameOver(`Your coins plus the payout (${fmt(before + payout)}) couldn’t cover a debt of ${fmt(res.debt)}.`,
       { res, cause:'bust', need:res.debt, have:before + payout });
+    return firstHandOver(res);
   }
   S.debt = 0;
   S.stats.bestPayout = Math.max(S.stats.bestPayout, payout);
   S.stats.peak = Math.max(S.stats.peak, S.coins);
   S.result = res; S.phase = 'result'; ui.modal = 'result';
-  // a new player's first hand is over: the Tutorial button goes; if the hand lost, its result offers the tutorial
-  if (!S.intro && prefs.tutHint){ prefs.tutHint = false; ui.tutOffer = res.net < 0 && !prefs.tutDone; store(PREF_KEY, prefs); }
+  firstHandOver(res);
   sfx(payout > res.debt ? 'win' : payout > 0 ? 'coin' : 'lose');
   if (ev.mult >= 10){ ui.celebrate = true; buzz([25, 40, 25, 40, 60]); } else if (res.net > 0) buzz(30);
   reportProgress();

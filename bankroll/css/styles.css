@@ -1316,9 +1316,9 @@ html.light #lbnote{background:#fffaf0;color:#2a1c05}
 .tutpill svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
 @keyframes tutGlow{0%,100%{box-shadow:0 0 0 0 rgba(245,217,140,0)}50%{box-shadow:0 0 0 4px rgba(245,217,140,.18)}}
 @media (prefers-reduced-motion: reduce){ .tutpill{animation:none} }
-.tutoffer{margin:12px 0 4px;padding:12px 14px;border-radius:14px;border:1px solid var(--brass-dim, rgba(217,171,76,.5));background:rgba(245,217,140,.08);font-size:14px;line-height:1.4;text-align:left}
-.tutoffer b{color:var(--brass-hi, #f5d98c)}
-.tutoffer-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.tutoffer{text-align:center}
+.tutoffer h2{color:var(--brass-hi, #f5d98c);text-align:center;padding:0;margin-inline:auto}
+.tutoffer .actions{justify-content:center}
 
 /* Settings: a sound's on/off and its volume on one line */
 .srow.svol{display:grid;grid-template-columns:7.2em minmax(0,1fr) auto;align-items:center;gap:14px}

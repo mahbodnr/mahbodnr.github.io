@@ -207,8 +207,8 @@ document.addEventListener('click', e => {
     case 'bustConfirm': act('cash', 1); break;
     case 'introNext': introNext(); if (!intro) return; break;
     case 'introSkip': if (intro) endIntro(); return;
-    case 'startTutorial': if (S && !S.intro) store(SAVE_KEY, S); ui.tutOffer = false; ui.modal = null; startIntro(true); break;   // the run is kept and picked up afterwards
-    case 'tutNo': ui.tutOffer = false; break;
+    case 'startTutorial': if (S && !S.intro) store(SAVE_KEY, S); ui.tutNext = null; ui.modal = null; startIntro(true); break;   // the run is kept and picked up afterwards
+    case 'tutNo': ui.modal = ui.tutNext || (S && S.phase === 'over' ? 'over' : 'result'); ui.tutNext = null; break;
     case 'lbNoteClose': { const n = document.getElementById('lbnote'); if (n) n.classList.remove('show'); return; }
     case 'tipDone': tipDone(t.dataset.v); break;
     case 'replayTutorial': if (S && !S.intro) store(SAVE_KEY, S); ui.modal = null; startIntro(true); break;
@@ -258,7 +258,7 @@ document.addEventListener('click', e => {
       if (S.deck.length && S.coins < upkeep()){ ui.upkeepFx = true; break; }   // can't pay upkeep: explain instead of dealing
       act('next'); break;
     case 'cash': act('cash'); break;
-    case 'nextSet': ui.tutOffer = false; act('nextSet'); break;
+    case 'nextSet': act('nextSet'); break;
     case 'openReshuffle': ui.modal = 'reshuffle'; break;
     case 'reshuffle': act('level'); break;
     default: return;
