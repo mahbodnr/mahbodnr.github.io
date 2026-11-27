@@ -47,7 +47,12 @@ function setPref(k, v){
   store(PREF_KEY, prefs); applyPrefs();
   if (k === 'sound' && v) sfx('coin');
   if (k === 'music'){ applyMusic(); musicBtnState(); }
-  if (k === 'pack') preloadCourts();
+  if (k === 'pack'){
+    preloadCourts();
+    // kept with the account too (signed in): the same deck on every device; marked unsent until the server has it
+    prefs.packSynced = false; store(PREF_KEY, prefs);
+    if (typeof LB !== 'undefined' && LB.signedIn && LB.backend && LB.backend.savePack) LB.backend.savePack(v);
+  }
   if (k === 'haptics' && v) buzz(20);
 }
 

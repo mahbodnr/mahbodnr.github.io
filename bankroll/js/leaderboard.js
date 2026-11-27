@@ -247,6 +247,21 @@ const supabaseBackend = {
       const all = !error && !!(data && data.unlock_all);
       const best = !error && data && +data.best_level > 0 ? Math.floor(+data.best_level) : 0;   // the account's best level, on any device
       if (all !== !!LB.unlockAll || best !== (LB.bestLevel || 0)){ LB.unlockAll = all; LB.bestLevel = best; applyPrefs(); if (typeof render === 'function' && S) render(); }
+      // the deck kept with the account: it's used here too; a choice made on this device the server doesn't have yet goes up
+      const kept = !error && data && typeof data.pack === 'string' && /^[a-z]{2,16}$/.test(data.pack) ? data.pack : null;
+      if (prefs.packSynced === false && prefs.pack) this.savePack(prefs.pack);
+      else if (kept && kept !== prefs.pack && typeof packById === 'function' && packById(kept)){
+        prefs.pack = kept; prefs.packSynced = true; store(PREF_KEY, prefs); applyPrefs();
+        if (typeof preloadCourts === 'function') preloadCourts();
+        if (typeof render === 'function' && S) render();
+      }
+    } catch(e){}
+  },
+  // the deck the player chose, kept with their account
+  async savePack(pack){
+    try {
+      const { data, error } = await this.client.rpc('bankroll_set_pack', { p_pack:pack });
+      if (!error && data === true && prefs.pack === pack){ prefs.packSynced = true; store(PREF_KEY, prefs); }
     } catch(e){}
   },
   // the player's own latest runs (normal and daily), with every move recorded so far: another device's progress
