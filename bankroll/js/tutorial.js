@@ -61,7 +61,8 @@ function resumeModal(){
 /* ---------- the steps ----------
    text: what the bubble says (a function, so numbers come from the table)
    target: what the bubble points at (none: a card in the middle of the screen); hl: also highlighted
-   ok: the only controls that respond; until: the step is done when this is true (else it has a Next button) */
+   ok: the only controls that respond; until: the step is done when this is true (else it has a Next button)
+   A step reached by doing what the one before asked shows after a pause (pause, in ms; longer when cards are dealt). */
 const INTRO = [
   // ---- hand 1 ----
   { title:'Welcome to Bankroll', center:true,
@@ -83,7 +84,7 @@ const INTRO = [
     text:() => 'Cash out pays <b>bet × multiplier</b>. No combo pays nothing.' },
   { target:'.betbox', hl:['#st-bet', '#st-debt'], ok:['.betbox'], title:'Place a bet', until:() => S.betInput === INTRO_BET[1] || S.phase !== 'bet',
     text:() => `Set your bet to <b>${INTRO_BET[1]}</b>. Watch <b>Bet</b> and <b>Debt</b>: dealing adds half the bet to the debt, and the first card dealt adds the whole bet.` },
-  { target:'[data-act="deal"]', hl:['#st-bet', '#st-debt'], ok:['[data-act="deal"]'], title:'Deal', until:() => S.phase !== 'bet',
+  { target:'[data-act="deal"]', hl:['#st-bet', '#st-debt'], ok:['[data-act="deal"]'], title:'Deal', pause:350, until:() => S.phase !== 'bet',
     text:() => `Bet ${coin}<b>${INTRO_BET[1]}</b>. Deal flips your hidden cards and deals a card to the center.` },
   { target:'#hand', title:'Two pairs', delay:true,
     text:() => `Your hidden cards were ${cn('7C')} and ${cn('KD')}: two pairs, ${X(2)} × ${X(2)} = <b>${X(4)}</b>.` },
@@ -99,7 +100,7 @@ const INTRO = [
   // ---- hand 2 ----
   { target:'.betbox', hl:['#st-bet', '#st-debt'], ok:['.betbox'], title:'Hand 2', until:() => S.betInput === INTRO_BET[2] || S.phase !== 'bet',
     text:() => `Bet <b>${INTRO_BET[2]}</b> this time. Bet and Debt show what dealing will cost.` },
-  { target:'[data-act="deal"]', ok:['[data-act="deal"]'], title:'Deal', until:() => S.phase !== 'bet', text:() => 'Deal.' },
+  { target:'[data-act="deal"]', ok:['[data-act="deal"]'], title:'Deal', pause:350, until:() => S.phase !== 'bet', text:() => 'Deal.' },
   { target:ic('JR'), title:'A Joker!', delay:true,
     text:() => 'A Joker goes straight into your hand and adds a <b>seat</b>: you now hold 6 cards. It never makes a combo, but if you swap it out the extra seat stays.' },
   { target:'[data-act="power"]', ok:['[data-act="power"]'], hl:['#pit .stage'], title:'A power-up', until:() => S.powerups.length > 0,
@@ -117,7 +118,7 @@ const INTRO = [
   // ---- hand 3 ----
   { target:'.betbox', hl:['#st-bet', '#st-debt'], ok:['.presets .q:last-child'], title:'Go big', until:() => S.betInput === S.coins || S.phase !== 'bet',
     text:() => `Feeling lucky? Bet everything: tap <b>Max</b>. Look how much debt that brings.` },
-  { target:'[data-act="deal"]', hl:['#st-debt'], ok:['[data-act="deal"]'], title:'All in', until:() => S.phase !== 'bet', text:() => `Deal ${coin}<b>${fmt(S.betInput)}</b>.` },
+  { target:'[data-act="deal"]', hl:['#st-debt'], ok:['[data-act="deal"]'], title:'All in', pause:350, until:() => S.phase !== 'bet', text:() => `Deal ${coin}<b>${fmt(S.betInput)}</b>.` },
   { target:'[data-act="discard"]', ok:['[data-act="discard"]'], hl:['#hand', '#st-debt'], title:'Chase it?', until:() => centre('3C'), delay:true,
     text:() => `A pair of 9s, ${X(2)}. Cashing out now would ${leaves()}. A third 9 would make it ${X(4)}. Discard to chase it (+${fmt(nextCardCost())} debt).` },
   { target:'[data-act="discard"]', ok:['[data-act="discard"]'], hl:['#st-debt'], title:'No 9', until:() => centre('KH'),
@@ -134,8 +135,18 @@ const INTRO = [
 
 function introStep(){
   let st = INTRO[intro.i];
+  const was = intro.i;
   while (st && st.until && st.until()){ intro.i++; st = INTRO[intro.i]; }
+  // the player just did what a step asked: let them watch what it did before the next bubble comes up
+  if (intro.i !== was && st) intro.hold = { i:intro.i, until:Date.now() + dur(st.pause ?? (st.delay ? 1500 : 1100)) };
   return st;
+}
+// still in the pause after an action (see introStep): no bubble, nothing to press; the step shows when it's over
+function introHolding(){
+  const h = intro && intro.hold;
+  if (!h || h.i !== intro.i || Date.now() >= h.until){ if (h) intro.hold = null; return false; }
+  if (!h.timer) h.timer = setTimeout(() => { h.timer = null; tutorialTick(); }, h.until - Date.now() + 10);
+  return true;
 }
 function introNext(){ if (!introOn()) return; const st = INTRO[intro.i]; if (st && st.done) return endIntro(); intro.i++; }
 function introAllows(el){ return !introOn() || !!(el && el.closest && el.closest('.intro-ok, #coach')); }
@@ -147,6 +158,7 @@ function introTick(){
   if (!introOn()){ root.classList.remove('intro-center'); return; }
   const st = introStep();
   if (!st) return endIntro();
+  if (introHolding()){ root.classList.remove('intro-center'); hideCoach(); return; }
   (st.ok || []).forEach(sel => document.querySelectorAll(sel).forEach(n => n.classList.add('intro-ok')));
   (st.hl || []).forEach(sel => document.querySelectorAll(sel).forEach(n => n.classList.add('intro-hl')));
   root.classList.toggle('intro-center', !!st.center);
