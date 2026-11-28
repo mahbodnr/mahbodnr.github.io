@@ -158,8 +158,9 @@ function introTick(){
   if (!introOn()){ root.classList.remove('intro-center'); return; }
   const st = introStep();
   if (!st) return endIntro();
-  if (introHolding()){ root.classList.remove('intro-center'); hideCoach(); return; }
+  // the step's own control works from the start, even in the pause (doing it then skips the bubble); nothing else does
   (st.ok || []).forEach(sel => document.querySelectorAll(sel).forEach(n => n.classList.add('intro-ok')));
+  if (introHolding()){ root.classList.remove('intro-center'); hideCoach(); return; }
   (st.hl || []).forEach(sel => document.querySelectorAll(sel).forEach(n => n.classList.add('intro-hl')));
   root.classList.toggle('intro-center', !!st.center);
   const c = $('coach'), key = String(intro.i), fresh = c.hidden || c.dataset.step !== key;
