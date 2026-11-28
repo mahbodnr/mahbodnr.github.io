@@ -376,10 +376,15 @@ function momentOf(kind, period){
   if (kind === 'daily'){
     const g = ui.group && LB.daily && ui.group.code === LB.daily.code && ui.group.data;
     let rows = g ? g.players : [];
-    if (!rows.length && LB.boards.daily) rows = LB.boards.daily.map(r => ({ user_id:r.id, level:r.level, peak:r.peak }));   // from the leaderboard
+    if (!rows.length && LB.boards.daily) rows = LB.boards.daily.map(r => ({ user_id:r.id, level:r.level, peak:r.peak, best_hand:r.bestHand }));   // from the leaderboard
     const i = rows.findIndex(p => p.user_id === LB.me);
     if (i < 0) return null;
-    return { kind, rank:i + 1, players:rows.length, level:rows[i].level || 1, peak:numOut(rows[i].peak), mult:numOut(S.stats.bestMult || 0), cards:(S.bestHand && S.bestHand.cards) || [], day:dayLabel() };
+    // the daily run's own best hand: from the board, or from the run itself while it's the one open (after a daily, the
+    // run open is usually the player's normal run again, whose hands have nothing to do with it)
+    const dailyOpen = S && LB.daily && S.challenge === LB.daily.code;
+    const b = rows[i].best_hand || (dailyOpen ? S.bestHand : null);
+    return { kind, rank:i + 1, players:rows.length, level:rows[i].level || 1, peak:numOut(rows[i].peak), mult:numOut((b && b.mult) || 0),
+      cards:(b && b.cards) || [], powers:(b && b.powers) || [], labels:((b && b.labels) || []).map(plainLabel), pack:(b && b.pack) || null, day:dayLabel() };
   }
   if (kind === 'tophand'){ const r = ui.record; return r ? { kind, mult:numOut(r.mult), labels:(r.labels || []).map(plainLabel), cards:r.cards || [], powers:r.powers || [], pack:r.pack || null } : null; }
   return null;

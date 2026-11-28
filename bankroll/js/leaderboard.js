@@ -231,7 +231,7 @@ const supabaseBackend = {
         cards:(r.hand && r.hand.cards) || [], labels:(r.hand && r.hand.labels) || [], pack:(r.hand && r.hand.pack) || null, at:Date.parse(r.achieved_at) || 0 });
       LB.boards.today = (today.data || []).map(row); LB.boards.week = (week.data || []).map(row);
       LB.hands.today = (todayHands.data || []).map(hand); LB.hands.week = (weekHands.data || []).map(hand);
-      LB.boards.daily = ((daily.data && daily.data.players) || []).map(r => ({ id:r.user_id, name:r.name || 'Player', avatar:r.avatar_url || null, level:r.level, peak:+r.peak, biggestWin:+r.biggest_win, seeded:false,
+      LB.boards.daily = ((daily.data && daily.data.players) || []).map(r => ({ id:r.user_id, name:r.name || 'Player', avatar:r.avatar_url || null, level:r.level, peak:+r.peak, biggestWin:+r.biggest_win, seeded:false, bestHand:r.best_hand || null,
         playing:!r.finished && Date.now() - (Date.parse(r.at) || 0) < 30 * 60e3 }));   // (not touched for half an hour: gone, not playing)
       LB.hands.daily = [];
       LB.state = 'ready';
